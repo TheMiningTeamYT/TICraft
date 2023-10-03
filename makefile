@@ -1,0 +1,8 @@
+NAME = THREED
+DESCRIPTION = "3d"
+COMPRESSED = YES
+COMPRESSED_MODE = zx7
+ARCHIVED = YES
+CFLAGS = -O3
+CXXFLAGS = -O3
+include $(shell cedev-config --makefile)
