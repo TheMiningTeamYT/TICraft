@@ -7,18 +7,27 @@
 #include <graphx.h>
 #include "renderer.hpp"
 
+#define focalDistance (Fixed24)200
+
+/*
+optimization ideas:
+Add support for different sized textures, depending on whats most apropriate, say 16x16, 8x8, or 4x4. That way, for small polygons we can waste less time drawing.
+Or, undersampling the textures at small sizes
+Drawing the polygon is the longest part of the process
+*/
 /*
 Speed observations:
 It appears that drawing the polygons is a farely slow process (if you disable double buffering you can see it happen --- it should be too fast to see)
+It seems that generating the row is the longest part of the polygon drawing process. -- maybe can be optimized?
+Undersampling the texture by 2x (16->8px) led to over a 1/3 improvement in render time
 It also appears that generating the polygons takes a considerable amount of time as well (with double buffering disabled you can see it sit as it generates them all)
 A faster method of drawing the pixels to the screen (rather than drawing tons of little lines) would be preferred
 It would also likely be faster if we didn't have to overdraw the lines to avoid blank pixels
 Also, the culling is in *dire* need of fixing --- it needs to be a LOT less agressive
 Also, the fixed point library I'm using does not have a very big range, so overflow issues are common. Maybe a better fixed point library is in order?
-I'm using it because I assume it is MUCH faster than floating point math --- and it almost certainly is --- but it's range limitations *are* a problem and it's not faster *enough* to justify them.
 */
 
-object* objects[400];
+object* objects[maxNumberOfObjects];
 transformedPolygon* preparedPolygons[maxNumberOfPolygons];
 char buffer[200];
 unsigned int numberOfPreparedPolygons = 0;
@@ -52,7 +61,6 @@ const Fixed24 cy = cosf(cameraAngle[1]);
 const Fixed24 sy = sinf(cameraAngle[1]);
 const Fixed24 cz = cosf(cameraAngle[2]);
 const Fixed24 sz = sinf(cameraAngle[2]);
-const Fixed24 focalDistance = 100;
 void object::generatePolygons() {
     point points[] = {{x, y, z}, {x+size, y, z}, {x+size, y-size, z}, {x, y-size, z}, {x, y, z+size}, {x+size, y, z+size}, {x+size, y-size, z+size}, {x, y-size, z+size}};
     polygon polygons[6];
@@ -110,8 +118,8 @@ void object::generatePolygons() {
                             if (z > otherPolygon->z) {
                                 for (unsigned int i = 0; i < 4; i++) {
                                     if (points[i] == true) {
-                                        screenPoint point = renderedPoints[polygon->points[i]];
-                                        if ((point.x >= otherPolygon->minX && point.x <= otherPolygon->maxX && point.y >= otherPolygon->minY && point.y <= otherPolygon->maxY)) {
+                                        screenPoint* point = &renderedPoints[polygon->points[i]];
+                                        if ((point->x >= otherPolygon->minX && point->x <= otherPolygon->maxX && point->y >= otherPolygon->minY && point->y <= otherPolygon->maxY)) {
                                             obscuredPoints++;
                                             points[i] = false;
                                         }
@@ -133,20 +141,12 @@ void object::generatePolygons() {
                     for (unsigned int i = 0; i < 4; i++) {
                         if (renderedPoints[polygon->points[i]].x < minX) {
                             minX = renderedPoints[polygon->points[i]].x;
-                        }
-                    }
-                    for (unsigned int i = 0; i < 4; i++) {
-                        if (renderedPoints[polygon->points[i]].y < minY) {
-                            minY = renderedPoints[polygon->points[i]].y;
-                        }
-                    }
-                    for (unsigned int i = 0; i < 4; i++) {
-                        if (renderedPoints[polygon->points[i]].x > maxX) {
+                        } else if (renderedPoints[polygon->points[i]].x > maxX) {
                             maxX = renderedPoints[polygon->points[i]].x;
                         }
-                    }
-                    for (unsigned int i = 0; i < 4; i++) {
-                        if (renderedPoints[polygon->points[i]].y > maxY) {
+                        if (renderedPoints[polygon->points[i]].y < minY) {
+                            minY = renderedPoints[polygon->points[i]].y;
+                        } else if (renderedPoints[polygon->points[i]].y > maxY) {
                             maxY = renderedPoints[polygon->points[i]].y;
                         }
                     }
@@ -179,8 +179,7 @@ void object::moveTo(Fixed24 newX, Fixed24 newY, Fixed24 newZ) {
 }
 
 Fixed24 object::getDistance() {
-    Fixed24 value = sqr(x - cameraXYZ[0]) + sqr(y - cameraXYZ[1]) + sqr(z - cameraXYZ[2]);
-    return sqrt(value);
+    return sqrtf(powf(x - cameraXYZ[0], 2) + powf(y - cameraXYZ[1], 2) + powf(z - cameraXYZ[2], 2));
 }
 
 int zCompare(const void *arg1, const void *arg2) {
@@ -209,9 +208,9 @@ screenPoint transformPoint(point point) {
     const Fixed24 sum1 = (sz*y+cz*x);
     const Fixed24 sum2 = (cy*z+sy*sum1);
     const Fixed24 sum3 = (cz*y - sz*x);
-    Fixed24 dx = cy*sum1-sy*z;
-    Fixed24 dy = sx*sum2 + cx*sum3;
-    Fixed24 dz = cx*sum2 - sx*sum3;
+    const Fixed24 dx = cy*sum1-sy*z;
+    const Fixed24 dy = sx*sum2 + cx*sum3;
+    const Fixed24 dz = cx*sum2 - sx*sum3;
     const Fixed24 sum4 = (focalDistance/dz);
     result.x = ((Fixed24)160 + sum4*dx).floor();
     result.y = ((Fixed24)120 - sum4*dy).floor();
@@ -238,13 +237,15 @@ void drawScreen() {
     outOfBoundsPolygons = 0;
     obscuredPolygons = 0;
     cameraXYZ[2] += 5;
-    gfx_FillScreen(255);
     gfx_SetColor(0);
     gfx_SetTextXY(0, 0);
+    //improves polygon culling but sorting can be slow
+    qsort(objects, numberOfObjects, sizeof(object*), distanceCompare);
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         objects[i]->generatePolygons();
     }
     qsort(preparedPolygons, numberOfPreparedPolygons, sizeof(transformedPolygon *), renderedZCompare);
+    gfx_FillScreen(255);
     for (unsigned int i = 0; i < numberOfPreparedPolygons; i++) {
         renderPolygon(preparedPolygons[i]);
     }
@@ -264,7 +265,9 @@ void drawScreen() {
     snprintf(buffer, 200, "Polygon Size: %u", sizeof(transformedPolygon));
     gfx_PrintString(buffer);
     gfx_SetTextXY(0, gfx_GetTextY() + 10); */
+    #if showDraw == false
     gfx_SwapDraw();
+    #endif
 }
 
 void renderPolygon(transformedPolygon* polygon) {
@@ -283,6 +286,8 @@ void renderPolygon(transformedPolygon* polygon) {
             nextPoint = 0;
         }
         lines[i] = {points[i], points[nextPoint]};
+        Fixed24 dx = sourceObject->renderedPoints[points[nextPoint]].x - sourceObject->renderedPoints[points[i]].x;
+        Fixed24 dy = sourceObject->renderedPoints[points[nextPoint]].y - sourceObject->renderedPoints[points[i]].y;
         Fixed24 length = sqrtf(powf(sourceObject->renderedPoints[points[nextPoint]].x - sourceObject->renderedPoints[points[i]].x, 2) + powf(sourceObject->renderedPoints[points[nextPoint]].y - sourceObject->renderedPoints[points[i]].y, 2));
         lineEquations[i] = {sourceObject->renderedPoints[points[i]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[i]].y, sourceObject->renderedPoints[points[nextPoint]].y, length};
     }
@@ -296,10 +301,11 @@ void renderPolygon(transformedPolygon* polygon) {
     const Fixed24 textureRatio = length*reciprocalOf16;
     const Fixed24 reciprocalOfTextureRatio = (Fixed24)1/textureRatio;
     const Fixed24 reciprocalOfLength = (Fixed24)1/length;
-    const Fixed24 textureLineXDiff = (((Fixed24)1)*lineEquations[3].px);
-    for (uint8_t i = 0; i < length; i++) {
+    for (uint8_t i = 0; i < (int)length; i++) {
         const Fixed24 divI = ((Fixed24)i*reciprocalOfLength);
         lineEquation textureLine = {(((Fixed24)1-divI)*lineEquations[3].px)+(divI*lineEquations[3].cx), (((Fixed24)1-divI)*lineEquations[1].cx)+(divI*lineEquations[1].px), (((Fixed24)1-divI)*lineEquations[3].py)+(divI*lineEquations[3].cy), (((Fixed24)1-divI)*lineEquations[1].cy)+(divI*lineEquations[1].py)};
+        Fixed24 dx = (textureLine.cx - textureLine.px).abs();
+        Fixed24 dy = (textureLine.cy - textureLine.py).abs();
         int row = ((Fixed24)i*reciprocalOfTextureRatio).floor()*16;
         Fixed24 x1;
         Fixed24 x2 = textureLine.cx;
@@ -308,24 +314,32 @@ void renderPolygon(transformedPolygon* polygon) {
         const Fixed24 xDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cx) + (reciprocalOf16*textureLine.px)) - textureLine.cx;
         const Fixed24 yDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cy) + (reciprocalOf16*textureLine.py)) - textureLine.cy;
         for (uint8_t a = 0; a < 16; a++) {
-            Fixed24 divA = ((Fixed24)(a+1)*reciprocalOf16);
             gfx_SetColor(polygon->texture[row + a]);
             x1 = x2;
-            x2 += xDiff;
             y1 = y2;
+            x2 += xDiff;
             y2 += yDiff;
             int lineX1 = x1;
             int lineX2 = x2;
             int lineY1 = y1;
             int lineY2 = y2;
             // this'll do, but I'd like a better way of fixing the white pixels than *blindly* overdrawing
-            if (lineX1 >= 0 && lineX1 < 319 && lineX2 >= 0 && lineX2 < 319 && lineY1 >= 0 && lineY1 < 239 && lineY2 >= 0 && lineY2 < 239) {
-                gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
-                gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2-1);
+            if ((int)length > 32) {
+                if (lineX1 >= 0 && lineX1 < 320 && lineX2 >= 0 && lineX2 < 320 && lineY1 >= 0 && lineY1 < 240 && lineY2 > 0 && lineY2 < 240) {
+                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
+                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2-1);
+                } else {
+                    gfx_Line(lineX1, lineY1, lineX2, lineY2);
+                    gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
+                }
             } else {
-                gfx_Line(lineX1, lineY1, lineX2, lineY2);
-                gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
+                if (lineX1 >= 0 && lineX1 < 320 && lineX2 >= 0 && lineX2 < 320 && lineY1 >= 0 && lineY1 < 240 && lineY2 > 0 && lineY2 < 240) {
+                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2 - 1);
+                } else {
+                    gfx_Line(lineX1, lineY1, lineX2, lineY2 - 1);
+                }
             }
+            
         }
     }
     gfx_SetColor(0);

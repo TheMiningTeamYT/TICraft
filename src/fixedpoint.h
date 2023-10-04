@@ -121,8 +121,14 @@ struct Fixed24 {
   bool operator!=(Fixed24 x) const {
     return n != x.n;
   }
+  bool operator==(Fixed24 x) const {
+    return n == x.n;
+  }
   operator int() const {
     return n >> POINT;
+  }
+  operator float() const {
+    return (float)n/(float)(1 << POINT);
   }
 };
 

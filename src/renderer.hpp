@@ -6,6 +6,7 @@
 #define maxNumberOfPolygons 2400
 #define zCullingDistance (Fixed24) 1500
 #define maxNumberOfObjects 400
+#define showDraw true
 
 struct point {
     Fixed24 x;
@@ -16,8 +17,6 @@ struct point {
 struct screenPoint {
     int x;
     int y;
-    int derotatedX;
-    int derotatedY;
     Fixed24 z;
 };
 
