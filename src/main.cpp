@@ -15,14 +15,15 @@ int main() {
     gfx_SetTextBGColor(255);
     gfx_SetTextScale(1, 1);
     initPalette();
-    for (int i = 0; i < 20; i++) {
+    gfx_SetColor(0);
+    for (int i = 0; i < 400; i++) {
         if (numberOfObjects < maxNumberOfObjects) {
             const uint8_t** texture = textures[i%4];
-            objects[numberOfObjects] = new object((i%5)*50, 0, (i/5)*50, 50, texture);
+            objects[numberOfObjects] = new object((i%30 - 20)*20, 0, (i/30)*20, 20, texture);
             numberOfObjects++;
         }
     }
-    /*for (uint8_t i = 0; i < 10; i++) {
+    /*for (uint8_t i = 0; i < 200; i++) {
         if (numberOfObjects < maxNumberOfObjects) {
             const uint8_t** texture = crafting_table_texture;
             const point cubePoint = cubes[i];
