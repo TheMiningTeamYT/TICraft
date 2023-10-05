@@ -395,11 +395,31 @@ const uint8_t grass_top[] {
 	19,34,23,23,34,34,30,30,23,42,19,37,19,30,23,32
 };
 
+const uint8_t cursor[]{
+	5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,255,255,255,255,255,255,255,255,255,255,255,255,255,255,5,
+	5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+};
+
 // assuming textures are 16x16;
 const uint8_t* crafting_table_texture[6] = {crafting_table_top, crafting_table_front, planks_oak, crafting_table_side, crafting_table_side, crafting_table_side};
 const uint8_t* dirt_texture[6] = {dirt, dirt, dirt, dirt, dirt, dirt};
 const uint8_t* planks_texture[6] = {planks_oak, planks_oak, planks_oak, planks_oak, planks_oak, planks_oak};
 const uint8_t* grass_texture[6] = {grass_top, grass_side, dirt, grass_side, grass_side, grass_side};
+const uint8_t* cursor_texture[6] = {cursor, cursor, cursor, cursor, cursor, cursor};
 // order is likely to change in the future
 const uint8_t** textures[24] = {crafting_table_texture, dirt_texture, planks_texture, grass_texture};
 

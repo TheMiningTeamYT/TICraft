@@ -23,7 +23,7 @@ A point in screen space (with distance to the camera)
 struct screenPoint {
     int x;
     int y;
-    
+
     //Distance to the camera
     int z = 0;
 };
@@ -81,12 +81,14 @@ class object {
     // initZ: starting Z position for the cube
     // initSize: starting size for the cube
     // initTexture: pointer to an array of uint8_t arrays each representing a 16x16 texture for one face of the polygon
-    object(Fixed24 initX, Fixed24 initY, Fixed24 initZ, Fixed24 initSize, const uint8_t** initTexture) {
+    object(Fixed24 initX, Fixed24 initY, Fixed24 initZ, Fixed24 initSize, const uint8_t** initTexture, bool initOutline) {
         x = initX;
         y = initY;
         z = initZ;
         size = initSize;
         texture = initTexture;
+        outline = initOutline;
+        visible = true;
     };
 
     // Offset the cube
@@ -96,7 +98,7 @@ class object {
     void moveTo(Fixed24 x, Fixed24 y, Fixed24 z);
 
     // Prepare the cube's polygons for rendering
-    void generatePolygons();
+    void generatePolygons(bool clip);
     
     // Get the distance from the cube to the camera
     int getDistance();
@@ -118,6 +120,13 @@ class object {
 
     // Size of the cube
     Fixed24 size;
+
+    // Whether the cube is currently visible
+    // Unused right now; might get used in the future
+    bool visible;
+
+    // draw as outline or texture
+    bool outline;
 };
 
 /*
@@ -155,7 +164,7 @@ void deletePolygons();
 void deleteEverything();
 
 // Render the 3D world
-void drawScreen();
+void drawScreen(bool redraw);
 
 // Render a single transformed polygon
 void renderPolygon(transformedPolygon* polygon);
@@ -177,3 +186,5 @@ extern unsigned int outOfBoundsPolygons;
 
 // The number of polygons that have been determined to be obscured by other polygons
 extern unsigned int obscuredPolygons;
+
+extern Fixed24 cameraXYZ[3];
