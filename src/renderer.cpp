@@ -22,6 +22,7 @@ Add a buffer to cache transformed polygon values if they atch -- Is it possible 
 My brain is devoid of ideas at this time for optimization
 Using ints for distance from camera (z) now... faster and doesn't encounter range issues like Fixed24 does... but has FAR less precision... maybe some multiplication is in order to increase the precision (virtual fixed point)?
 Make rendered points back into a pointer that is deleted and reinitalized after each frame -- that way memory isn't wasted storing points of objects that are off screen
+Don't re-render the points if told not to
 */
 /*
 Speed observations:
@@ -49,9 +50,6 @@ unsigned int outOfBoundsPolygons = 0;
 
 unsigned int obscuredPolygons = 0;
 
-// The number of frames since the objects in the world were sorted
-int8_t lastResort = -1;
-
 // Faces of a cube
 uint8_t face1Points[] = {0, 1, 2, 3};
 polygon face1 = {face1Points, 5};
@@ -74,7 +72,7 @@ top, front, bottom, back, left, right
 polygon cubePolygons[] = {face0, face1, face2, face3, face4, face5};
 
 // Position of the camera
-Fixed24 cameraXYZ[3] = {-100, 200, -100};
+Fixed24 cameraXYZ[3] = {-100, 300, -100};
 
 // Angle of the camera
 const float cameraAngle[3] = {0.7853982, 0.7853982, 0};
@@ -172,7 +170,7 @@ void object::generatePolygons(bool clip) {
                 Fixed24 z = polygon->z;
                 
                 // Normalized z (0-255)
-                unsigned int normalizedZ = ::abs(polygon->z) >> 2;
+                unsigned int normalizedZ = ::abs(polygon->z) >> 3;
 
                 // Clamp the Z to the range of the uint8_t
                 if (normalizedZ > 255) {
@@ -181,7 +179,7 @@ void object::generatePolygons(bool clip) {
 
                 // If there are any other polygons this one could be overlapping with, check the z buffer
                 // The z culling still has problems
-                if (numberOfPreparedPolygons > 0 && clip == true) {
+                if (clip == true) {
                     // Get the average x & y of the polygon
                     int totalX = 0;
                     int totalY = 0;
@@ -240,6 +238,98 @@ void object::generatePolygons(bool clip) {
     }
 }
 
+object::~object() {
+    if (visible) {
+        gfx_SetDrawBuffer();
+        // A local copy of the polygons of a cube (Not sure this is necessary)
+        polygon polygons[6];
+        memcpy(polygons, cubePolygons, sizeof(polygon)*6);
+        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
+            // Set the polygon's distance from the camera
+            int z = 0;
+            polygon* polygon = &polygons[polygonNum];
+            for (unsigned int i = 0; i < 4; i++) {
+                z += renderedPoints[polygon->points[i]].z;
+            }
+            z = z >> 2;
+            polygon->z = z;
+        }
+
+        // Sort the polygons by distance from the camera, front to back
+        qsort((void *) polygons, 6, sizeof(polygon), zCompare);
+
+        // Prepare the polygons for rendering
+        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
+            // Protection against polygon buffer overflow
+            if (numberOfPreparedPolygons < maxNumberOfPolygons) {
+                // The polygon we are rendering
+                polygon* polygon = &polygons[polygonNum];
+
+                // Are we going to render the polygon?
+                bool render = false;
+                int z = polygon->z;
+                
+                // Normalized z (0-255)
+                unsigned int normalizedZ = ::abs(polygon->z) >> 3;
+
+                // Clamp the Z to the range of the uint8_t
+                if (normalizedZ > 255) {
+                    normalizedZ = 255;
+                }
+
+                // If there are any other polygons this one could be overlapping with, check the z buffer
+                // The z culling still has problems
+                // Get the average x & y of the polygon
+                int totalX = 0;
+                int totalY = 0;
+                for (uint8_t i = 0; i < 4; i++) {
+                    totalX += renderedPoints[polygon->points[i]].x;
+                    totalY += renderedPoints[polygon->points[i]].y;
+                }
+                int x = totalX >> 2;
+                int y = totalY >> 2;
+
+                // If this polygon is behind whatever is at (x,y), don't render it
+                if (normalizedZ <= gfx_GetPixel(x, y)) {
+                    render = true;
+                }
+                /*uint8_t obscuredPoints = 0;
+                for (uint8_t i = 0; i < 4; i++) {
+                    screenPoint* point = &renderedPoints[polygon->points[i]];
+                    if (normalizedZ >= gfx_GetPixel(point->x, point->y)) {
+                        obscuredPoints++;
+                    }
+                }
+                if (obscuredPoints == 4) {
+                    obscuredPolygons++;
+                    render = false;
+                }*/
+
+                // Prepare this polygon for rendering
+                if (render) {
+                    // Draw the polygon to the z buffer (just the screen)
+                    gfx_SetColor(255);
+                    int x1 = renderedPoints[polygon->points[0]].x;
+                    int x2 = renderedPoints[polygon->points[1]].x;
+                    int x3 = renderedPoints[polygon->points[2]].x;
+                    int x4 = renderedPoints[polygon->points[3]].x;
+                    int y1 = renderedPoints[polygon->points[0]].y;
+                    int y2 = renderedPoints[polygon->points[1]].y;
+                    int y3 = renderedPoints[polygon->points[2]].y;
+                    int y4 = renderedPoints[polygon->points[3]].y;
+                    gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+                    gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+                    gfx_SetDrawScreen();
+                    gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+                    gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+                    gfx_SetDrawBuffer();
+                }
+            }
+        }
+    }
+    gfx_SetDrawScreen();
+}
+
 void object::moveBy(Fixed24 newX, Fixed24 newY, Fixed24 newZ) {
     x += newX;
     y += newY;
@@ -275,6 +365,20 @@ int distanceCompare(const void *arg1, const void *arg2) {
     object* object1 = *((object**) arg1);
     object* object2 = *((object**) arg2);
     return object1->getDistance() - object2->getDistance();
+}
+
+// why don't you work???
+int xCompare(const void *arg1, const void *arg2) {
+    object* object1 = *((object**) arg1);
+    object* object2 = *((object**) arg2);
+    if (gfx_GetTextY() > 200) {
+        gfx_SetTextXY(0, 0);
+    } else {
+        gfx_SetTextXY(0, gfx_GetTextY() + 10);
+    }
+    /*snprintf(buffer, 200, "XComp X1: %f, X2: %f", (float)object1->x, (float)object2->x);
+    gfx_PrintString(buffer);*/
+    return object1->x - object2->x;
 }
 
 screenPoint transformPoint(point point) {
@@ -316,28 +420,34 @@ void deleteEverything() {
     }
 }
 
-void drawScreen(bool redraw) {
-    if (!redraw) {
+/*
+0: Normal full render
+1: Redraw without regenerating polygons
+2: Redraw with regenerating polygons (but not z buffer)
+*/
+void drawScreen(uint8_t mode) {
+    object** zSortedObjects = new object*[numberOfObjects];
+    memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
+    if (mode == 0 || mode == 2) {
         // Move the camera (for the demo that is the state of the program)
-        cameraXYZ[2] += 5;
+        //cameraXYZ[2] += 5;
         gfx_SetTextXY(0, 0);
         // Clear the list of polygons
         deletePolygons();
         outOfBoundsPolygons = 0;
         obscuredPolygons = 0;
-        // Clear the screen
-        gfx_FillScreen(255);
         // Sort all objects front to back
         // improves polygon culling but sorting can be slow
-        if (lastResort == -1 || lastResort > 9) {
-            qsort(objects, numberOfObjects, sizeof(object*), distanceCompare);
-            lastResort = 0;
-        } else {
-            lastResort++;
+        qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
+        gfx_SetDrawBuffer();
+        if (mode == 0) {
+            // Clear the screen
+            gfx_FillScreen(255);
         }
         for (unsigned int i = 0; i < numberOfObjects; i++) {
-            objects[i]->generatePolygons(true);
+            zSortedObjects[i]->generatePolygons(true);
         }
+        gfx_SetDrawScreen();
     }
     // Sort all polygons back to front
     qsort(preparedPolygons, numberOfPreparedPolygons, sizeof(transformedPolygon *), renderedZCompare);
@@ -345,7 +455,7 @@ void drawScreen(bool redraw) {
     // I think this is slower but there will be no leftovers from polygon generation
     #if showDraw == false
     // Clear the screen again
-    if (!redraw) {
+    if (mode == 0) {
         gfx_FillScreen(255);
     }
     #endif
@@ -354,7 +464,7 @@ void drawScreen(bool redraw) {
     }
 
     // Print some diagnostic information
-    if (!redraw) {
+    if (mode == 0) {
         snprintf(buffer, 200, "Out of bounds polygons: %u", outOfBoundsPolygons);
         gfx_PrintString(buffer);
         gfx_SetTextXY(0, gfx_GetTextY() + 10);
@@ -372,11 +482,7 @@ void drawScreen(bool redraw) {
     snprintf(buffer, 200, "Polygon Size: %u", sizeof(transformedPolygon));
     gfx_PrintString(buffer);
     gfx_SetTextXY(0, gfx_GetTextY() + 10);*/
-    #if showDraw == false
-    if (!redraw) {
-        gfx_SwapDraw();
-    }
-    #endif
+    delete[] zSortedObjects;
 }
 
 // implementation of affine texture mapping (i think thats what you'd call this anyway)
@@ -389,7 +495,7 @@ void renderPolygon(transformedPolygon* polygon) {
     #define sourceObject polygon->object
 
     if (sourceObject->outline) {
-        gfx_SetColor(0);
+        gfx_SetColor(outlineColor);
         for (uint8_t i = 0; i < 4; i++) {
             uint8_t nextPoint = i + 1;
             if (nextPoint > 3) {
@@ -537,4 +643,8 @@ int getPointDistance(point point) {
         return sqrtf((float)x + (float)y + (float)z);
     }
     return sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
+}
+
+object** xSearch(object* key) {
+    return (object**) bsearch((void*) key, objects, numberOfObjects, sizeof(object *), xCompare);
 }

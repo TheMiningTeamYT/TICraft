@@ -7,6 +7,7 @@
 #define zCullingDistance 2000
 #define maxNumberOfObjects 400
 #define showDraw false
+#define outlineColor 0
 
 /*
 A point in 3d space
@@ -91,6 +92,8 @@ class object {
         visible = true;
     };
 
+    ~object();
+
     // Offset the cube
     void moveBy(Fixed24 x, Fixed24 y, Fixed24 z);
 
@@ -160,14 +163,19 @@ int renderedZCompare(const void *arg1, const void *arg2);
 // Used for sorting of objects
 int distanceCompare(const void *arg1, const void *arg2);
 
+int xCompare(const void *arg1, const void *arg2);
+
 void deletePolygons();
 void deleteEverything();
 
 // Render the 3D world
-void drawScreen(bool redraw);
+void drawScreen(uint8_t mode);
 
 // Render a single transformed polygon
 void renderPolygon(transformedPolygon* polygon);
+object** xSearch(object* key);
+
+#define xSort() qsort(objects, numberOfObjects, sizeof(object *), xCompare)
 
 // An array of all the objects in the world
 extern object* objects[maxNumberOfObjects];
