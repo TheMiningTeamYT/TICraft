@@ -37,6 +37,7 @@ Also, the fixed point library I'm using does not have a very big range, so overf
 */
 
 object* objects[maxNumberOfObjects];
+object** zSortedObjects;
 transformedPolygon* preparedPolygons[maxNumberOfPolygons];
 
 // Buffer for creating diagnostic strings
@@ -226,7 +227,7 @@ void object::generatePolygons(bool clip) {
                     }
 
                     // Create a new transformed (prepared) polygon and set initialize it;
-                    preparedPolygons[numberOfPreparedPolygons] = new transformedPolygon{polygon->points, this, texture[polygon->polygonNum], z};
+                    preparedPolygons[numberOfPreparedPolygons] = new transformedPolygon{polygon->points, this, texture[polygon->polygonNum], z, polygon->polygonNum};
                     
                     // Increment the number of prepared polygons
                     numberOfPreparedPolygons++;
@@ -309,14 +310,14 @@ object::~object() {
                 if (render) {
                     // Draw the polygon to the z buffer (just the screen)
                     gfx_SetColor(255);
-                    int x1 = renderedPoints[polygon->points[0]].x;
-                    int x2 = renderedPoints[polygon->points[1]].x;
-                    int x3 = renderedPoints[polygon->points[2]].x;
-                    int x4 = renderedPoints[polygon->points[3]].x;
-                    int y1 = renderedPoints[polygon->points[0]].y;
-                    int y2 = renderedPoints[polygon->points[1]].y;
-                    int y3 = renderedPoints[polygon->points[2]].y;
-                    int y4 = renderedPoints[polygon->points[3]].y;
+                    int x1 = renderedPoints[polygon->points[0]].x - 1;
+                    int x2 = renderedPoints[polygon->points[1]].x + 1;
+                    int x3 = renderedPoints[polygon->points[2]].x + 1;
+                    int x4 = renderedPoints[polygon->points[3]].x - 1;
+                    int y1 = renderedPoints[polygon->points[0]].y + 1;
+                    int y2 = renderedPoints[polygon->points[1]].y + 1;
+                    int y3 = renderedPoints[polygon->points[2]].y - 1;
+                    int y4 = renderedPoints[polygon->points[3]].y - 1;
                     gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
                     gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
                     gfx_SetDrawScreen();
@@ -426,8 +427,6 @@ void deleteEverything() {
 2: Redraw with regenerating polygons (but not z buffer)
 */
 void drawScreen(uint8_t mode) {
-    object** zSortedObjects = new object*[numberOfObjects];
-    memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
     if (mode == 0 || mode == 2) {
         // Move the camera (for the demo that is the state of the program)
         //cameraXYZ[2] += 5;
@@ -436,9 +435,6 @@ void drawScreen(uint8_t mode) {
         deletePolygons();
         outOfBoundsPolygons = 0;
         obscuredPolygons = 0;
-        // Sort all objects front to back
-        // improves polygon culling but sorting can be slow
-        qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
         gfx_SetDrawBuffer();
         if (mode == 0) {
             // Clear the screen
@@ -482,7 +478,6 @@ void drawScreen(uint8_t mode) {
     snprintf(buffer, 200, "Polygon Size: %u", sizeof(transformedPolygon));
     gfx_PrintString(buffer);
     gfx_SetTextXY(0, gfx_GetTextY() + 10);*/
-    delete[] zSortedObjects;
 }
 
 // implementation of affine texture mapping (i think thats what you'd call this anyway)
@@ -547,9 +542,8 @@ void renderPolygon(transformedPolygon* polygon) {
         }
 
         // Ratios that make the math faster (means we can multiply instead of divide)
-        const Fixed24 textureRatio = length*reciprocalOf16;
-        const Fixed24 reciprocalOfTextureRatio = (Fixed24)1/textureRatio;
         const Fixed24 reciprocalOfLength = (Fixed24)1/length;
+        const Fixed24 reciprocalOfTextureRatio = (Fixed24)16*reciprocalOfLength;
         for (uint8_t i = 0; i < (int)length; i++) {
             /*gfx_SetTextXY(0, 0);
             snprintf(buffer, 200, "i: %u", i);
@@ -592,8 +586,13 @@ void renderPolygon(transformedPolygon* polygon) {
                 }
 
                 // Set the line color to the color of the pixel from the texture
-                if (polygon->texture[row + a] != 255) {
-                    gfx_SetColor(polygon->texture[row + a]);
+                // 255 is reserved for transparency
+                if (polygon->texture[row + a] < 255) {
+                    uint8_t color = polygon->texture[row + a];
+                    if (polygon->polygonNum == 3 || polygon->polygonNum == 5) {
+                        color += 64;
+                    }
+                    gfx_SetColor(color);
 
                     // Move along the line 
                     x2 += xDiff;
@@ -647,4 +646,16 @@ int getPointDistance(point point) {
 
 object** xSearch(object* key) {
     return (object**) bsearch((void*) key, objects, numberOfObjects, sizeof(object *), xCompare);
+}
+
+void xSort() {
+    qsort(objects, numberOfObjects, sizeof(object *), xCompare);
+    if (zSortedObjects) {
+        delete[] zSortedObjects;
+    }
+    zSortedObjects = new object*[numberOfObjects];
+    memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
+    // Sort all objects front to back
+    // improves polygon culling but sorting can be slow
+    qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
 }

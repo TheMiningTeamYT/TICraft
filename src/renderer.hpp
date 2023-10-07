@@ -146,6 +146,8 @@ struct transformedPolygon {
     const uint8_t* texture;
 
     int z;
+
+    uint8_t polygonNum;
 };
 
 // Convert a point from 3D space to screen space
@@ -175,8 +177,6 @@ void drawScreen(uint8_t mode);
 void renderPolygon(transformedPolygon* polygon);
 object** xSearch(object* key);
 
-#define xSort() qsort(objects, numberOfObjects, sizeof(object *), xCompare)
-
 // An array of all the objects in the world
 extern object* objects[maxNumberOfObjects];
 
@@ -196,3 +196,5 @@ extern unsigned int outOfBoundsPolygons;
 extern unsigned int obscuredPolygons;
 
 extern Fixed24 cameraXYZ[3];
+
+void xSort();
