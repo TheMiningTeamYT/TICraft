@@ -9,8 +9,9 @@
 uint8_t* cursorBackgroundBuffer;
 gfx_sprite_t* cursorBackground = (gfx_sprite_t*) cursorBackgroundBuffer;
 char buffer2[200];
+uint8_t selectedObject = 14;
 
-object playerCursor(20, 20, 40, 20, dirt_texture, true);
+object playerCursor(20, 20, 40, 20, textures[selectedObject], true);
 int playerCursorX;
 int playerCursorY;
 
@@ -20,8 +21,6 @@ void drawBuffer();
 void printStringCentered(const char* string, int row);
 void printStringAndMoveDownCentered(const char* string);
 void moveCursor(uint8_t direction);
-
-uint8_t selectedObject = 14;
 
 int main() {
     boot_Set48MHzMode();
@@ -57,6 +56,9 @@ int main() {
             objects[numberOfObjects] = new object((i%15)*20, 0, (i/15)*20, 20, texture, false);
             numberOfObjects++;
         }
+    }
+    for (unsigned int i = 0; i < numberOfObjects; i++) {
+        objects[i]->generatePoints();
     }
     xSort();
     /*for (uint8_t i = 0; i < 200; i++) {
@@ -142,6 +144,7 @@ int main() {
                             deletePolygons();
                             objects[numberOfObjects] = new object(playerCursor.x, playerCursor.y, playerCursor.z, 20, textures[selectedObject], false);
                             gfx_SetDrawBuffer();
+                            objects[numberOfObjects]->generatePoints();
                             objects[numberOfObjects]->generatePolygons(true);
                             gfx_SetDrawScreen();
                             numberOfObjects++;
@@ -176,6 +179,7 @@ void drawCursor() {
     if (cursorBackgroundBuffer) {
         drawBuffer();
     }
+    playerCursor.generatePoints();
     playerCursor.generatePolygons(false);
     if (playerCursor.visible) {
         if (cursorBackgroundBuffer) {

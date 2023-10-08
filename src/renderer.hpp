@@ -102,6 +102,8 @@ class object {
 
     // Prepare the cube's polygons for rendering
     void generatePolygons(bool clip);
+
+    void generatePoints();
     
     // Get the distance from the cube to the camera
     int getDistance();
