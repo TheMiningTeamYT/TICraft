@@ -21,7 +21,7 @@ void printStringCentered(const char* string, int row);
 void printStringAndMoveDownCentered(const char* string);
 void moveCursor(uint8_t direction);
 
-uint8_t selectedObject = 0;
+uint8_t selectedObject = 14;
 
 int main() {
     boot_Set48MHzMode();
@@ -132,8 +132,6 @@ int main() {
                                 getBuffer();
                                 drawCursor();
                                 deletedObject = true;
-                                gfx_SetTextXY(0, gfx_GetTextY() + 10);
-                                gfx_PrintString("deleted object");
                                 break;
                             }
                             matchingObject++;

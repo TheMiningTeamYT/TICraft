@@ -196,17 +196,6 @@ void object::generatePolygons(bool clip) {
                         obscuredPolygons++;
                         render = false;
                     }
-                    /*uint8_t obscuredPoints = 0;
-                    for (uint8_t i = 0; i < 4; i++) {
-                        screenPoint* point = &renderedPoints[polygon->points[i]];
-                        if (normalizedZ >= gfx_GetPixel(point->x, point->y)) {
-                            obscuredPoints++;
-                        }
-                    }
-                    if (obscuredPoints == 4) {
-                        obscuredPolygons++;
-                        render = false;
-                    }*/
                 }
 
                 // Prepare this polygon for rendering
@@ -214,14 +203,14 @@ void object::generatePolygons(bool clip) {
                     // Draw the polygon to the z buffer (just the screen)
                     if (clip == true) {
                         gfx_SetColor(normalizedZ);
-                        int x1 = renderedPoints[polygon->points[0]].x;
-                        int x2 = renderedPoints[polygon->points[1]].x;
-                        int x3 = renderedPoints[polygon->points[2]].x;
-                        int x4 = renderedPoints[polygon->points[3]].x;
-                        int y1 = renderedPoints[polygon->points[0]].y;
-                        int y2 = renderedPoints[polygon->points[1]].y;
-                        int y3 = renderedPoints[polygon->points[2]].y;
-                        int y4 = renderedPoints[polygon->points[3]].y;
+                        int x1 = renderedPoints[polygons[polygonNum].points[0]].x - 1;
+                        int x2 = renderedPoints[polygons[polygonNum].points[1]].x + 1;
+                        int x3 = renderedPoints[polygons[polygonNum].points[2]].x + 1;
+                        int x4 = renderedPoints[polygons[polygonNum].points[3]].x - 1;
+                        int y1 = renderedPoints[polygons[polygonNum].points[0]].y + 1;
+                        int y2 = renderedPoints[polygons[polygonNum].points[1]].y + 1;
+                        int y3 = renderedPoints[polygons[polygonNum].points[2]].y - 1;
+                        int y4 = renderedPoints[polygons[polygonNum].points[3]].y - 1;
                         gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
                         gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
                     }
@@ -261,71 +250,22 @@ object::~object() {
 
         // Prepare the polygons for rendering
         for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
-            // Protection against polygon buffer overflow
-            if (numberOfPreparedPolygons < maxNumberOfPolygons) {
-                // The polygon we are rendering
-                polygon* polygon = &polygons[polygonNum];
-
-                // Are we going to render the polygon?
-                bool render = false;
-                int z = polygon->z;
-                
-                // Normalized z (0-255)
-                unsigned int normalizedZ = ::abs(polygon->z) >> 3;
-
-                // Clamp the Z to the range of the uint8_t
-                if (normalizedZ > 255) {
-                    normalizedZ = 255;
-                }
-
-                // If there are any other polygons this one could be overlapping with, check the z buffer
-                // The z culling still has problems
-                // Get the average x & y of the polygon
-                int totalX = 0;
-                int totalY = 0;
-                for (uint8_t i = 0; i < 4; i++) {
-                    totalX += renderedPoints[polygon->points[i]].x;
-                    totalY += renderedPoints[polygon->points[i]].y;
-                }
-                int x = totalX >> 2;
-                int y = totalY >> 2;
-
-                // If this polygon is behind whatever is at (x,y), don't render it
-                if (normalizedZ <= gfx_GetPixel(x, y)) {
-                    render = true;
-                }
-                /*uint8_t obscuredPoints = 0;
-                for (uint8_t i = 0; i < 4; i++) {
-                    screenPoint* point = &renderedPoints[polygon->points[i]];
-                    if (normalizedZ >= gfx_GetPixel(point->x, point->y)) {
-                        obscuredPoints++;
-                    }
-                }
-                if (obscuredPoints == 4) {
-                    obscuredPolygons++;
-                    render = false;
-                }*/
-
-                // Prepare this polygon for rendering
-                if (render) {
-                    // Draw the polygon to the z buffer (just the screen)
-                    gfx_SetColor(255);
-                    int x1 = renderedPoints[polygon->points[0]].x - 1;
-                    int x2 = renderedPoints[polygon->points[1]].x + 1;
-                    int x3 = renderedPoints[polygon->points[2]].x + 1;
-                    int x4 = renderedPoints[polygon->points[3]].x - 1;
-                    int y1 = renderedPoints[polygon->points[0]].y + 1;
-                    int y2 = renderedPoints[polygon->points[1]].y + 1;
-                    int y3 = renderedPoints[polygon->points[2]].y - 1;
-                    int y4 = renderedPoints[polygon->points[3]].y - 1;
-                    gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-                    gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-                    gfx_SetDrawScreen();
-                    gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-                    gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-                    gfx_SetDrawBuffer();
-                }
-            }
+            // The polygon we are rendering
+            gfx_SetColor(255);
+            int x1 = renderedPoints[polygons[polygonNum].points[0]].x - 1;
+            int x2 = renderedPoints[polygons[polygonNum].points[1]].x + 1;
+            int x3 = renderedPoints[polygons[polygonNum].points[2]].x + 1;
+            int x4 = renderedPoints[polygons[polygonNum].points[3]].x - 1;
+            int y1 = renderedPoints[polygons[polygonNum].points[0]].y + 1;
+            int y2 = renderedPoints[polygons[polygonNum].points[1]].y + 1;
+            int y3 = renderedPoints[polygons[polygonNum].points[2]].y - 1;
+            int y4 = renderedPoints[polygons[polygonNum].points[3]].y - 1;
+            gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+            gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+            gfx_SetDrawScreen();
+            gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+            gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+            gfx_SetDrawBuffer();
         }
     }
     gfx_SetDrawScreen();
@@ -347,7 +287,8 @@ int object::getDistance() {
     if (renderedPoints[0].z != 0) {
         return renderedPoints[0].z;
     }
-    return getPointDistance({x, y, z});
+    renderedPoints[0].z = getPointDistance({x, y, z});
+    return renderedPoints[0].z;
 }
 
 int zCompare(const void *arg1, const void *arg2) {
@@ -518,20 +459,18 @@ void renderPolygon(transformedPolygon* polygon) {
 
             // Find the length of the line
             // Use faster Fixed24 sqr/sqrt if the numbers are not too big
-            // Leading to infinite loops caused by wrong length values
-            /*if ((int)dx < 45 && (int)dy < 45) {
+            if ((int)dx < 46 && (int)dy < 46) {
                 dx = sqr(dx);
                 dy = sqr(dy);
-                if ((int)dx + (int)dy < 2047) {
+                if ((int)dx + (int)dy < 2048) {
                     Fixed24 value = dx + dy;
                     length = sqrt(value);
                 } else {
-                    length = sqrtf(powf((float)dx, 2) + powf((float)dy, 2));
+                    length = sqrtf((float)dx + (float)dy);
                 } 
             } else {
                 length = sqrtf(powf((float)dx, 2) + powf((float)dy, 2));
-            }*/
-            length = sqrtf(powf((float)dx, 2) + powf((float)dy, 2));
+            }
             lineEquations[i] = {sourceObject->renderedPoints[points[(2*i)+1]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[(2*i)+1]].y, sourceObject->renderedPoints[points[nextPoint]].y, length};
         }
         Fixed24 length;
@@ -544,7 +483,7 @@ void renderPolygon(transformedPolygon* polygon) {
         // Ratios that make the math faster (means we can multiply instead of divide)
         const Fixed24 reciprocalOfLength = (Fixed24)1/length;
         const Fixed24 reciprocalOfTextureRatio = (Fixed24)16*reciprocalOfLength;
-        for (uint8_t i = 0; i < (int)length; i++) {
+        for (int i = 0; i < (int)length; i++) {
             /*gfx_SetTextXY(0, 0);
             snprintf(buffer, 200, "i: %u", i);
             gfx_SetColor(255);
@@ -569,7 +508,7 @@ void renderPolygon(transformedPolygon* polygon) {
             const Fixed24 yDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cy) + (reciprocalOf16*textureLine.py)) - textureLine.cy;
             
             // Draw each pixel of the texture row
-            for (uint8_t a = 0; a < 16; a++) {
+            for (int a = 0; a < 16; a++) {
                 x1 = x2;
                 y1 = y2;
 
@@ -587,7 +526,7 @@ void renderPolygon(transformedPolygon* polygon) {
 
                 // Set the line color to the color of the pixel from the texture
                 // 255 is reserved for transparency
-                if (polygon->texture[row + a] < 255) {
+                if (polygon->texture[row + a] != 255) {
                     uint8_t color = polygon->texture[row + a];
                     if (polygon->polygonNum == 3 || polygon->polygonNum == 5) {
                         color += 64;
@@ -604,12 +543,14 @@ void renderPolygon(transformedPolygon* polygon) {
                     int lineY1 = y1;
                     int lineY2 = y2;
                     // this'll do, but I'd like a better way of fixing the white pixels than *blindly* overdrawing
-                    if (lineY2 < 1) {
-                        gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
-                    } else {
+                    if (lineY2 > 0) {
                         gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2-1);
+                    } else {
+                        gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
                     }
-                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
+                    if (length > (Fixed24)32) {
+                        gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
+                    }
                 }
             }
         }
