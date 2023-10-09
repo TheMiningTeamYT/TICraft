@@ -129,17 +129,17 @@ int main() {
                     drawBuffer();
                     if (matchingObject != nullptr) {
                         while (matchingObject >= &objects[0]) {
-                            if ((*matchingObject)->x != playerCursor.x) {
+                            if ((*matchingObject)->x > playerCursor.x) {
                                 matchingObject++;
                                 break;
                             }
                             matchingObject--;
                         }
                         while (matchingObject <= &objects[numberOfObjects - 1]) {
-                            if ((*matchingObject)->x != playerCursor.x) {
+                            if ((*matchingObject)->x < playerCursor.x) {
                                 break;
                             }
-                            if ((*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
+                            if ((*matchingObject)->x == playerCursor.x && (*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
                                 object* matchingObjectReference = *matchingObject;
                                 memmove(matchingObject, matchingObject + 1, sizeof(object *) * (&objects[numberOfObjects - 1] - matchingObject));
                                 numberOfObjects--;

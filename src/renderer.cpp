@@ -189,6 +189,8 @@ void object::generatePolygons(bool clip) {
                 }
             }
         }
+    } else {
+        outOfBoundsPolygons += 6;
     }
 }
 
