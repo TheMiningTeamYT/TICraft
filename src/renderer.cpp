@@ -54,17 +54,17 @@ unsigned int obscuredPolygons = 0;
 
 // Faces of a cube
 uint8_t face1Points[] = {0, 1, 2, 3};
-polygon face1 = {face1Points, 5};
+const polygon face1 = {face1Points, 5};
 uint8_t face5Points[] = {5, 1, 2, 6};
-polygon face5 = {face5Points, 3};
+const polygon face5 = {face5Points, 3};
 uint8_t face4Points[] = {4, 0, 3, 7};
-polygon face4 = {face4Points, 1};
+const polygon face4 = {face4Points, 1};
 uint8_t face3Points[] = {4, 5, 6, 7};
-polygon face3 = {face3Points, 4};
+const polygon face3 = {face3Points, 4};
 uint8_t face2Points[] = {3, 2, 6, 7};
-polygon face2 = {face2Points, 2};
+const polygon face2 = {face2Points, 2};
 uint8_t face0Points[] = {4, 0, 1, 5};
-polygon face0 = {face0Points, 0};
+const polygon face0 = {face0Points, 0};
 
 /*
 Array of the polygons that make up a cube
@@ -73,7 +73,7 @@ top, front, bottom, back, left, right
 Unwrapping order with the optimized version:
 top, front, right
 */ 
-polygon cubePolygons[] = {face0, face4, face1};
+const polygon cubePolygons[] = {face0, face4, face1};
 
 // Position of the camera
 Fixed24 cameraXYZ[3] = {-100, 300, -100};
@@ -145,11 +145,22 @@ void object::generatePolygons(bool clip) {
                     }
                     int x = totalX >> 2;
                     int y = totalY >> 2;
-
+                    /*
                     // If this polygon is behind whatever is at (x,y), don't render it
                     if (normalizedZ >= gfx_GetPixel(x, y)) {
                         obscuredPolygons++;
                         render = false;
+                    }*/
+                    uint8_t obscuredPoints = 0;
+                    for (uint8_t i = 0; i < 4; i++) {
+                        screenPoint* point = &renderedPoints[polygon->points[i]];
+                        if (normalizedZ >= gfx_GetPixel((point->x + x)>>1, (point->y + y)>>1)) {
+                            obscuredPoints++;
+                        }
+                    }
+                    if (obscuredPoints == 4) {
+                        render = false;
+                        obscuredPolygons++;
                     }
                 }
 
@@ -158,14 +169,14 @@ void object::generatePolygons(bool clip) {
                     // Draw the polygon to the z buffer (just the screen)
                     if (clip == true) {
                         gfx_SetColor(normalizedZ);
-                        int x1 = renderedPoints[polygons[polygonNum].points[0]].x - 1;
-                        int x2 = renderedPoints[polygons[polygonNum].points[1]].x + 1;
-                        int x3 = renderedPoints[polygons[polygonNum].points[2]].x + 1;
-                        int x4 = renderedPoints[polygons[polygonNum].points[3]].x - 1;
-                        int y1 = renderedPoints[polygons[polygonNum].points[0]].y + 1;
-                        int y2 = renderedPoints[polygons[polygonNum].points[1]].y + 1;
-                        int y3 = renderedPoints[polygons[polygonNum].points[2]].y - 1;
-                        int y4 = renderedPoints[polygons[polygonNum].points[3]].y - 1;
+                        int x1 = renderedPoints[polygons[polygonNum].points[0]].x;
+                        int x2 = renderedPoints[polygons[polygonNum].points[1]].x;
+                        int x3 = renderedPoints[polygons[polygonNum].points[2]].x;
+                        int x4 = renderedPoints[polygons[polygonNum].points[3]].x;
+                        int y1 = renderedPoints[polygons[polygonNum].points[0]].y;
+                        int y2 = renderedPoints[polygons[polygonNum].points[1]].y;
+                        int y3 = renderedPoints[polygons[polygonNum].points[2]].y;
+                        int y4 = renderedPoints[polygons[polygonNum].points[3]].y;
                         gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
                         gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
                     }
@@ -181,7 +192,7 @@ void object::generatePolygons(bool clip) {
     }
 }
 
-object::~object() {
+void object::deleteObject() {
     if (visible) {
         gfx_SetDrawBuffer();
         // A local copy of the polygons of a cube (Not sure this is necessary)
@@ -204,38 +215,46 @@ object::~object() {
         // Prepare the polygons for rendering
         for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
             // The polygon we are rendering
-            gfx_SetColor(255);
-            int x1 = renderedPoints[polygons[polygonNum].points[0]].x - 1;
-            int x2 = renderedPoints[polygons[polygonNum].points[1]].x + 1;
-            int x3 = renderedPoints[polygons[polygonNum].points[2]].x + 1;
-            int x4 = renderedPoints[polygons[polygonNum].points[3]].x - 1;
-            int y1 = renderedPoints[polygons[polygonNum].points[0]].y + 1;
-            int y2 = renderedPoints[polygons[polygonNum].points[1]].y + 1;
-            int y3 = renderedPoints[polygons[polygonNum].points[2]].y - 1;
-            int y4 = renderedPoints[polygons[polygonNum].points[3]].y - 1;
-            gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-            gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-            gfx_SetDrawScreen();
-            gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-            gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-            gfx_SetDrawBuffer();
+            if (visible) {
+                gfx_SetColor(255);
+                int x1 = renderedPoints[polygons[polygonNum].points[0]].x - 2;
+                int x2 = renderedPoints[polygons[polygonNum].points[1]].x + 2;
+                int x3 = renderedPoints[polygons[polygonNum].points[2]].x;
+                int x4 = renderedPoints[polygons[polygonNum].points[3]].x;
+                int y1 = renderedPoints[polygons[polygonNum].points[0]].y - 2;
+                int y2 = renderedPoints[polygons[polygonNum].points[1]].y - 2;
+                int y3 = renderedPoints[polygons[polygonNum].points[2]].y;
+                int y4 = renderedPoints[polygons[polygonNum].points[3]].y;
+                if (x1 >= 0 && x1 < 320 && x2 >= 0 && x2 < 320 && x3 >= 0 && x3 < 320 && x4 >= 0 && x4 < 320 && y1 >= 0 && y1 < 240 && y2 >= 0 && y2 < 240 && y3 >= 0 && y3 < 240 && y4 >= 0 && y4 < 240) {
+                    gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+                    gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+                    gfx_SetDrawScreen();
+                    gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+                    gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+                } else {
+                    gfx_FillTriangle(x1, y1, x2, y2, x3, y3);
+                    gfx_FillTriangle(x1, y1, x4, y4, x3, y3);
+                    gfx_SetDrawScreen();
+                    gfx_FillTriangle(x1, y1, x2, y2, x3, y3);
+                    gfx_FillTriangle(x1, y1, x4, y4, x3, y3);
+                }
+                gfx_SetDrawBuffer();
+            }
         }
     }
     gfx_SetDrawScreen();
 }
 
 void object::generatePoints() {
+    visible = true;
     // The verticies of the cube
     point points[] = {{x, y, z}, {x+size, y, z}, {x+size, y-size, z}, {x, y-size, z}, {x, y, z+size}, {x+size, y, z+size}, {x+size, y-size, z+size}, {x, y-size, z+size}};
     // rough but hopefully effective optimization
     {
-        int z = getPointDistance(points[0]);
-        renderedPoints[0].z = z;
+        renderedPoints[0] = transformPoint(points[0]);
 
         // If the object is outside the culling distance, don't render it
-        if (z < zCullingDistance) {
-            renderedPoints[0] = transformPoint(points[0]);
-        } else {
+        if (renderedPoints[0].z >= zCullingDistance) {
             visible = false;
             outOfBoundsPolygons += 6;
         }
@@ -251,11 +270,8 @@ void object::generatePoints() {
     // Check all the other points if the origin of the cube is on screen
     if (visible) {
         for (uint8_t i = 1; i < 8; i++) {
-            int z = getPointDistance(points[i]);
-            if (z < zCullingDistance) {
-                renderedPoints[i] = transformPoint(points[i]);
-                renderedPoints[i].z = z;
-            } else {
+            renderedPoints[i] = transformPoint(points[i]);
+            if (renderedPoints[i].z >= zCullingDistance) {
                 visible = false;
                 outOfBoundsPolygons += 6;
                 break;
@@ -311,11 +327,6 @@ int distanceCompare(const void *arg1, const void *arg2) {
 int xCompare(const void *arg1, const void *arg2) {
     object* object1 = *((object**) arg1);
     object* object2 = *((object**) arg2);
-    if (gfx_GetTextY() > 200) {
-        gfx_SetTextXY(0, 0);
-    } else {
-        gfx_SetTextXY(0, gfx_GetTextY() + 10);
-    }
     /*snprintf(buffer, 200, "XComp X1: %f, X2: %f", (float)object1->x, (float)object2->x);
     gfx_PrintString(buffer);*/
     return object1->x - object2->x;
@@ -326,23 +337,35 @@ screenPoint transformPoint(point point) {
     screenPoint result;
     
     // Convert from global space to relative to the camera
-    const Fixed24 x = point.x - cameraXYZ[0];
-    const Fixed24 y = point.y - cameraXYZ[1];
-    const Fixed24 z = point.z - cameraXYZ[2];
+    Fixed24 x = point.x - cameraXYZ[0];
+    Fixed24 y = point.y - cameraXYZ[1];
+    Fixed24 z = point.z - cameraXYZ[2];
     
     // Components of the transform equation that get reused
     const Fixed24 sum1 = (sz*y+cz*x);
     const Fixed24 sum2 = (cy*z+sy*sum1);
     const Fixed24 sum3 = (cz*y - sz*x);
     // This is mostly magic I found on Wikipedia that I don't really understand
-    const Fixed24 dx = cy*sum1-sy*z;
+    const Fixed24 dx = cy*sum1 - sy*z;
     const Fixed24 dy = sx*sum2 + cx*sum3;
     const Fixed24 dz = cx*sum2 - sx*sum3;
     const Fixed24 sum4 = (focalDistance/dz);
     result.x = ((Fixed24)160 + sum4*dx).floor();
     result.y = ((Fixed24)120 - sum4*dy).floor();
     // Is calling two functions but only if you need to slower than always calling just one function? IDK!
-    //result.z = sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
+    if ((int)x < 46 && (int)y < 46 && (int)z < 46) {
+        x = sqr(x);
+        y = sqr(y);
+        z = sqr(z);
+        if ((int)x + (int)y + (int)z < 2048) {
+            Fixed24 value = x + y + z;
+            result.z = sqrt(value);
+        } else {
+            result.z = sqrtf((float)x + (float)y + (float)z);
+        }
+    } else {
+        result.z = sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
+    }
     return result;
 }
 
@@ -433,126 +456,6 @@ void renderPolygon(transformedPolygon* polygon) {
     // Array of the 2 lines of the polygon we will need for this
     lineEquation lineEquations[2];
     // uint8_t* points = polygon->points;
-    
-    // Generate the lines from the points of the polygon
-    for (unsigned int i = 0; i < 2; i++) {
-        unsigned int nextPoint = (2*i) + 2;
-        if (nextPoint > 3) {
-            nextPoint = 0;
-        }
-        //lines[i] = {points[i], points[nextPoint]};
-        Fixed24 dx = sourceObject->renderedPoints[points[nextPoint]].x - sourceObject->renderedPoints[points[(2*i)+1]].x;
-        Fixed24 dy = sourceObject->renderedPoints[points[nextPoint]].y - sourceObject->renderedPoints[points[(2*i)+1]].y;
-        Fixed24 length;
-
-        // Find the length of the line
-        // Use faster Fixed24 sqr/sqrt if the numbers are not too big
-        if ((int)dx < 46 && (int)dy < 46) {
-            dx = sqr(dx);
-            dy = sqr(dy);
-            if ((int)dx + (int)dy < 2048) {
-                Fixed24 value = dx + dy;
-                length = sqrt(value);
-            } else {
-                length = sqrtf((float)dx + (float)dy);
-            } 
-        } else {
-            length = sqrtf(powf((float)dx, 2) + powf((float)dy, 2));
-        }
-        lineEquations[i] = {sourceObject->renderedPoints[points[(2*i)+1]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[(2*i)+1]].y, sourceObject->renderedPoints[points[nextPoint]].y, length};
-    }
-    Fixed24 length;
-    if (lineEquations[1].length > lineEquations[0].length) {
-        length = lineEquations[1].length;
-    } else {
-        length = lineEquations[0].length;
-    }
-
-    // Ratios that make the math faster (means we can multiply instead of divide)
-    const Fixed24 reciprocalOfLength = (Fixed24)1/length;
-    const Fixed24 reciprocalOfTextureRatio = (Fixed24)16*reciprocalOfLength;
-    for (int i = 0; i < (int)length; i++) {
-        /*gfx_SetTextXY(0, 0);
-        snprintf(buffer, 200, "i: %u", i);
-        gfx_SetColor(255);
-        gfx_FillRectangle(0, 0, 32, 32);
-        gfx_PrintString(buffer);*/
-
-        // Another ratio that makes the math faster
-        const Fixed24 divI = ((Fixed24)i*reciprocalOfLength);
-
-        // The line we will draw a row of the texture along
-        lineEquation textureLine = {(((Fixed24)1-divI)*lineEquations[1].px)+(divI*lineEquations[1].cx), (((Fixed24)1-divI)*lineEquations[0].cx)+(divI*lineEquations[0].px), (((Fixed24)1-divI)*lineEquations[1].py)+(divI*lineEquations[1].cy), (((Fixed24)1-divI)*lineEquations[0].cy)+(divI*lineEquations[0].py)};
-        int row = ((Fixed24)i*reciprocalOfTextureRatio).floor()*16;
-
-        // Declare/Init the x/y of the lines we will need
-        Fixed24 x1;
-        Fixed24 x2 = textureLine.cx;
-        Fixed24 y1;
-        Fixed24 y2 = textureLine.cy;
-
-        // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
-        const Fixed24 xDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cx) + (reciprocalOf16*textureLine.px)) - textureLine.cx;
-        const Fixed24 yDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cy) + (reciprocalOf16*textureLine.py)) - textureLine.cy;
-        
-        // Draw each pixel of the texture row
-        for (int a = 0; a < 16; a++) {
-            x1 = x2;
-            y1 = y2;
-
-            // Texture undersampling for small polygons
-            if (length < (Fixed24)16) {
-                a++;
-                x2 += xDiff;
-                y2 += yDiff;
-                if (length < (Fixed24)8) {
-                    a++;
-                    x2 += xDiff;
-                    y2 += yDiff;
-                }
-            }
-
-            // Set the line color to the color of the pixel from the texture
-            // 255 is reserved for transparency
-            if (polygon->texture[row + a] != 255) {
-                uint8_t color = polygon->texture[row + a];
-                if (polygon->polygonNum == 3 || polygon->polygonNum == 5) {
-                    color += 64;
-                }
-                gfx_SetColor(color);
-
-                // Move along the line 
-                x2 += xDiff;
-                y2 += yDiff;
-
-                // Convert the Fixed24's to ints
-                int lineX1 = x1;
-                int lineX2 = x2;
-                int lineY1 = y1;
-                int lineY2 = y2;
-                // this'll do, but I'd like a better way of fixing the white pixels than *blindly* overdrawing
-                if (lineY2 > 0) {
-                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2-1);
-                } else {
-                    gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
-                }
-                if (length > (Fixed24)32) {
-                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
-                }
-            }
-        }
-    }
-    // drawing polygon outlines -- not necessary for textured polygons
-    /*for (unsigned int i = 0; i < 4; i++) {
-        screenPoint* point1 = &sourceObject->renderedPoints[lines[i].point1];
-        screenPoint* point2 = &sourceObject->renderedPoints[lines[i].point2];
-        if (point1->x >= 0 && point1->x <= 319 && point1->y >= 0 && point1->y <= 239 && point2->x >= 0 && point2->x <= 319 && point2->y >= 0 && point2->y <= 239) {
-            gfx_Line_NoClip(point1->x, point1->y, point2->x, point2->y);
-        } else {
-            gfx_Line(point1->x, point1->y, point2->x, point2->y);
-        }
-        
-    } */
     if (sourceObject->outline) {
         gfx_SetColor(outlineColor);
         for (uint8_t i = 0; i < 4; i++) {
@@ -561,6 +464,105 @@ void renderPolygon(transformedPolygon* polygon) {
                 nextPoint = 0;
             }
             gfx_Line_NoClip(sourceObject->renderedPoints[points[i]].x, sourceObject->renderedPoints[points[i]].y, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[nextPoint]].y);
+        }
+    } else {
+        uint8_t colorOffset = 0;
+        if (polygon->polygonNum == 3 || polygon->polygonNum == 5) {
+            colorOffset = 64;
+        }
+        // Generate the lines from the points of the polygon
+        for (unsigned int i = 0; i < 2; i++) {
+            unsigned int nextPoint = (2*i) + 2;
+            if (nextPoint > 3) {
+                nextPoint = 0;
+            }
+            //lines[i] = {points[i], points[nextPoint]};
+            Fixed24 dx = sourceObject->renderedPoints[points[nextPoint]].x - sourceObject->renderedPoints[points[(2*i)+1]].x;
+            Fixed24 dy = sourceObject->renderedPoints[points[nextPoint]].y - sourceObject->renderedPoints[points[(2*i)+1]].y;
+            Fixed24 length;
+
+            // Find the length of the line
+            // Use faster Fixed24 sqr/sqrt if the numbers are not too big
+            if ((int)dx < 46 && (int)dy < 46) {
+                dx = sqr(dx);
+                dy = sqr(dy);
+                if ((int)dx + (int)dy < 2048) {
+                    Fixed24 value = dx + dy;
+                    length = sqrt(value);
+                } else {
+                    length = sqrtf((float)dx + (float)dy);
+                } 
+            } else {
+                length = sqrtf(powf((float)dx, 2) + powf((float)dy, 2));
+            }
+            lineEquations[i] = {sourceObject->renderedPoints[points[(2*i)+1]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[(2*i)+1]].y, sourceObject->renderedPoints[points[nextPoint]].y, length};
+        }
+        Fixed24 length;
+        if (lineEquations[1].length > lineEquations[0].length) {
+            length = lineEquations[1].length;
+        } else {
+            length = lineEquations[0].length;
+        }
+
+        // Ratios that make the math faster (means we can multiply instead of divide)
+        const Fixed24 reciprocalOfLength = (Fixed24)1/length;
+        Fixed24 reciprocalOfTextureRatio;
+        reciprocalOfTextureRatio.n = reciprocalOfLength.n<<4;
+        for (int i = 0; i < (int)length; i++) {
+            /*gfx_SetTextXY(0, 0);
+            snprintf(buffer, 200, "i: %u", i);
+            gfx_SetColor(255);
+            gfx_FillRectangle(0, 0, 32, 32);
+            gfx_PrintString(buffer);*/
+
+            // Another ratio that makes the math faster
+            const Fixed24 divI = ((Fixed24)i*reciprocalOfLength);
+
+            // The line we will draw a row of the texture along
+            lineEquation textureLine = {(((Fixed24)1-divI)*lineEquations[1].px)+(divI*lineEquations[1].cx), (((Fixed24)1-divI)*lineEquations[0].cx)+(divI*lineEquations[0].px), (((Fixed24)1-divI)*lineEquations[1].py)+(divI*lineEquations[1].cy), (((Fixed24)1-divI)*lineEquations[0].cy)+(divI*lineEquations[0].py)};
+            int row = ((Fixed24)i*reciprocalOfTextureRatio).floor()*16;
+
+            // Declare/Init the x/y of the lines we will need
+            Fixed24 x1;
+            Fixed24 x2 = textureLine.cx;
+            Fixed24 y1;
+            Fixed24 y2 = textureLine.cy;
+
+            // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
+            Fixed24 xDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cx) + (reciprocalOf16*textureLine.px)) - textureLine.cx;
+            Fixed24 yDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cy) + (reciprocalOf16*textureLine.py)) - textureLine.cy;
+
+            // Draw each pixel of the texture row
+            for (int a = 0; a < 16; a++) {
+                x1 = x2;
+                y1 = y2;
+
+                // Set the line color to the color of the pixel from the texture
+                // 255 is reserved for transparency
+                if (polygon->texture[row + a] != 255) {
+                    uint8_t color = polygon->texture[row + a] + colorOffset;
+                    gfx_SetColor(color);
+
+                    // Move along the line 
+                    x2 += xDiff;
+                    y2 += yDiff;
+
+                    // Convert the Fixed24's to ints
+                    int lineX1 = x1;
+                    int lineX2 = x2;
+                    int lineY1 = y1;
+                    int lineY2 = y2;
+                    // this'll do, but I'd like a better way of fixing the white pixels than *blindly* overdrawing
+                    if (lineY2 > 0) {
+                        gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2-1);
+                    } else {
+                        gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
+                    }
+                    if (length > (Fixed24)32) {
+                        gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
+                    }
+                }
+            }
         }
     }
 }

@@ -21,6 +21,9 @@ void drawBuffer();
 void printStringCentered(const char* string, int row);
 void printStringAndMoveDownCentered(const char* string);
 void moveCursor(uint8_t direction);
+void selectBlock();
+void redrawSelectedObject();
+void selectNewObject();
 
 int main() {
     boot_Set48MHzMode();
@@ -48,6 +51,7 @@ int main() {
     printStringAndMoveDownCentered("1: Diagonally Backward");
     printStringAndMoveDownCentered("7: Diagonally Left");
     printStringAndMoveDownCentered("3: Diagonally Right");
+    printStringAndMoveDownCentered("Enter: Block selection menu");
     printStringAndMoveDownCentered("Made by Logan C.");
     // implement more controls in the near future
     for (int i = 0; i < 225; i++) {
@@ -69,6 +73,13 @@ int main() {
             numberOfObjects++;
         }
     }*/
+    printStringAndMoveDownCentered("Press any key to begin.");
+    gfx_SetColor(255);
+    gfx_FillRectangle_NoClip(0, 0, 320, 40);
+    gfx_SetTextScale(4,4);
+    printStringCentered("Loaded!", 5);
+    gfx_SetTextScale(1,1);
+    while (!os_GetCSC());
     drawScreen(0);
     drawCursor();
     bool quit = false;
@@ -117,17 +128,22 @@ int main() {
                     bool deletedObject = false;
                     drawBuffer();
                     if (matchingObject != nullptr) {
-                        while (matchingObject > &objects[0]) {
+                        while (matchingObject >= &objects[0]) {
                             if ((*matchingObject)->x != playerCursor.x) {
+                                matchingObject++;
                                 break;
                             }
                             matchingObject--;
                         }
-                        while (matchingObject < &objects[numberOfObjects - 1]) {
-                            if ((*matchingObject)->x == playerCursor.x && (*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
+                        while (matchingObject <= &objects[numberOfObjects - 1]) {
+                            if ((*matchingObject)->x != playerCursor.x) {
+                                break;
+                            }
+                            if ((*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
                                 object* matchingObjectReference = *matchingObject;
                                 memmove(matchingObject, matchingObject + 1, sizeof(object *) * (&objects[numberOfObjects - 1] - matchingObject));
                                 numberOfObjects--;
+                                matchingObjectReference->deleteObject();
                                 delete matchingObjectReference;
                                 xSort();
                                 drawScreen(2);
@@ -165,12 +181,17 @@ int main() {
                 // exit
                 case sk_Clear:
                     quit = true;
+                    gfx_SetDrawScreen();
+                    gfx_FillScreen(254);
                     break;
+                case sk_Enter:
+                    selectBlock();
             }
         }
     }
     deleteEverything();
     gfx_End();
+    return 0;
 }
 
 // still has problems
@@ -290,4 +311,107 @@ void printStringAndMoveDownCentered(const char* string) {
     gfx_SetTextXY(160-(width/2), gfx_GetTextY());
     gfx_PrintString(string);
     gfx_SetTextXY(0, gfx_GetTextY() + 10);
+}
+
+void selectBlock() {
+    gfx_SetColor(102);
+    gfx_FillRectangle(80, 60, 160, 120);
+    for (uint8_t i = 0; i < 18; i++) {
+        if (i == selectedObject) {
+            gfx_SetColor(254);
+            gfx_FillRectangle(98 + (20*(i%6)), 78 + (24*(i/6)), 20, 20);
+        }
+        uint8_t* blockBuffer = new uint8_t[258];
+        memcpy(&blockBuffer[2], textures[i][1], 256);
+        gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
+        block->width = 16;
+        block->height = 16;
+        gfx_Sprite_NoClip(block, 100 + (20*(i%6)), 80 + (24*(i/6)));
+        delete[] blockBuffer;
+    }
+    bool quit = false;
+    while (!quit) {
+        uint8_t key = os_GetCSC();
+        if (key) {
+            switch (key) {
+                case sk_Up:
+                    if (selectedObject > 5) {
+                        redrawSelectedObject();
+                        selectedObject -= 6;
+                        selectNewObject();
+                    } else {
+                        redrawSelectedObject();
+                        selectedObject += 12;
+                        selectNewObject();
+                    }
+                    break;
+                case sk_Down:
+                    if (selectedObject < 12) {
+                        redrawSelectedObject();
+                        selectedObject += 6;
+                        selectNewObject();
+                    } else {
+                        redrawSelectedObject();
+                        selectedObject -= 12;
+                        selectNewObject();
+                    }
+                    break;
+                case sk_Left:
+                    if (selectedObject > 0) {
+                        redrawSelectedObject();
+                        selectedObject--;
+                        selectNewObject();
+                    } else {
+                        redrawSelectedObject();
+                        selectedObject = 17;
+                        selectNewObject();
+                    }
+                    break;
+                case sk_Right:
+                    if (selectedObject < 17) {
+                        redrawSelectedObject();
+                        selectedObject++;
+                        selectNewObject();
+                    } else {
+                        redrawSelectedObject();
+                        selectedObject = 0;
+                        selectNewObject();
+                    }
+                    break;
+                case sk_Enter:
+                    quit = true;
+                    break;
+                case sk_Clear:
+                    quit = true;
+                    break;
+            }
+        }
+    }
+    drawScreen(0);
+    getBuffer();
+    drawCursor();
+}
+
+void redrawSelectedObject() {
+    gfx_SetColor(102);
+    gfx_FillRectangle(98 + (20*(selectedObject%6)), 78 + (24*(selectedObject/6)), 20, 20);
+    uint8_t* blockBuffer = new uint8_t[258];
+    memcpy(&blockBuffer[2], textures[selectedObject][1], 256);
+    gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
+    block->width = 16;
+    block->height = 16;
+    gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 80 + (24*(selectedObject/6)));
+    delete[] blockBuffer;
+}
+
+void selectNewObject() {
+    gfx_SetColor(254);
+    gfx_FillRectangle(98 + (20*(selectedObject%6)), 78 + (24*(selectedObject/6)), 20, 20);
+    uint8_t* blockBuffer = new uint8_t[258];
+    memcpy(&blockBuffer[2], textures[selectedObject][1], 256);
+    gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
+    block->width = 16;
+    block->height = 16;
+    gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 80 + (24*(selectedObject/6)));
+    delete[] blockBuffer;
 }

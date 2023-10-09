@@ -5,7 +5,7 @@
 
 #define maxNumberOfPolygons 1000
 #define zCullingDistance 2000
-#define maxNumberOfObjects 400
+#define maxNumberOfObjects 800
 #define showDraw false
 #define outlineColor 0
 
@@ -92,7 +92,7 @@ class object {
         visible = true;
     };
 
-    ~object();
+    void deleteObject();
 
     // Offset the cube
     void moveBy(Fixed24 x, Fixed24 y, Fixed24 z);

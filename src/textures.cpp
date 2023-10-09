@@ -259,7 +259,7 @@ uint16_t texPalette[] = {
 	gfx_RGBTo1555(255,255,255),
 	gfx_RGBTo1555(255,255,255),
 	gfx_RGBTo1555(255,255,255),
-	gfx_RGBTo1555(255,255,255)
+	gfx_RGBTo1555(135,206,235)
 };
 
 static const uint8_t bedrock[] {
