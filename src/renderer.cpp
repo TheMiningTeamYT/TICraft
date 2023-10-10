@@ -54,15 +54,9 @@ unsigned int obscuredPolygons = 0;
 
 // Faces of a cube
 uint8_t face1Points[] = {0, 1, 2, 3};
-const polygon face1 = {face1Points, 5};
-uint8_t face5Points[] = {5, 1, 2, 6};
-const polygon face5 = {face5Points, 3};
+const polygon face1 = {face1Points, 2};
 uint8_t face4Points[] = {4, 0, 3, 7};
 const polygon face4 = {face4Points, 1};
-uint8_t face3Points[] = {4, 5, 6, 7};
-const polygon face3 = {face3Points, 4};
-uint8_t face2Points[] = {3, 2, 6, 7};
-const polygon face2 = {face2Points, 2};
 uint8_t face0Points[] = {4, 0, 1, 5};
 const polygon face0 = {face0Points, 0};
 
@@ -76,7 +70,7 @@ top, front, right
 const polygon cubePolygons[] = {face0, face4, face1};
 
 // Position of the camera
-Fixed24 cameraXYZ[3] = {-100, 300, -100};
+Fixed24 cameraXYZ[3] = {-100, 275, -100};
 
 // Angle of the camera
 const float cameraAngle[3] = {0.7853982, 0.7853982, 0};
@@ -424,6 +418,7 @@ void drawScreen(uint8_t mode) {
     }
 
     // Print some diagnostic information
+    #if diagnostics == true
     if (mode == 0) {
         snprintf(buffer, 200, "Out of bounds polygons: %u", outOfBoundsPolygons);
         gfx_PrintString(buffer);
@@ -434,6 +429,7 @@ void drawScreen(uint8_t mode) {
         snprintf(buffer, 200, "Total Polygons: %u", numberOfPreparedPolygons);
         gfx_PrintString(buffer);
     }
+    #endif
 
     /*gfx_SetTextXY(0, gfx_GetTextY() + 10);
     snprintf(buffer, 200, "Object Size: %u", sizeof(object));
@@ -469,7 +465,7 @@ void renderPolygon(transformedPolygon* polygon) {
         }
     } else {
         uint8_t colorOffset = 0;
-        if (polygon->polygonNum == 3 || polygon->polygonNum == 5) {
+        if (polygon->polygonNum == 2) {
             colorOffset = 64;
         }
         // Generate the lines from the points of the polygon
@@ -533,36 +529,44 @@ void renderPolygon(transformedPolygon* polygon) {
             // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
             Fixed24 xDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cx) + (reciprocalOf16*textureLine.px)) - textureLine.cx;
             Fixed24 yDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cy) + (reciprocalOf16*textureLine.py)) - textureLine.cy;
+            
+            uint8_t aDiff = 1;
+            if (length < (Fixed24)4) {
+                xDiff.n = xDiff.n << 2;
+                yDiff.n = yDiff.n << 2;
+                aDiff = 3;
+            } else if (length < (Fixed24)8) {
+                xDiff.n = xDiff.n << 1;
+                yDiff.n = yDiff.n << 1;
+                aDiff = 2;
+            }
 
             // Draw each pixel of the texture row
-            for (int a = 0; a < 16; a++) {
+            for (int a = 0; a < 16; a += aDiff) {
                 x1 = x2;
                 y1 = y2;
 
                 // Set the line color to the color of the pixel from the texture
                 // 255 is reserved for transparency
-                if (polygon->texture[row + a] != 255) {
-                    uint8_t color = polygon->texture[row + a] + colorOffset;
-                    gfx_SetColor(color);
+                uint8_t color = polygon->texture[row + a] + colorOffset;
+                gfx_SetColor(color);
 
-                    // Move along the line 
-                    x2 += xDiff;
-                    y2 += yDiff;
-
-                    // Convert the Fixed24's to ints
-                    int lineX1 = x1;
-                    int lineX2 = x2;
-                    int lineY1 = y1;
-                    int lineY2 = y2;
-                    // this'll do, but I'd like a better way of fixing the white pixels than *blindly* overdrawing
-                    if (lineY2 > 0) {
-                        gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2-1);
-                    } else {
-                        gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
-                    }
-                    if (length > (Fixed24)32) {
-                        gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
-                    }
+                // Move along the line 
+                x2 += xDiff;
+                y2 += yDiff;
+                // Convert the Fixed24's to ints
+                int lineX1 = x1;
+                int lineX2 = x2;
+                int lineY1 = y1;
+                int lineY2 = y2;
+                // this'll do, but I'd like a better way of fixing the white pixels than *blindly* overdrawing
+                if (lineY2 > 0) {
+                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2-1);
+                } else {
+                    gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
+                }
+                if (length > (Fixed24)32) {
+                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
                 }
             }
         }

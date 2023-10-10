@@ -9,13 +9,13 @@
 uint8_t* cursorBackgroundBuffer;
 gfx_sprite_t* cursorBackground = (gfx_sprite_t*) cursorBackgroundBuffer;
 char buffer2[200];
-uint8_t selectedObject = 14;
+uint8_t selectedObject = 10;
 
 object playerCursor(20, 20, 40, 20, textures[selectedObject], true);
 int playerCursorX;
 int playerCursorY;
 
-void drawCursor();
+void drawCursor(bool generatePoints);
 void getBuffer();
 void drawBuffer();
 void printStringCentered(const char* string, int row);
@@ -52,12 +52,14 @@ int main() {
     printStringAndMoveDownCentered("7: Diagonally Left");
     printStringAndMoveDownCentered("3: Diagonally Right");
     printStringAndMoveDownCentered("Enter: Block selection menu");
+    printStringAndMoveDownCentered("2nd: Re-render the screen");
+    printStringAndMoveDownCentered("Mode: Perform a full re-render of the screen");
     printStringAndMoveDownCentered("Made by Logan C.");
     // implement more controls in the near future
-    for (int i = 0; i < 225; i++) {
+    for (int i = 0; i < 450; i++) {
         if (numberOfObjects < maxNumberOfObjects) {
-            const uint8_t** texture = textures[i%18];
-            objects[numberOfObjects] = new object((i%15)*20, 0, (i/15)*20, 20, texture, false);
+            const uint8_t** texture = textures[i%23];
+            objects[numberOfObjects] = new object((i%15)*20, ((i)/225)*-20, ((i%225)/15)*20, 20, texture, false);
             numberOfObjects++;
         }
     }
@@ -81,7 +83,7 @@ int main() {
     gfx_SetTextScale(1,1);
     while (!os_GetCSC());
     drawScreen(0);
-    drawCursor();
+    drawCursor(true);
     bool quit = false;
     while (!quit) {
         uint8_t key = os_GetCSC();
@@ -129,14 +131,14 @@ int main() {
                     drawBuffer();
                     if (matchingObject != nullptr) {
                         while (matchingObject >= &objects[0]) {
-                            if ((*matchingObject)->x > playerCursor.x) {
+                            if ((*matchingObject)->x < playerCursor.x) {
                                 matchingObject++;
                                 break;
                             }
                             matchingObject--;
                         }
                         while (matchingObject <= &objects[numberOfObjects - 1]) {
-                            if ((*matchingObject)->x < playerCursor.x) {
+                            if ((*matchingObject)->x > playerCursor.x) {
                                 break;
                             }
                             if ((*matchingObject)->x == playerCursor.x && (*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
@@ -148,7 +150,7 @@ int main() {
                                 xSort();
                                 drawScreen(2);
                                 getBuffer();
-                                drawCursor();
+                                drawCursor(true);
                                 deletedObject = true;
                                 break;
                             }
@@ -167,16 +169,22 @@ int main() {
                             xSort();
                             drawScreen(1);
                             getBuffer();
-                            drawCursor();
+                            drawCursor(true);
                         }
                     }
                     break;
                 }
-                // redraw the screen
-                case sk_2nd:
+                case sk_Mode:
                     drawScreen(0);
                     getBuffer();
-                    drawCursor();
+                    drawCursor(true);
+                    break;
+                // redraw the screen
+                case sk_2nd:
+                    drawBuffer();
+                    drawScreen(2);
+                    getBuffer();
+                    drawCursor(true);
                     break;
                 // exit
                 case sk_Clear:
@@ -186,6 +194,8 @@ int main() {
                     break;
                 case sk_Enter:
                     selectBlock();
+                default:
+                    break;
             }
         }
     }
@@ -195,17 +205,17 @@ int main() {
 }
 
 // still has problems
-void drawCursor() {
+void drawCursor(bool generatePoints) {
     deletePolygons();
     if (cursorBackgroundBuffer) {
         drawBuffer();
     }
-    playerCursor.generatePoints();
+    if (generatePoints) {
+        playerCursor.generatePoints();
+    }
     playerCursor.generatePolygons(false);
     if (playerCursor.visible) {
-        if (cursorBackgroundBuffer) {
-            delete[] cursorBackgroundBuffer;
-        }
+        delete[] cursorBackgroundBuffer;
         int minX = playerCursor.renderedPoints[0].x;
         int minY = playerCursor.renderedPoints[0].x;
         int maxX = playerCursor.renderedPoints[0].x;
@@ -226,9 +236,6 @@ void drawCursor() {
         minY--;
         int width = (maxX-minX) + 1;
         int height = (maxY-minY) + 1;
-        /*if (cursorBackgroundBuffer) {
-            delete[] cursorBackgroundBuffer;
-        }*/
         cursorBackgroundBuffer = new uint8_t[width*height + 2];
         cursorBackground = (gfx_sprite_t*) cursorBackgroundBuffer;
         cursorBackground->width = width;
@@ -286,7 +293,45 @@ void moveCursor(uint8_t direction) {
         default:
             return;
     }
-    drawCursor();
+    playerCursor.generatePoints();
+    if (playerCursor.visible) {
+        drawCursor(false);
+    } else {
+        switch (direction) {
+            case 0:
+                playerCursor.moveBy(0, -20, 0);
+                break;
+            case 1:
+                playerCursor.moveBy(0, 20, 0);
+                break;
+            case 2:
+                playerCursor.moveBy(0, 0, -20);
+                break;
+            case 3:
+                playerCursor.moveBy(0, 0, 20);
+                break;
+            case 4:
+                playerCursor.moveBy(-20, 0, 0);
+                break;
+            case 5:
+                playerCursor.moveBy(20, 0, 0);
+                break;
+            case 6:
+                playerCursor.moveBy(20, 0, -20);
+                break;
+            case 7:
+                playerCursor.moveBy(-20, 0, 20);
+                break;
+            case 8:
+                playerCursor.moveBy(-20, 0, -20);
+                break;
+            case 9:
+                playerCursor.moveBy(20, 0, 20);
+                break;
+            default:
+                return;
+        }
+    }
 }
 
 void getBuffer() {
@@ -314,19 +359,23 @@ void printStringAndMoveDownCentered(const char* string) {
 }
 
 void selectBlock() {
+    gfx_SetDrawBuffer();
+    gfx_SetColor(255);
+    gfx_FillRectangle(80, 60, 160, 120);
+    gfx_SetDrawScreen();
     gfx_SetColor(102);
     gfx_FillRectangle(80, 60, 160, 120);
-    for (uint8_t i = 0; i < 18; i++) {
+    for (uint8_t i = 0; i < 23; i++) {
         if (i == selectedObject) {
             gfx_SetColor(254);
-            gfx_FillRectangle(98 + (20*(i%6)), 78 + (24*(i/6)), 20, 20);
+            gfx_FillRectangle(98 + (20*(i%6)), 68 + (24*(i/6)), 20, 20);
         }
         uint8_t* blockBuffer = new uint8_t[258];
         memcpy(&blockBuffer[2], textures[i][1], 256);
         gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
         block->width = 16;
         block->height = 16;
-        gfx_Sprite_NoClip(block, 100 + (20*(i%6)), 80 + (24*(i/6)));
+        gfx_Sprite_NoClip(block, 100 + (20*(i%6)), 70 + (24*(i/6)));
         delete[] blockBuffer;
     }
     bool quit = false;
@@ -341,18 +390,18 @@ void selectBlock() {
                         selectNewObject();
                     } else {
                         redrawSelectedObject();
-                        selectedObject += 12;
+                        selectedObject += 18;
                         selectNewObject();
                     }
                     break;
                 case sk_Down:
-                    if (selectedObject < 12) {
+                    if (selectedObject < 22) {
                         redrawSelectedObject();
                         selectedObject += 6;
                         selectNewObject();
                     } else {
                         redrawSelectedObject();
-                        selectedObject -= 12;
+                        selectedObject -= 18;
                         selectNewObject();
                     }
                     break;
@@ -363,12 +412,12 @@ void selectBlock() {
                         selectNewObject();
                     } else {
                         redrawSelectedObject();
-                        selectedObject = 17;
+                        selectedObject = 22;
                         selectNewObject();
                     }
                     break;
                 case sk_Right:
-                    if (selectedObject < 17) {
+                    if (selectedObject < 22) {
                         redrawSelectedObject();
                         selectedObject++;
                         selectNewObject();
@@ -387,31 +436,31 @@ void selectBlock() {
             }
         }
     }
-    drawScreen(0);
+    drawScreen(2);
     getBuffer();
-    drawCursor();
+    drawCursor(true);
 }
 
 void redrawSelectedObject() {
     gfx_SetColor(102);
-    gfx_FillRectangle(98 + (20*(selectedObject%6)), 78 + (24*(selectedObject/6)), 20, 20);
+    gfx_FillRectangle(98 + (20*(selectedObject%6)), 68 + (24*(selectedObject/6)), 20, 20);
     uint8_t* blockBuffer = new uint8_t[258];
     memcpy(&blockBuffer[2], textures[selectedObject][1], 256);
     gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
     block->width = 16;
     block->height = 16;
-    gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 80 + (24*(selectedObject/6)));
+    gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 70 + (24*(selectedObject/6)));
     delete[] blockBuffer;
 }
 
 void selectNewObject() {
     gfx_SetColor(254);
-    gfx_FillRectangle(98 + (20*(selectedObject%6)), 78 + (24*(selectedObject/6)), 20, 20);
+    gfx_FillRectangle(98 + (20*(selectedObject%6)), 68 + (24*(selectedObject/6)), 20, 20);
     uint8_t* blockBuffer = new uint8_t[258];
     memcpy(&blockBuffer[2], textures[selectedObject][1], 256);
     gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
     block->width = 16;
     block->height = 16;
-    gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 80 + (24*(selectedObject/6)));
+    gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 70 + (24*(selectedObject/6)));
     delete[] blockBuffer;
 }

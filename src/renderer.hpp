@@ -8,6 +8,7 @@
 #define maxNumberOfObjects 800
 #define showDraw false
 #define outlineColor 0
+#define diagnositics false
 
 /*
 A point in 3d space
