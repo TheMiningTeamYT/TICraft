@@ -8,7 +8,6 @@
 
 uint8_t* cursorBackgroundBuffer;
 gfx_sprite_t* cursorBackground = (gfx_sprite_t*) cursorBackgroundBuffer;
-char buffer2[200];
 uint8_t selectedObject = 10;
 
 object playerCursor(20, 20, 40, 20, textures[selectedObject], true);
@@ -56,15 +55,17 @@ int main() {
     printStringAndMoveDownCentered("Mode: Perform a full re-render of the screen");
     printStringAndMoveDownCentered("Made by Logan C.");
     // implement more controls in the near future
-    for (int i = 0; i < 450; i++) {
+    for (int i = 0; i < 225; i++) {
         if (numberOfObjects < maxNumberOfObjects) {
-            const uint8_t** texture = textures[i%23];
-            objects[numberOfObjects] = new object((i%15)*20, ((i)/225)*-20, ((i%225)/15)*20, 20, texture, false);
-            numberOfObjects++;
+            const uint8_t** texture = grass_texture;
+            objects[numberOfObjects] = new object((i%15)*20, 0, (i/15)*20, 20, texture, false);
+            objects[numberOfObjects]->generatePoints();
+            if (objects[numberOfObjects]->visible == false) {
+                delete objects[numberOfObjects];
+            } else {
+                numberOfObjects++;
+            }
         }
-    }
-    for (unsigned int i = 0; i < numberOfObjects; i++) {
-        objects[i]->generatePoints();
     }
     xSort();
     /*for (uint8_t i = 0; i < 200; i++) {
@@ -130,9 +131,8 @@ int main() {
                     bool deletedObject = false;
                     drawBuffer();
                     if (matchingObject != nullptr) {
-                        while (matchingObject >= &objects[0]) {
+                        while (matchingObject > &objects[0]) {
                             if ((*matchingObject)->x < playerCursor.x) {
-                                matchingObject++;
                                 break;
                             }
                             matchingObject--;
@@ -194,6 +194,65 @@ int main() {
                     break;
                 case sk_Enter:
                     selectBlock();
+                    break;
+                case sk_Up:
+                    cameraXYZ[0] += 50;
+                    cameraXYZ[2] += 50;
+                    for (unsigned int i = 0; i < numberOfObjects; i++) {
+                        objects[i]->generatePoints();
+                    }
+                    drawScreen(0);
+                    getBuffer();
+                    drawCursor(true);
+                    break;
+                case sk_Down:
+                    cameraXYZ[0] -= 50;
+                    cameraXYZ[2] -= 50;
+                    for (unsigned int i = 0; i < numberOfObjects; i++) {
+                        objects[i]->generatePoints();
+                    }
+                    drawScreen(0);
+                    getBuffer();
+                    drawCursor(true);
+                    break;
+                case sk_Left:
+                    cameraXYZ[0] -= 50;
+                    cameraXYZ[2] += 50;
+                    for (unsigned int i = 0; i < numberOfObjects; i++) {
+                        objects[i]->generatePoints();
+                    }
+                    drawScreen(0);
+                    getBuffer();
+                    drawCursor(true);
+                    break;
+                case sk_Right:
+                    cameraXYZ[0] += 50;
+                    cameraXYZ[2] -= 50;
+                    for (unsigned int i = 0; i < numberOfObjects; i++) {
+                        objects[i]->generatePoints();
+                    }
+                    drawScreen(0);
+                    getBuffer();
+                    drawCursor(true);
+                    break;
+                case sk_Del:
+                    cameraXYZ[1] += 50;
+                    for (unsigned int i = 0; i < numberOfObjects; i++) {
+                        objects[i]->generatePoints();
+                    }
+                    drawScreen(0);
+                    getBuffer();
+                    drawCursor(true);
+                    break;
+                case sk_Stat:
+                    cameraXYZ[1] -= 50;
+                    for (unsigned int i = 0; i < numberOfObjects; i++) {
+                        objects[i]->generatePoints();
+                    }
+                    drawScreen(0);
+                    getBuffer();
+                    drawCursor(true);
+                    break;
                 default:
                     break;
             }
@@ -213,8 +272,8 @@ void drawCursor(bool generatePoints) {
     if (generatePoints) {
         playerCursor.generatePoints();
     }
-    playerCursor.generatePolygons(false);
     if (playerCursor.visible) {
+        playerCursor.generatePolygons(false);
         delete[] cursorBackgroundBuffer;
         int minX = playerCursor.renderedPoints[0].x;
         int minY = playerCursor.renderedPoints[0].x;
@@ -259,6 +318,7 @@ void drawCursor(bool generatePoints) {
 9: diagonally backward
 */
 void moveCursor(uint8_t direction) {
+    bool visibleBefore = playerCursor.visible;
     switch (direction) {
         case 0:
             playerCursor.moveBy(0, 20, 0);
@@ -296,7 +356,7 @@ void moveCursor(uint8_t direction) {
     playerCursor.generatePoints();
     if (playerCursor.visible) {
         drawCursor(false);
-    } else {
+    } else if (visibleBefore) {
         switch (direction) {
             case 0:
                 playerCursor.moveBy(0, -20, 0);
@@ -384,24 +444,32 @@ void selectBlock() {
         if (key) {
             switch (key) {
                 case sk_Up:
-                    if (selectedObject > 5) {
+                    if (selectedObject/6 > 0) {
                         redrawSelectedObject();
                         selectedObject -= 6;
                         selectNewObject();
                     } else {
                         redrawSelectedObject();
-                        selectedObject += 18;
+                        if (selectedObject != 5) {
+                            selectedObject += 18;
+                        } else {
+                            selectedObject += 12;
+                        }
                         selectNewObject();
                     }
                     break;
                 case sk_Down:
-                    if (selectedObject < 22) {
+                    if (selectedObject/6 < 3 && selectedObject != 17) {
                         redrawSelectedObject();
                         selectedObject += 6;
                         selectNewObject();
                     } else {
                         redrawSelectedObject();
-                        selectedObject -= 18;
+                        if (selectedObject != 17) {
+                            selectedObject -= 18;
+                        } else {
+                            selectedObject -= 12;
+                        }
                         selectNewObject();
                     }
                     break;
@@ -436,6 +504,9 @@ void selectBlock() {
             }
         }
     }
+    drawBuffer();
+    gfx_SetColor(255);
+    gfx_FillRectangle(80, 60, 160, 120);
     drawScreen(2);
     getBuffer();
     drawCursor(true);

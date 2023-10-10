@@ -8,7 +8,7 @@
 #define maxNumberOfObjects 800
 #define showDraw false
 #define outlineColor 0
-#define diagnositics false
+#define diagnostics false
 
 /*
 A point in 3d space
@@ -23,11 +23,11 @@ struct point {
 A point in screen space (with distance to the camera)
 */
 struct screenPoint {
-    int x;
-    int y;
+    int16_t x;
+    int16_t y;
 
     //Distance to the camera
-    int z = 0;
+    int16_t z = 0;
 };
 
 /*
@@ -70,7 +70,7 @@ struct polygon {
     uint8_t polygonNum;
 
     // The distance from the polygon to the camera
-    int z;
+    int16_t z;
 };
 
 /*
@@ -139,17 +139,13 @@ class object {
 A polygon that has been prepared for rendering
 */
 struct transformedPolygon {
-    // The points of the polygon, represented as a list of indexes into an array of screenPoints
-    uint8_t* points;
-
     // A pointer to the parent object of this polygon
     object* object;
 
-    // The texture of the polygon, represented as an uint8_t array
-    const uint8_t* texture;
+    // The distance from the camera
+    int16_t z;
 
-    int z;
-
+    // The original number of the polygon (in the unwrapping order)
     uint8_t polygonNum;
 };
 
@@ -201,3 +197,5 @@ extern unsigned int obscuredPolygons;
 extern Fixed24 cameraXYZ[3];
 
 void xSort();
+
+unsigned int_sqrt(const unsigned n);

@@ -7,7 +7,7 @@
 #include <graphx.h>
 #include "renderer.hpp"
 
-#define focalDistance (Fixed24)400
+#define focalDistance (Fixed24)300
 /*
 feature add ideas:
 Lighting:
@@ -70,10 +70,10 @@ top, front, right
 const polygon cubePolygons[] = {face0, face4, face1};
 
 // Position of the camera
-Fixed24 cameraXYZ[3] = {-100, 275, -100};
+Fixed24 cameraXYZ[3] = {-100, 150, -100};
 
 // Angle of the camera
-const float cameraAngle[3] = {0.7853982, 0.7853982, 0};
+const float cameraAngle[3] = {0.5235988, 0.7853982, 0};
 
 // Constant ratios needed for projection
 const Fixed24 cx = cosf(cameraAngle[0]);
@@ -117,7 +117,6 @@ void object::generatePolygons(bool clip) {
 
                 // Are we going to render the polygon?
                 bool render = true;
-                Fixed24 z = polygon->z;
                 
                 // Normalized z (0-255)
                 unsigned int normalizedZ = ::abs(polygon->z) >> 3;
@@ -176,15 +175,13 @@ void object::generatePolygons(bool clip) {
                     }
 
                     // Create a new transformed (prepared) polygon and set initialize it;
-                    preparedPolygons[numberOfPreparedPolygons] = new transformedPolygon{polygon->points, this, texture[polygon->polygonNum], z, polygon->polygonNum};
+                    preparedPolygons[numberOfPreparedPolygons] = new transformedPolygon{this, polygon->z, polygon->polygonNum};
                     
                     // Increment the number of prepared polygons
                     numberOfPreparedPolygons++;
                 }
             }
         }
-    } else {
-        outOfBoundsPolygons += 6;
     }
 }
 
@@ -209,9 +206,9 @@ void object::deleteObject() {
         qsort((void *) polygons, 3, sizeof(polygon), zCompare);
 
         // Prepare the polygons for rendering
-        for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
-            // The polygon we are rendering
-            if (visible) {
+        if (visible) {
+            for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
+                // The polygon we are rendering
                 gfx_SetColor(255);
                 int x1 = renderedPoints[polygons[polygonNum].points[0]].x - 2;
                 int x2 = renderedPoints[polygons[polygonNum].points[1]].x + 2;
@@ -252,14 +249,12 @@ void object::generatePoints() {
         // If the object is outside the culling distance, don't render it
         if (renderedPoints[0].z >= zCullingDistance) {
             visible = false;
-            outOfBoundsPolygons += 6;
         }
 
         // If any part of the object is off screen, don't render it
         // Not ideal, but makes a lot of other things easier (and faster)
         if (renderedPoints[0].x < 0 || renderedPoints[0].x > 320 || renderedPoints[0].y < 0 || renderedPoints[0].y > 240) {
             visible = false;
-            outOfBoundsPolygons += 6;
         }
     }
 
@@ -269,12 +264,10 @@ void object::generatePoints() {
             renderedPoints[i] = transformPoint(points[i]);
             if (renderedPoints[i].z >= zCullingDistance) {
                 visible = false;
-                outOfBoundsPolygons += 6;
                 break;
             }
             if (renderedPoints[i].x < 0 || renderedPoints[i].x > 320 || renderedPoints[i].y < 0 || renderedPoints[i].y > 240) {
                 visible = false;
-                outOfBoundsPolygons += 6;
                 break;
             }
         }
@@ -349,19 +342,7 @@ screenPoint transformPoint(point point) {
     result.x = ((Fixed24)160 + sum4*dx).floor();
     result.y = ((Fixed24)120 - sum4*dy).floor();
     // Is calling two functions but only if you need to slower than always calling just one function? IDK!
-    if ((int)x < 46 && (int)y < 46 && (int)z < 46) {
-        x = sqr(x);
-        y = sqr(y);
-        z = sqr(z);
-        if ((int)x + (int)y + (int)z < 2048) {
-            Fixed24 value = x + y + z;
-            result.z = sqrt(value);
-        } else {
-            result.z = sqrtf((float)x + (float)y + (float)z);
-        }
-    } else {
-        result.z = sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
-    }
+    result.z = int_sqrt(((int)x*(int)x)+((int)y*(int)y)+((int)z*(int)z));
     return result;
 }
 
@@ -388,16 +369,16 @@ void drawScreen(uint8_t mode) {
     if (mode == 0 || mode == 2) {
         // Move the camera (for the demo that is the state of the program)
         //cameraXYZ[2] += 5;
-        gfx_SetTextXY(0, 0);
+        gfx_SetDrawBuffer();
+        if (mode == 0) {
+            gfx_SetTextXY(0, 0);
+            // Clear the screen
+            gfx_FillScreen(255);
+        }
         // Clear the list of polygons
         deletePolygons();
         outOfBoundsPolygons = 0;
         obscuredPolygons = 0;
-        gfx_SetDrawBuffer();
-        if (mode == 0) {
-            // Clear the screen
-            gfx_FillScreen(255);
-        }
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             zSortedObjects[i]->generatePolygons(true);
         }
@@ -428,16 +409,15 @@ void drawScreen(uint8_t mode) {
         gfx_SetTextXY(0, gfx_GetTextY() + 10);
         snprintf(buffer, 200, "Total Polygons: %u", numberOfPreparedPolygons);
         gfx_PrintString(buffer);
+        gfx_SetTextXY(0, gfx_GetTextY() + 10);
+        snprintf(buffer, 200, "Object Size: %u", sizeof(object));
+        gfx_PrintString(buffer);
+        gfx_SetTextXY(0, gfx_GetTextY() + 10);
+        snprintf(buffer, 200, "Polygon Size: %u", sizeof(transformedPolygon));
+        gfx_PrintString(buffer);
+        gfx_SetTextXY(0, gfx_GetTextY() + 10);
     }
     #endif
-
-    /*gfx_SetTextXY(0, gfx_GetTextY() + 10);
-    snprintf(buffer, 200, "Object Size: %u", sizeof(object));
-    gfx_PrintString(buffer);
-    gfx_SetTextXY(0, gfx_GetTextY() + 10);
-    snprintf(buffer, 200, "Polygon Size: %u", sizeof(transformedPolygon));
-    gfx_PrintString(buffer);
-    gfx_SetTextXY(0, gfx_GetTextY() + 10);*/
 }
 
 // implementation of affine texture mapping (i think thats what you'd call this anyway)
@@ -445,9 +425,11 @@ void drawScreen(uint8_t mode) {
 // but on quads, it looks pretty good at a fraction of the cost
 void renderPolygon(transformedPolygon* polygon) {
     // Quick shorthand
+    uint8_t* points = cubePolygons[polygon->polygonNum].points;
     // Another useful shortand
-    #define points polygon->points
-    #define sourceObject polygon->object
+    object* sourceObject = polygon->object;
+    // result of memory optimization
+    const uint8_t* texture = polygon->object->texture[polygon->polygonNum];
 
     point sourcePoints[] = {{sourceObject->x, sourceObject->y, sourceObject->z}, {sourceObject->x+sourceObject->size, sourceObject->y, sourceObject->z}, {sourceObject->x+sourceObject->size, sourceObject->y-sourceObject->size, sourceObject->z}, {sourceObject->x, sourceObject->y-sourceObject->size, sourceObject->z}, {sourceObject->x, sourceObject->y, sourceObject->z+sourceObject->size}, {sourceObject->x+sourceObject->size, sourceObject->y, sourceObject->z+sourceObject->size}, {sourceObject->x+sourceObject->size, sourceObject->y-sourceObject->size, sourceObject->z+sourceObject->size}, {sourceObject->x, sourceObject->y-sourceObject->size, sourceObject->z+sourceObject->size}};
 
@@ -477,11 +459,11 @@ void renderPolygon(transformedPolygon* polygon) {
             //lines[i] = {points[i], points[nextPoint]};
             Fixed24 dx = sourceObject->renderedPoints[points[nextPoint]].x - sourceObject->renderedPoints[points[(2*i)+1]].x;
             Fixed24 dy = sourceObject->renderedPoints[points[nextPoint]].y - sourceObject->renderedPoints[points[(2*i)+1]].y;
-            Fixed24 length;
+            int length;
 
             // Find the length of the line
             // Use faster Fixed24 sqr/sqrt if the numbers are not too big
-            if ((int)dx < 46 && (int)dy < 46) {
+            /*if ((int)dx < 46 && (int)dy < 46) {
                 dx = sqr(dx);
                 dy = sqr(dy);
                 if ((int)dx + (int)dy < 2048) {
@@ -492,7 +474,8 @@ void renderPolygon(transformedPolygon* polygon) {
                 } 
             } else {
                 length = sqrtf(powf((float)dx, 2) + powf((float)dy, 2));
-            }
+            }*/
+            length = int_sqrt(((int)dx*(int)dx)+((int)dy*(int)dy));
             lineEquations[i] = {sourceObject->renderedPoints[points[(2*i)+1]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[(2*i)+1]].y, sourceObject->renderedPoints[points[nextPoint]].y, length};
         }
         Fixed24 length;
@@ -548,12 +531,13 @@ void renderPolygon(transformedPolygon* polygon) {
 
                 // Set the line color to the color of the pixel from the texture
                 // 255 is reserved for transparency
-                uint8_t color = polygon->texture[row + a] + colorOffset;
+                uint8_t color = texture[row + a] + colorOffset;
                 gfx_SetColor(color);
 
                 // Move along the line 
                 x2 += xDiff;
                 y2 += yDiff;
+
                 // Convert the Fixed24's to ints
                 int lineX1 = x1;
                 int lineX2 = x2;
@@ -574,20 +558,10 @@ void renderPolygon(transformedPolygon* polygon) {
 }
 
 int getPointDistance(point point) {
-    Fixed24 x = point.x - cameraXYZ[0];
-    Fixed24 y = point.y - cameraXYZ[1];
-    Fixed24 z = point.z - cameraXYZ[2];
-    if ((int)x < 46 && (int)y < 46 && (int)z < 46) {
-        x = sqr(x);
-        y = sqr(y);
-        z = sqr(z);
-        if ((int)x + (int)y + (int)z < 2048) {
-            Fixed24 value = x + y + z;
-            return sqrt(value);
-        }
-        return sqrtf((float)x + (float)y + (float)z);
-    }
-    return sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
+    int x = point.x - cameraXYZ[0];
+    int y = point.y - cameraXYZ[1];
+    int z = point.z - cameraXYZ[2];
+    return int_sqrt((x*x)+(y*y)+(z*z));
 }
 
 object** xSearch(object* key) {
@@ -604,4 +578,27 @@ void xSort() {
     // Sort all objects front to back
     // improves polygon culling but sorting can be slow
     qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
+}
+
+unsigned char bit_width(unsigned long long x) {
+    return x == 0 ? 1 : 64 - __builtin_clzll(x);
+}
+
+// Thank you Jan Schultke of Stack Overflow! (seriously it's ludicrious how much faster this is)
+// https://stackoverflow.com/questions/34187171/fast-integer-square-root-approximation
+// implementation for all unsigned integer types
+unsigned int_sqrt(unsigned n) {
+    unsigned char shift = bit_width(n);
+    shift += shift & 1; // round up to next multiple of 2
+
+    unsigned result = 0;
+
+    do {
+        shift -= 2;
+        result <<= 1; // leftshift the result to make the next guess
+        result |= 1;  // guess that the next bit is 1
+        result ^= result * result > (n >> shift); // revert if guess too high
+    } while (shift != 0);
+
+    return result;
 }
