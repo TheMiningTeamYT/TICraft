@@ -1,0 +1,3 @@
+Block Textures: https://github.com/TheScienceElf/Blocks-TI-84
+Fixed Point Library: https://github.com/mateoconlechuga/TI-84-CE-Raytracing/tree/patch-1
+CRC32 library: https://github.com/gityf/crc

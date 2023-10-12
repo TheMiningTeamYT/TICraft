@@ -5,7 +5,7 @@
 
 #define maxNumberOfPolygons 1000
 #define zCullingDistance 2000
-#define maxNumberOfObjects 800
+#define maxNumberOfObjects 500
 #define showDraw false
 #define outlineColor 0
 #define diagnostics false
@@ -83,7 +83,7 @@ class object {
     // initZ: starting Z position for the cube
     // initSize: starting size for the cube
     // initTexture: pointer to an array of uint8_t arrays each representing a 16x16 texture for one face of the polygon
-    object(Fixed24 initX, Fixed24 initY, Fixed24 initZ, Fixed24 initSize, const uint8_t** initTexture, bool initOutline) {
+    object(Fixed24 initX, Fixed24 initY, Fixed24 initZ, Fixed24 initSize, uint8_t initTexture, bool initOutline) {
         x = initX;
         y = initY;
         z = initZ;
@@ -92,6 +92,8 @@ class object {
         outline = initOutline;
         visible = true;
     };
+
+    object() {};
 
     void deleteObject();
 
@@ -112,8 +114,8 @@ class object {
     // The position of each of the cubes points (verticies) in screen space, once rendered
     screenPoint renderedPoints[8];
 
-    // A pointer to an array of uint8_t arrays each representing a 16x16 texture for one face of the polygon
-    const uint8_t** texture;
+    // An index into an array of pointers representing the texture of the cube
+    uint8_t texture;
 
     // X position of the cube
     Fixed24 x;
@@ -148,6 +150,34 @@ struct transformedPolygon {
     // The original number of the polygon (in the unwrapping order)
     uint8_t polygonNum;
 };
+
+struct cubeSave {
+    // X position of the cube
+    Fixed24 x;
+
+    // Y position of the cube
+    Fixed24 y;
+
+    // Z position of the cube
+    Fixed24 z;
+
+    // Size of the cube
+    Fixed24 size;
+
+    // An index into an array of pointers representing the texture of the cube
+    uint8_t texture;
+};
+
+/*
+Save file format:
+struct saveFile {
+    char[] magic = "BLOCKS"; // BLOCKS
+    unsigned int version = 1; // Version
+    unsigned int numberOfObjects;
+    cubeSave[numberOfObjects] objects;
+    uint32_t checksum; // CRC32
+};
+*/
 
 // Convert a point from 3D space to screen space
 screenPoint transformPoint(point point);

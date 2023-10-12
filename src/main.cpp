@@ -1,18 +1,23 @@
 #include <graphx.h>
+#include <fileioc.h>
 #include <ti/getcsc.h>
 #include <sys/power.h>
 #include <cstdint>
 #include <cstdio>
 #include "renderer.hpp"
 #include "textures.hpp"
+#include "crc32.h"
+
+#define saveFileVersion 1
 
 uint8_t* cursorBackgroundBuffer;
 gfx_sprite_t* cursorBackground = (gfx_sprite_t*) cursorBackgroundBuffer;
 uint8_t selectedObject = 10;
 
-object playerCursor(20, 20, 40, 20, textures[selectedObject], true);
+object playerCursor(20, 20, 20, 20, selectedObject, true);
 int playerCursorX;
 int playerCursorY;
+char buffer2[200];
 
 void drawCursor(bool generatePoints);
 void getBuffer();
@@ -23,17 +28,106 @@ void moveCursor(uint8_t direction);
 void selectBlock();
 void redrawSelectedObject();
 void selectNewObject();
+void gfxStart();
+void failedToSave();
+void failedToLoadSave();
 
 int main() {
     boot_Set48MHzMode();
     point cubes[] = {{0, 0, 0}, {1, 0, 0}, {2, 0, 0}, {0, 0, 1}, {1, 0, 1}, {2, 0, 1}, {0, 0, 2}, {1, 0, 2}, {2, 0, 2}, {1, 1, 1}};
-    gfx_Begin();
-    gfx_SetTextXY(0, 0);
-    gfx_SetTextFGColor(0);
-    gfx_SetTextBGColor(255);
-    gfx_SetTextScale(4, 4);
-    initPalette();
+    bool userSelected = false;
+    bool toSaveOrNotToSave = true;
+    gfxStart();
+    gfx_FillScreen(255);
     gfx_SetColor(0);
+    uint8_t save = ti_Open("WORLD", "r");
+    if (save) {
+        gfx_SetTextXY(0, 110);
+        printStringAndMoveDownCentered("Would you like to load your save?");
+        printStringAndMoveDownCentered("Press 1 for yes, 2 for no.");
+        while (!userSelected) {
+            uint8_t key = os_GetCSC();
+            if (key) {
+                switch (key) {
+                    case sk_1:
+                        userSelected = true;
+                        toSaveOrNotToSave = true;
+                        break;
+                    case sk_2:
+                        userSelected = true;
+                        toSaveOrNotToSave = false;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    } else {
+        toSaveOrNotToSave = false;
+    }
+    if (toSaveOrNotToSave) {
+        char signature[7];
+        if (ti_Read(signature, 7, 1, save) == 1) {
+            if (strcmp(signature, "BLOCKS") == 0) {
+                unsigned int version;
+                if (ti_Read(&version, sizeof(unsigned int), 1, save) == 1) {
+                    if (version == saveFileVersion) {
+                        if (ti_Seek(0, SEEK_SET, save) != EOF) {
+                            uint32_t checksum = crc32((char*) ti_GetDataPtr(save), ti_GetSize(save) - sizeof(uint32_t));
+                            if (ti_Seek(-4, SEEK_END, save) != EOF) {
+                                uint32_t properChecksum;
+                                if (ti_Read(&properChecksum, sizeof(uint32_t), 1, save) == 1) {
+                                    if (checksum != properChecksum) {
+                                        printStringAndMoveDownCentered("Bad checksum.");
+                                        failedToLoadSave();
+                                        toSaveOrNotToSave = false;
+                                        ti_Close(save);
+                                        ti_Delete("WORLD");
+                                    }
+                                } else {
+                                    printStringAndMoveDownCentered("Failed to read checksum.");
+                                    failedToLoadSave();
+                                    toSaveOrNotToSave = false;
+                                }
+                            } else {
+                                printStringAndMoveDownCentered("Failed to seek to end.");
+                                failedToLoadSave();
+                                toSaveOrNotToSave = false;
+                            }
+                        } else {
+                            printStringAndMoveDownCentered("Failed to seek to beginning.");
+                            failedToLoadSave();
+                            toSaveOrNotToSave = false;
+                        }
+                    } else {
+                        printStringAndMoveDownCentered("Wrong save file version");
+                        failedToLoadSave();
+                        toSaveOrNotToSave = false;
+                        ti_Close(save);
+                        ti_Delete("WORLD");
+                    }
+                } else {
+                    printStringAndMoveDownCentered("Failed to read save file version.");
+                    failedToLoadSave();
+                    toSaveOrNotToSave = false;
+                    ti_Close(save);
+                    ti_Delete("WORLD");
+                }
+            } else {
+                printStringAndMoveDownCentered("Bad signature.");
+                failedToLoadSave();
+                toSaveOrNotToSave = false;
+                ti_Close(save);
+                ti_Delete("WORLD");
+            }
+        }
+    }
+    if (save) {
+        ti_Close(save);
+    }
+    gfx_FillScreen(255);
+    gfx_SetTextScale(4, 4);
+    gfx_SetTextXY(0, 0);
     printStringCentered("Loading...", 5);
     gfx_SetTextXY(0, 40);
     gfx_SetTextScale(1,1);
@@ -55,16 +149,38 @@ int main() {
     printStringAndMoveDownCentered("Mode: Perform a full re-render of the screen");
     printStringAndMoveDownCentered("Made by Logan C.");
     // implement more controls in the near future
-    for (int i = 0; i < 225; i++) {
-        if (numberOfObjects < maxNumberOfObjects) {
-            const uint8_t** texture = grass_texture;
-            objects[numberOfObjects] = new object((i%15)*20, 0, (i/15)*20, 20, texture, false);
+    if (!toSaveOrNotToSave) {
+        for (int i = 0; i < 256; i++) {
+            objects[numberOfObjects] = new object((i%16)*20, (i/256)*-20, ((i%256)/16)*20, 20, 10, false);
             objects[numberOfObjects]->generatePoints();
-            if (objects[numberOfObjects]->visible == false) {
-                delete objects[numberOfObjects];
+            numberOfObjects++;
+        }
+    } else {
+        save = ti_Open("WORLD", "r");
+        if (save) {
+            if (ti_Seek(7 + sizeof(unsigned int), SEEK_SET, save) != EOF) {
+                if (ti_Read(&numberOfObjects, sizeof(unsigned int), 1, save) == 1) {
+                    if (numberOfObjects <= maxNumberOfObjects) {
+                        for (unsigned int i = 0; i < numberOfObjects; i++) {
+                            cubeSave cube;
+                            if (ti_Read(&cube, sizeof(cubeSave), 1, save) == 1) {
+                                objects[i] = new object(cube.x, cube.y, cube.z, cube.size, cube.texture, false);
+                                objects[i]->generatePoints();
+                            } else {
+                                failedToLoadSave();
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    failedToLoadSave();
+                }
             } else {
-                numberOfObjects++;
+                failedToLoadSave();
             }
+            ti_Close(save);
+        } else {
+            failedToLoadSave();
         }
     }
     xSort();
@@ -160,7 +276,7 @@ int main() {
                     if (!deletedObject) {
                         if (numberOfObjects < maxNumberOfObjects) {
                             deletePolygons();
-                            objects[numberOfObjects] = new object(playerCursor.x, playerCursor.y, playerCursor.z, 20, textures[selectedObject], false);
+                            objects[numberOfObjects] = new object(playerCursor.x, playerCursor.y, playerCursor.z, 20, selectedObject, false);
                             gfx_SetDrawBuffer();
                             objects[numberOfObjects]->generatePoints();
                             objects[numberOfObjects]->generatePolygons(true);
@@ -190,7 +306,7 @@ int main() {
                 case sk_Clear:
                     quit = true;
                     gfx_SetDrawScreen();
-                    gfx_FillScreen(254);
+                    gfx_FillScreen(255);
                     break;
                 case sk_Enter:
                     selectBlock();
@@ -255,6 +371,94 @@ int main() {
                     break;
                 default:
                     break;
+            }
+        }
+    }
+    gfx_SetTextXY(0, 110);
+    userSelected = false;
+    toSaveOrNotToSave = true;
+    printStringAndMoveDownCentered("Would you like to save?");
+    printStringAndMoveDownCentered("Press 1 for yes, 2 for no.");
+    while (!userSelected) {
+        uint8_t key = os_GetCSC();
+        if (key) {
+            switch (key) {
+                case sk_1:
+                    userSelected = true;
+                    toSaveOrNotToSave = true;
+                    break;
+                case sk_2:
+                    userSelected = true;
+                    toSaveOrNotToSave = false;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    if (toSaveOrNotToSave) {
+        ti_SetGCBehavior(gfx_End, gfxStart);
+        save = ti_Open("WORLD", "w+");
+        if (save) {
+            if (ti_Write("BLOCKS", 7, 1, save) == 1) {
+                unsigned int version = saveFileVersion;
+                if (ti_Write(&version, sizeof(unsigned int), 1 ,save) == 1) {
+                    if (ti_Write(&numberOfObjects, sizeof(unsigned int), 1, save) == 1) {
+                        for (unsigned int i = 0; i < numberOfObjects; i++) {
+                            cubeSave cube = {objects[i]->x, objects[i]->y, objects[i]->z, objects[i]->size, objects[i]->texture};
+                            if (ti_Write(&cube, sizeof(cubeSave), 1, save) != 1) {
+                                ti_Close(save);
+                                ti_Delete("WORLD");
+                                printStringAndMoveDownCentered("Failed to write blocks.");
+                                failedToSave();
+                                break;
+                            } else {
+                                delete objects[i];
+                            }
+                        }
+                        if (save) {
+                            if (ti_Seek(0, SEEK_SET, save) != EOF) {
+                                uint32_t checksum = crc32((char*) ti_GetDataPtr(save), ti_GetSize(save));
+                                if (ti_Seek(0, SEEK_END, save) != EOF) {
+                                    if (ti_Write(&checksum, sizeof(uint32_t), 1, save) == 1) {
+                                        ti_SetArchiveStatus(true, save);
+                                        ti_Close(save);
+                                    } else {
+                                        ti_Close(save);
+                                        ti_Delete("WORLD");
+                                        printStringAndMoveDownCentered("Failed to seek to write checksum.");
+                                        failedToSave();
+                                    }
+                                } else {
+                                    ti_Close(save);
+                                    ti_Delete("WORLD");
+                                    printStringAndMoveDownCentered("Failed to seek to end.");
+                                    failedToSave();
+                                }
+                            } else {
+                                ti_Close(save);
+                                ti_Delete("WORLD");
+                                printStringAndMoveDownCentered("Failed to seek to beginning.");
+                                failedToSave();
+                            }
+                        }
+                    } else {
+                        printStringAndMoveDownCentered("Failed to write number of blocks.");
+                        failedToSave();
+                        ti_Close(save);
+                        ti_Delete("WORLD");
+                    }
+                } else {
+                    printStringAndMoveDownCentered("Failed to write version.");
+                    failedToSave();
+                    ti_Close(save);
+                    ti_Delete("WORLD");
+                }
+            } else {
+                printStringAndMoveDownCentered("Failed to write signature.");
+                failedToSave();
+                ti_Close(save);
+                ti_Delete("WORLD");
             }
         }
     }
@@ -419,6 +623,7 @@ void printStringAndMoveDownCentered(const char* string) {
 }
 
 void selectBlock() {
+    drawBuffer();
     gfx_SetDrawBuffer();
     gfx_SetColor(255);
     gfx_FillRectangle(80, 60, 160, 120);
@@ -504,7 +709,6 @@ void selectBlock() {
             }
         }
     }
-    drawBuffer();
     gfx_SetColor(255);
     gfx_FillRectangle(80, 60, 160, 120);
     drawScreen(2);
@@ -534,4 +738,24 @@ void selectNewObject() {
     block->height = 16;
     gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 70 + (24*(selectedObject/6)));
     delete[] blockBuffer;
+}
+
+void gfxStart() {
+    gfx_Begin();
+    gfx_SetTextFGColor(0);
+    gfx_SetTextBGColor(255);
+    gfx_SetTextScale(1, 1);
+    initPalette();
+}
+
+void failedToSave() {
+    printStringAndMoveDownCentered("Failed to save.");
+    printStringAndMoveDownCentered("Press any key to continue.");
+    while (!os_GetCSC());
+}
+
+void failedToLoadSave() {
+    printStringAndMoveDownCentered("Failed to load save.");
+    printStringAndMoveDownCentered("Press any key to continue.");
+    while (!os_GetCSC());
 }
