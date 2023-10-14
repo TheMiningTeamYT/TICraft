@@ -1,3 +1,4 @@
+#pragma once
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
@@ -56,7 +57,7 @@ struct lineEquation {
     Fixed24 py;
 
     // The length of the line
-    Fixed24 length;
+    int length;
 };
 
 /*
@@ -171,10 +172,13 @@ struct cubeSave {
 /*
 Save file format:
 struct saveFile {
-    char[] magic = "BLOCKS"; // BLOCKS
+    char magic[7]; // BLOCKS
     unsigned int version = 1; // Version
     unsigned int numberOfObjects;
-    cubeSave[numberOfObjects] objects;
+    cubeSave objects[numberOfObjects];
+    uint8_t selectedObject;
+    Fixed24[3] cameraPos;
+    Fixed24[3] cursorPos;
     uint32_t checksum; // CRC32
 };
 */

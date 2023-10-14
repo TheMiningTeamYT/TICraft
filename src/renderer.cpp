@@ -102,7 +102,7 @@ void object::generatePolygons(bool clip) {
             for (unsigned int i = 0; i < 4; i++) {
                 z += renderedPoints[polygon->points[i]].z;
             }
-            z = z >> 2;
+            z >>= 2;
             polygon->z = z;
         }
 
@@ -199,7 +199,7 @@ void object::deleteObject() {
             for (unsigned int i = 0; i < 4; i++) {
                 z += renderedPoints[polygon->points[i]].z;
             }
-            z = z >> 2;
+            z >>= 2;
             polygon->z = z;
         }
 
@@ -211,7 +211,7 @@ void object::deleteObject() {
             for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
                 // The polygon we are rendering
                 gfx_SetColor(255);
-                int x1 = renderedPoints[polygons[polygonNum].points[0]].x;
+                /*int x1 = renderedPoints[polygons[polygonNum].points[0]].x;
                 int x2 = renderedPoints[polygons[polygonNum].points[1]].x;
                 int x3 = renderedPoints[polygons[polygonNum].points[2]].x;
                 int x4 = renderedPoints[polygons[polygonNum].points[3]].x;
@@ -219,19 +219,43 @@ void object::deleteObject() {
                 int y2 = renderedPoints[polygons[polygonNum].points[1]].y;
                 int y3 = renderedPoints[polygons[polygonNum].points[2]].y;
                 int y4 = renderedPoints[polygons[polygonNum].points[3]].y;
-                if (x1 >= 0 && x1 < 320 && x2 >= 0 && x2 < 320 && x3 >= 0 && x3 < 320 && x4 >= 0 && x4 < 320 && y1 >= 0 && y1 < 240 && y2 >= 0 && y2 < 240 && y3 >= 0 && y3 < 240 && y4 >= 0 && y4 < 240) {
-                    gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-                    gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-                    gfx_SetDrawScreen();
-                    gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-                    gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-                } else {
-                    gfx_FillTriangle(x1, y1, x2, y2, x3, y3);
-                    gfx_FillTriangle(x1, y1, x4, y4, x3, y3);
-                    gfx_SetDrawScreen();
-                    gfx_FillTriangle(x1, y1, x2, y2, x3, y3);
-                    gfx_FillTriangle(x1, y1, x4, y4, x3, y3);
+                gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+                gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+                gfx_SetDrawScreen();
+                gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+                gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+                gfx_SetDrawBuffer();*/
+                int16_t minX = renderedPoints[polygons[polygonNum].points[0]].x;
+                int16_t minY = renderedPoints[polygons[polygonNum].points[0]].y;
+                int16_t maxX = renderedPoints[polygons[polygonNum].points[0]].x;
+                int16_t maxY = renderedPoints[polygons[polygonNum].points[0]].y;
+                for (uint8_t i = 1; i < 4; i++) {
+                    if (renderedPoints[polygons[polygonNum].points[i]].x < minX) {
+                        minX = renderedPoints[polygons[polygonNum].points[i]].x;
+                    } else if (renderedPoints[polygons[polygonNum].points[i]].x > maxX) {
+                        maxX = renderedPoints[polygons[polygonNum].points[i]].x;
+                    }
+                    if (renderedPoints[polygons[polygonNum].points[i]].y < minY) {
+                        minY = renderedPoints[polygons[polygonNum].points[i]].y;
+                    } else if (renderedPoints[polygons[polygonNum].points[i]].y > maxY) {
+                        maxY = renderedPoints[polygons[polygonNum].points[i]].y;
+                    }
                 }
+                if (minX > 1) {
+                    minX -= 2;
+                }
+                if (maxX < 318) {
+                    maxX += 2;
+                }
+                if (minY > 1) {
+                    minY -= 2;
+                }
+                if (maxY < 238) {
+                    maxY += 2;
+                }
+                gfx_FillRectangle_NoClip(minX, minY, (maxX-minX), (maxY-minY));
+                gfx_SetDrawScreen();
+                gfx_FillRectangle_NoClip(minX, minY, (maxX-minX), (maxY-minY));
                 gfx_SetDrawBuffer();
             }
         }
@@ -357,10 +381,11 @@ void deletePolygons() {
 void deleteEverything() {
     deletePolygons();
     for (unsigned int i = 0; i < numberOfObjects; i++) {
-        if (objects[numberOfObjects]) {
-            delete objects[numberOfObjects];
+        if (objects[i]) {
+            delete objects[i];
         }
     }
+    numberOfObjects = 0;
 }
 
 /*
@@ -478,14 +503,14 @@ void renderPolygon(transformedPolygon* polygon) {
             } else {
                 length = sqrtf(powf((float)dx, 2) + powf((float)dy, 2));
             }*/
-            int length = int_sqrt(((int)dx*(int)dx)+((int)dy*(int)dy));
+            int length = ((int)dx*(int)dx)+((int)dy*(int)dy);
             lineEquations[i] = {sourceObject->renderedPoints[points[currentPoint]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[currentPoint]].y, sourceObject->renderedPoints[points[nextPoint]].y, length};
         }
         int length;
         if (lineEquations[1].length > lineEquations[0].length) {
-            length = lineEquations[1].length;
+            length = int_sqrt(lineEquations[1].length);
         } else {
-            length = lineEquations[0].length;
+            length = int_sqrt(lineEquations[0].length);
         }
 
         // Ratios that make the math faster (means we can multiply instead of divide)
@@ -514,7 +539,7 @@ void renderPolygon(transformedPolygon* polygon) {
             // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
             Fixed24 xDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cx) + (reciprocalOf16*textureLine.px)) - textureLine.cx;
             Fixed24 yDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cy) + (reciprocalOf16*textureLine.py)) - textureLine.cy;
-            
+            bool longDistance = xDiff.abs() + yDiff.abs() > (Fixed24)1;
             /*uint8_t aDiff = 1;
             if (length < (Fixed24)4) {
                 xDiff.n = xDiff.n << 2;
@@ -545,26 +570,24 @@ void renderPolygon(transformedPolygon* polygon) {
                 int lineY1 = y1;
                 // this'll do, but I'd like a better way of fixing the white pixels than *blindly* overdrawing
                 // this is leaving a few blank pixels -- not ideal
-                if (xDiff.abs() + yDiff.abs() > (Fixed24)1) {
+                if (longDistance) {
                     // faster but a bunch of unfilled pixels
                     // too many unfilled pixels
-                    /*while (texture[row + a] == texture[row + a + 1] && a < 16) {
+                    while (texture[row + a] == texture[row + a + 1] && a < 16) {
                         x2 += xDiff;
                         y2 += yDiff;
                         a++;
-                    }*/
+                    }
                     int lineX2 = x2;
                     int lineY2 = y2;
                     color = texture[row + a] + colorOffset;
                     gfx_SetColor(color);
-                    if (lineY2 > 0) {
-                        gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2-1);
+                    if (lineY1 > 0 && lineY2 > 0) {
+                        gfx_Line_NoClip(lineX1, lineY1 - 1, lineX2, lineY2 - 1);
                     } else {
-                        gfx_Line(lineX1, lineY1, lineX2, lineY2-1);
+                        gfx_Line(lineX1, lineY1 - 1, lineX2, lineY2 - 1);
                     }
-                    if (length > 32) {
-                        gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
-                    }
+                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
                 } else {
                     gfx_vram[(lineY1*320)+lineX1] = color;
                 }
