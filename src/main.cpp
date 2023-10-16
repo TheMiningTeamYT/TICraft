@@ -340,34 +340,44 @@ void moveCursor(uint8_t direction) {
     bool visibleBefore = playerCursor.visible;
     switch (direction) {
         case 0:
-            playerCursor.moveBy(0, 20, 0);
+            if (playerCursor.y < (Fixed24)2027)
+                playerCursor.moveBy(0, 20, 0);
             break;
         case 1:
-            playerCursor.moveBy(0, -20, 0);
+            if (playerCursor.y > (Fixed24)-2027)
+                playerCursor.moveBy(0, -20, 0);
             break;
         case 2:
-            playerCursor.moveBy(0, 0, 20);
+            if (playerCursor.z < (Fixed24)2027)
+                playerCursor.moveBy(0, 0, 20);
             break;
         case 3:
-            playerCursor.moveBy(0, 0, -20);
+            if (playerCursor.z > (Fixed24)-2027)
+                playerCursor.moveBy(0, 0, -20);
             break;
         case 4:
-            playerCursor.moveBy(20, 0, 0);
+            if (playerCursor.x < (Fixed24)2027)
+                playerCursor.moveBy(20, 0, 0);
             break;
         case 5:
-            playerCursor.moveBy(-20, 0, 0);
+            if (playerCursor.x > (Fixed24)-2027)
+                playerCursor.moveBy(-20, 0, 0);
             break;
         case 6:
-            playerCursor.moveBy(-20, 0, 20);
+            if (playerCursor.x > (Fixed24)-2027 && playerCursor.z < (Fixed24)2027)
+                playerCursor.moveBy(-20, 0, 20);
             break;
         case 7:
-            playerCursor.moveBy(20, 0, -20);
+            if (playerCursor.x < (Fixed24)2027 && playerCursor.z > (Fixed24)-2027)
+                playerCursor.moveBy(20, 0, -20);
             break;
         case 8:
-            playerCursor.moveBy(20, 0, 20);
+            if (playerCursor.x < (Fixed24)2027 && playerCursor.z < (Fixed24)2027)
+                playerCursor.moveBy(20, 0, 20);
             break;
         case 9:
-            playerCursor.moveBy(-20, 0, -20);
+            if (playerCursor.x > (Fixed24)-2027 && playerCursor.z > (Fixed24)-2027)
+                playerCursor.moveBy(-20, 0, -20);
             break;
         default:
             return;
@@ -378,34 +388,44 @@ void moveCursor(uint8_t direction) {
     } else if (visibleBefore) {
         switch (direction) {
             case 0:
-                playerCursor.moveBy(0, -20, 0);
+                if (playerCursor.x > (Fixed24)-2027)
+                    playerCursor.moveBy(-20, 0, 0);
                 break;
             case 1:
-                playerCursor.moveBy(0, 20, 0);
+                if (playerCursor.y < (Fixed24)2027)
+                    playerCursor.moveBy(0, 20, 0);
                 break;
             case 2:
-                playerCursor.moveBy(0, 0, -20);
+                if (playerCursor.z > (Fixed24)-2027)
+                    playerCursor.moveBy(0, 0, -20);
                 break;
             case 3:
-                playerCursor.moveBy(0, 0, 20);
+                if (playerCursor.z < (Fixed24)2027)
+                    playerCursor.moveBy(0, 0, 20);
                 break;
             case 4:
-                playerCursor.moveBy(-20, 0, 0);
+                if (playerCursor.x > (Fixed24)-2027)
+                    playerCursor.moveBy(-20, 0, 0);
                 break;
             case 5:
-                playerCursor.moveBy(20, 0, 0);
+                if (playerCursor.x < (Fixed24)2027)
+                    playerCursor.moveBy(20, 0, 0);
                 break;
             case 6:
-                playerCursor.moveBy(20, 0, -20);
+                if (playerCursor.x < (Fixed24)2027 && playerCursor.z > (Fixed24)-2027)
+                    playerCursor.moveBy(20, 0, -20);
                 break;
             case 7:
-                playerCursor.moveBy(-20, 0, 20);
+                if (playerCursor.x > (Fixed24)-2027 && playerCursor.z < (Fixed24)2027)
+                    playerCursor.moveBy(-20, 0, 20);
                 break;
             case 8:
-                playerCursor.moveBy(-20, 0, -20);
+                if (playerCursor.x > (Fixed24)-2027 && playerCursor.z > (Fixed24)-2027)
+                    playerCursor.moveBy(-20, 0, -20);
                 break;
             case 9:
-                playerCursor.moveBy(20, 0, 20);
+                if (playerCursor.x < (Fixed24)2027 && playerCursor.z < (Fixed24)2027)
+                    playerCursor.moveBy(20, 0, 20);
                 break;
             default:
                 return;

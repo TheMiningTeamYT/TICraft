@@ -325,6 +325,10 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                     return false;
                     quit = true;
                     break;
+                case sk_Graph:
+                    return false;
+                    quit = true;
+                    break;
                 case sk_Del:
                     gfx_FillScreen(252);
                     char buffer[100] = "Are you sure you'd like to delete ";

@@ -573,7 +573,7 @@ void renderPolygon(transformedPolygon* polygon) {
                 if (longDistance) {
                     // faster but a bunch of unfilled pixels
                     // too many unfilled pixels
-                    while (texture[row + a] == texture[row + a + 1] && a < 16) {
+                    while (texture[row + a] == texture[row + a + 1] && a < 15) {
                         x2 += xDiff;
                         y2 += yDiff;
                         a++;
