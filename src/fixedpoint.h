@@ -43,6 +43,15 @@ struct Fixed24 {
     return out;
   }
 
+  int24_t round() {
+    int24_t fraction = n % (1 << POINT);
+    int24_t whole = n - fraction;
+    if (fraction > (1 << (POINT - 1))) {
+      whole += (1 << (POINT - 1));
+    }
+    return whole/(1 << POINT);
+  }
+
   /* Rounds down the provided Fixed24 while preserving the last requested number
    * of digits. This is equivalent to
    *

@@ -27,7 +27,6 @@ void selectNewObject();
 
 int main() {
     boot_Set48MHzMode();
-    point cubes[] = {{0, 0, 0}, {1, 0, 0}, {2, 0, 0}, {0, 0, 1}, {1, 0, 1}, {2, 0, 1}, {0, 0, 2}, {1, 0, 2}, {2, 0, 2}, {1, 1, 1}};
     bool userSelected = false;
     bool toSaveOrNotToSave = true;
     gfxStart();
@@ -77,14 +76,6 @@ int main() {
             objects[i]->generatePoints();
         }
         xSort();
-        /*for (uint8_t i = 0; i < 200; i++) {
-            if (numberOfObjects < maxNumberOfObjects) {
-                const uint8_t** texture = crafting_table_texture;
-                const point cubePoint = cubes[i];
-                objects[numberOfObjects] = new object(cubePoint.x * (Fixed24)50, cubePoint.y*(Fixed24)50, cubePoint.z*(Fixed24)50, 50, texture);
-                numberOfObjects++;
-            }
-        }*/
         printStringAndMoveDownCentered("Press any key to begin.");
         gfx_SetColor(255);
         gfx_FillRectangle_NoClip(0, 0, 320, 40);
@@ -212,8 +203,8 @@ int main() {
                         selectBlock();
                         break;
                     case sk_Up:
-                        cameraXYZ[0] += 50;
-                        cameraXYZ[2] += 50;
+                        cameraXYZ[0] += 40;
+                        cameraXYZ[2] += 40;
                         for (unsigned int i = 0; i < numberOfObjects; i++) {
                             objects[i]->generatePoints();
                         }
@@ -222,8 +213,8 @@ int main() {
                         drawCursor(true);
                         break;
                     case sk_Down:
-                        cameraXYZ[0] -= 50;
-                        cameraXYZ[2] -= 50;
+                        cameraXYZ[0] -= 40;
+                        cameraXYZ[2] -= 40;
                         for (unsigned int i = 0; i < numberOfObjects; i++) {
                             objects[i]->generatePoints();
                         }
@@ -232,8 +223,8 @@ int main() {
                         drawCursor(true);
                         break;
                     case sk_Left:
-                        cameraXYZ[0] -= 50;
-                        cameraXYZ[2] += 50;
+                        cameraXYZ[0] -= 40;
+                        cameraXYZ[2] += 40;
                         for (unsigned int i = 0; i < numberOfObjects; i++) {
                             objects[i]->generatePoints();
                         }
@@ -242,8 +233,8 @@ int main() {
                         drawCursor(true);
                         break;
                     case sk_Right:
-                        cameraXYZ[0] += 50;
-                        cameraXYZ[2] -= 50;
+                        cameraXYZ[0] += 40;
+                        cameraXYZ[2] -= 40;
                         for (unsigned int i = 0; i < numberOfObjects; i++) {
                             objects[i]->generatePoints();
                         }
@@ -252,7 +243,7 @@ int main() {
                         drawCursor(true);
                         break;
                     case sk_Del:
-                        cameraXYZ[1] += 50;
+                        cameraXYZ[1] += 40;
                         for (unsigned int i = 0; i < numberOfObjects; i++) {
                             objects[i]->generatePoints();
                         }
@@ -261,7 +252,7 @@ int main() {
                         drawCursor(true);
                         break;
                     case sk_Stat:
-                        cameraXYZ[1] -= 50;
+                        cameraXYZ[1] -= 40;
                         for (unsigned int i = 0; i < numberOfObjects; i++) {
                             objects[i]->generatePoints();
                         }
@@ -388,8 +379,8 @@ void moveCursor(uint8_t direction) {
     } else if (visibleBefore) {
         switch (direction) {
             case 0:
-                if (playerCursor.x > (Fixed24)-2027)
-                    playerCursor.moveBy(-20, 0, 0);
+                if (playerCursor.y > (Fixed24)-2027)
+                    playerCursor.moveBy(0, -20, 0);
                 break;
             case 1:
                 if (playerCursor.y < (Fixed24)2027)
@@ -430,6 +421,7 @@ void moveCursor(uint8_t direction) {
             default:
                 return;
         }
+        playerCursor.generatePoints();
     }
 }
 

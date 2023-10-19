@@ -10,6 +10,9 @@
 
 #define focalDistance (Fixed24)300
 /*
+todo:
+handle bad alloc
+
 feature add ideas:
 Lighting:
 still thinking about how to do it
@@ -490,106 +493,190 @@ void renderPolygon(transformedPolygon* polygon) {
             Fixed24 dy = sourceObject->renderedPoints[points[nextPoint]].y - sourceObject->renderedPoints[points[currentPoint]].y;
 
             // Find the length of the line
-            // Use faster Fixed24 sqr/sqrt if the numbers are not too big
-            /*if ((int)dx < 46 && (int)dy < 46) {
-                dx = sqr(dx);
-                dy = sqr(dy);
-                if ((int)dx + (int)dy < 2048) {
-                    Fixed24 value = dx + dy;
-                    length = sqrt(value);
-                } else {
-                    length = sqrtf((float)dx + (float)dy);
-                } 
+            //int length = ((int)dx*(int)dx)+((int)dy*(int)dy);
+            int length;
+            if (abs(dx) > abs(dy)) {
+                length = abs(dx);
             } else {
-                length = sqrtf(powf((float)dx, 2) + powf((float)dy, 2));
-            }*/
-            int length = ((int)dx*(int)dx)+((int)dy*(int)dy);
-            lineEquations[i] = {sourceObject->renderedPoints[points[currentPoint]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[currentPoint]].y, sourceObject->renderedPoints[points[nextPoint]].y, length};
+                length = abs(dy);
+            }
+            lineEquations[i] = {sourceObject->renderedPoints[points[currentPoint]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[currentPoint]].y, sourceObject->renderedPoints[points[nextPoint]].y, length, dx, dy};
         }
         int length;
         if (lineEquations[1].length > lineEquations[0].length) {
-            length = int_sqrt(lineEquations[1].length);
+            //length = int_sqrt(lineEquations[1].length);
+            length = lineEquations[1].length;
         } else {
-            length = int_sqrt(lineEquations[0].length);
+            // length = int_sqrt(lineEquations[0].length);
+            length = lineEquations[0].length;
         }
 
         // Ratios that make the math faster (means we can multiply instead of divide)
         const Fixed24 reciprocalOfLength = (Fixed24)1/(Fixed24)length;
         Fixed24 reciprocalOfTextureRatio;
         reciprocalOfTextureRatio.n = reciprocalOfLength.n<<4;
+        // Another ratio that makes the math faster
+        Fixed24 divI = 0;
+        Fixed24 lineCX = lineEquations[1].px;
+        Fixed24 linePX = lineEquations[0].cx;
+        Fixed24 lineCY = lineEquations[1].py;
+        Fixed24 linePY = lineEquations[0].cy;
+        Fixed24 CXdiff = (-lineEquations[1].dx)*reciprocalOfLength;
+        Fixed24 PXdiff = (lineEquations[0].dx)*reciprocalOfLength;
+        Fixed24 CYdiff = (-lineEquations[1].dy)*reciprocalOfLength;
+        Fixed24 PYdiff = (lineEquations[0].dy)*reciprocalOfLength;
+        {
+            Fixed24 x1 = (lineCX);
+            Fixed24 dx = (linePX - PXdiff) - x1;
+            Fixed24 y1 = (lineCY);
+            Fixed24 dy = (linePY - PYdiff) - y1;
+            int textureLineLength;
+            if (abs(dx) > abs(dy)) {
+                textureLineLength = abs(dx);
+            } else {
+                textureLineLength = abs(dy);
+            }
+            Fixed24 reciprocalOfTextureLineLength = (Fixed24)1/(Fixed24)textureLineLength;
+            Fixed24 textureLineRatio;
+            textureLineRatio.n = reciprocalOfTextureLineLength.n << 4;
+            Fixed24 column = 0;
+            // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
+            Fixed24 xDiff = (Fixed24)dx * reciprocalOfTextureLineLength;
+            Fixed24 yDiff = (Fixed24)dy * reciprocalOfTextureLineLength;
+            
+            // Draw each pixel of the texture row
+            for (int a = 0; a < textureLineLength; a++) {
+                uint8_t color = texture[column.floor()] + colorOffset;
+                // 255 is reserved for transparency
+                if (color != 255) {
+                    int x = (int)x1;
+                    int y = ((int)y1)*320;
+                    gfx_vram[y + x] = color;
+                    gfx_vram[y + x - 320] = color;
+                }
+                // Move along the line 
+                x1 += xDiff;
+                y1 += yDiff;
+                column += textureLineRatio;
+            }
+            {
+                uint8_t color = texture[15] + colorOffset;
+                // 255 is reserved for transparency
+                if (color != 255) {
+                    int x = (int)x1;
+                    int y = ((int)y1)*320;
+                    gfx_vram[y + x] = color;
+                    gfx_vram[y + x - 320] = color;
+                }
+            }
+        }
         for (int i = 0; i < length; i++) {
-            /*gfx_SetTextXY(0, 0);
-            snprintf(buffer, 200, "i: %u", i);
-            gfx_SetColor(255);
-            gfx_FillRectangle(0, 0, 32, 32);
-            gfx_PrintString(buffer);*/
-
-            // Another ratio that makes the math faster
-            const Fixed24 divI = ((Fixed24)i*reciprocalOfLength);
-
             // The line we will draw a row of the texture along
-            lineEquation textureLine = {(((Fixed24)1-divI)*lineEquations[1].px)+(divI*lineEquations[1].cx), (((Fixed24)1-divI)*lineEquations[0].cx)+(divI*lineEquations[0].px), (((Fixed24)1-divI)*lineEquations[1].py)+(divI*lineEquations[1].cy), (((Fixed24)1-divI)*lineEquations[0].cy)+(divI*lineEquations[0].py)};
-            int row = ((Fixed24)i*reciprocalOfTextureRatio).floor()*16;
+            lineEquation textureLine = {lineCX, linePX, lineCY, linePY};
+            int row = (divI.n >> 4) & 0xFFFFF0;
 
             // Declare/Init the x/y of the lines we will need
-            Fixed24 x1;
-            Fixed24 x2 = textureLine.cx;
-            Fixed24 y1;
-            Fixed24 y2 = textureLine.cy;
+            Fixed24 x1 = textureLine.cx;
+            //Fixed24 x2 = textureLine.cx;
+            Fixed24 y1 = textureLine.cy;
+            //Fixed24 y2 = textureLine.cy;
+            int dx = textureLine.px - textureLine.cx;
+            int dy = textureLine.py - textureLine.cy;
+            int textureLineLength;
+            if (abs(dx) > abs(dy)) {
+                textureLineLength = abs(dx);
+            } else {
+                textureLineLength = abs(dy);
+            }
+            Fixed24 reciprocalOfTextureLineLength = (Fixed24)1/(Fixed24)textureLineLength;
+            Fixed24 textureLineRatio;
+            textureLineRatio.n = reciprocalOfTextureLineLength.n << 4;
+            Fixed24 column = 0;
             // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
-            Fixed24 xDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cx) + (reciprocalOf16*textureLine.px)) - textureLine.cx;
-            Fixed24 yDiff = ((((Fixed24)1-reciprocalOf16)*textureLine.cy) + (reciprocalOf16*textureLine.py)) - textureLine.cy;
-            bool longDistance = xDiff.abs() + yDiff.abs() > (Fixed24)1;
-            /*uint8_t aDiff = 1;
-            if (length < (Fixed24)4) {
-                xDiff.n = xDiff.n << 2;
-                yDiff.n = yDiff.n << 2;
-                aDiff = 3;
-            } else if (length < (Fixed24)8) {
-                xDiff.n = xDiff.n << 1;
-                yDiff.n = yDiff.n << 1;
-                aDiff = 2;
-            }*/
-
+            Fixed24 xDiff = (Fixed24)dx * reciprocalOfTextureLineLength;
+            Fixed24 yDiff = (Fixed24)dy * reciprocalOfTextureLineLength;
+            
             // Draw each pixel of the texture row
-            for (int a = 0; a < 16; a++) {
-                x1 = x2;
-                y1 = y2;
-
-                // Set the line color to the color of the pixel from the texture
+            for (int a = 0; a < textureLineLength; a++) {
+                uint8_t color = texture[row + column.floor()] + colorOffset;
                 // 255 is reserved for transparency
-                uint8_t color = texture[row + a] + colorOffset;
-                //gfx_SetColor(color);
-
+                if (color != 255) {
+                    int x = (int)x1;
+                    int y = ((int)y1)*320;
+                    gfx_vram[y + x] = color;
+                    if (y >= 320) {
+                        gfx_vram[y + x - 320] = color;
+                    }
+                }
                 // Move along the line 
-                x2 += xDiff;
-                y2 += yDiff;
-
-                // Convert the Fixed24's to ints
-                int lineX1 = x1;
-                int lineY1 = y1;
-                // this'll do, but I'd like a better way of fixing the white pixels than *blindly* overdrawing
-                // this is leaving a few blank pixels -- not ideal
-                if (longDistance) {
-                    // faster but a bunch of unfilled pixels
-                    // too many unfilled pixels
-                    while (texture[row + a] == texture[row + a + 1] && a < 15) {
-                        x2 += xDiff;
-                        y2 += yDiff;
-                        a++;
+                x1 += xDiff;
+                y1 += yDiff;
+                column += textureLineRatio;
+            }
+            {
+                uint8_t color = texture[row + 15] + colorOffset;
+                // 255 is reserved for transparency
+                if (color != 255) {
+                    int x = (int)x1;
+                    int y = ((int)y1)*320;
+                    gfx_vram[y + x] = color;
+                    if (y >= 320) {
+                        gfx_vram[y + x - 320] = color;
                     }
-                    int lineX2 = x2;
-                    int lineY2 = y2;
-                    color = texture[row + a] + colorOffset;
-                    gfx_SetColor(color);
-                    if (lineY1 > 0 && lineY2 > 0) {
-                        gfx_Line_NoClip(lineX1, lineY1 - 1, lineX2, lineY2 - 1);
-                    } else {
-                        gfx_Line(lineX1, lineY1 - 1, lineX2, lineY2 - 1);
+                }
+            }
+            divI += reciprocalOfLength;
+            lineCX += CXdiff;
+            linePX += PXdiff;
+            lineCY += CYdiff;
+            linePY += PYdiff;
+        }
+        {
+            Fixed24 x1 = (lineCX);
+            Fixed24 dx = (linePX) - x1;
+            Fixed24 y1 = (lineCY);
+            Fixed24 dy = (linePY) - y1;
+            int textureLineLength;
+            if (abs(dx) > abs(dy)) {
+                textureLineLength = abs(dx);
+            } else {
+                textureLineLength = abs(dy);
+            }
+            Fixed24 reciprocalOfTextureLineLength = (Fixed24)1/(Fixed24)textureLineLength;
+            Fixed24 textureLineRatio;
+            textureLineRatio.n = reciprocalOfTextureLineLength.n << 4;
+            Fixed24 column = 0;
+            // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
+            Fixed24 xDiff = (Fixed24)dx * reciprocalOfTextureLineLength;
+            Fixed24 yDiff = (Fixed24)dy * reciprocalOfTextureLineLength;
+            
+            // Draw each pixel of the texture row
+            for (int a = 0; a < textureLineLength; a++) {
+                uint8_t color = texture[240 + column.floor()] + colorOffset;
+                // 255 is reserved for transparency
+                if (color != 255) {
+                    int x = (int)x1;
+                    int y = ((int)y1)*320;
+                    gfx_vram[y + x] = color;
+                    if (y >= 320) {
+                        gfx_vram[y + x - 320] = color;
                     }
-                    gfx_Line_NoClip(lineX1, lineY1, lineX2, lineY2);
-                } else {
-                    gfx_vram[(lineY1*320)+lineX1] = color;
+                }
+                // Move along the line 
+                x1 += xDiff;
+                y1 += yDiff;
+                column += textureLineRatio;
+            }
+            {
+                uint8_t color = texture[255] + colorOffset;
+                // 255 is reserved for transparency
+                if (color != 255) {
+                    int x = (int)x1;
+                    int y = ((int)y1)*320;
+                    gfx_vram[y + x] = color;
+                    if (y >= 320) {
+                        gfx_vram[y + x - 320] = color;
+                    }
                 }
             }
         }

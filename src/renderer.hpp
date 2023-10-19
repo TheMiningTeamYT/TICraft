@@ -58,6 +58,9 @@ struct lineEquation {
 
     // The length of the line
     int length;
+
+    Fixed24 dx;
+    Fixed24 dy;
 };
 
 /*
