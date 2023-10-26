@@ -236,3 +236,10 @@ extern Fixed24 cameraXYZ[3];
 void xSort();
 
 unsigned int_sqrt(const unsigned n);
+
+void drawTextureLine(Fixed24 startingX, Fixed24 startingY, Fixed24 endingX, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset);
+
+extern "C" {
+    void drawTextureLineA(Fixed24 startingX, Fixed24 endingX, Fixed24 startingY, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset);
+    unsigned int_sqrt_a(unsigned n);
+}

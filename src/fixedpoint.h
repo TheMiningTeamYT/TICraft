@@ -134,7 +134,7 @@ struct Fixed24 {
     return n == x.n;
   }
   operator int() const {
-    return n >> POINT;
+    return fp_to_int(n);
   }
   operator float() const {
     return (float)n/(float)(1 << POINT);

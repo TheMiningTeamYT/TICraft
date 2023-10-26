@@ -5,8 +5,9 @@ public _fp_mul
 ; bits 8 to 39 of the result and extract the middle 24 bits of that.
 ; This means we do a 24x24->40 multiplication with the low 8 bits discarded.
 _fp_mul:
+  push iy
   ; Align iy to the arguments in the stack
-  ld iy, 3
+  ld iy, 6
   add iy, sp
 
   ; Perform each of the component-wise multiplications
@@ -120,6 +121,7 @@ _fp_mul:
 
   ; Add with prior intermediate result, rounding to nearest
   adc hl, de
+  pop iy
   ret
 
 section .text
@@ -219,7 +221,8 @@ section .text
 ; Only verified when the result does not overflow
 public _fp_div
 _fp_div:
-  ld iy, 3
+  push iy
+  ld iy, 6
   add iy, sp
   xor a, a
   sbc hl, hl
@@ -264,6 +267,7 @@ _fp_div:
 .no_round:
   ld a, (iy + 5)
   xor a, (iy + 2)
+  pop iy
   ret p
   ex de, hl
   sbc hl, hl

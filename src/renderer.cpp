@@ -19,26 +19,11 @@ still thinking about how to do it
 It's probably time to move on to making a game with this
 */
 /*
-optimization ideas:
-Appearently generating the points takes way longer than I realized.
-Add support for different sized textures, depending on whats most apropriate, say 16x16, 8x8, or 4x4. That way, for small polygons we can waste less time drawing.
-Or, undersampling the textures at small sizes
-Add a buffer to cache transformed polygon values if they atch -- Is it possible to do this without taking longer than rendering?
-My brain is devoid of ideas at this time for optimization
-Using ints for distance from camera (z) now... faster and doesn't encounter range issues like Fixed24 does... but has FAR less precision... maybe some multiplication is in order to increase the precision (virtual fixed point)?
-Make rendered points back into a pointer that is deleted and reinitalized after each frame -- that way memory isn't wasted storing points of objects that are off screen
-Don't re-render the points if told not to
-*/
-/*
-Speed observations:
-It appears that drawing the polygons is a farely slow process (if you disable double buffering you can see it happen --- it should be too fast to see)
-It seems that generating the row is the longest part of the polygon drawing process. -- maybe can be optimized?
-Undersampling the texture by 2x (16->8px) led to over a 1/3 improvement in render time
-It also appears that generating the polygons takes a considerable amount of time as well (with double buffering disabled you can see it sit as it generates them all)
-For large numbers of cubes, polygon generation takes up most of the render time -- what can be done to optimize this?
-A faster method of drawing the pixels to the screen (rather than drawing tons of little lines) would be preferred
-It would also likely be faster if we didn't have to overdraw the lines to avoid blank pixels
-Also, the fixed point library I'm using does not have a very big range, so overflow issues are common. Maybe a better fixed point library is in order?
+Optimization ideas:
+With the latest advancements in polygon drawing optimizations, generating the z buffer now takes about as long as filling the polygons themselves
+This implies to me that generating the zBuffer could benefit from assembly optimization
+The only problem is --- how the heck do I (a first time eZ80 assembly developer) do that?
+Based on prior experience whatever I cobble together will probably be faster than what the compiler spits out, but I still have to get something working first.
 */
 
 object* objects[maxNumberOfObjects];
@@ -349,6 +334,7 @@ int xCompare(const void *arg1, const void *arg2) {
     return object1->x - object2->x;
 }
 
+// possible target for optimization -- as soon as I figure out how
 screenPoint transformPoint(point point) {
     // Result we will return
     screenPoint result;
@@ -369,8 +355,7 @@ screenPoint transformPoint(point point) {
     const Fixed24 sum4 = (focalDistance/dz);
     result.x = ((Fixed24)160 + sum4*dx).floor();
     result.y = ((Fixed24)120 - sum4*dy).floor();
-    // Is calling two functions but only if you need to slower than always calling just one function? IDK!
-    result.z = int_sqrt(((int)x*(int)x)+((int)y*(int)y)+((int)z*(int)z));
+    result.z = int_sqrt_a(((int)x*(int)x)+((int)y*(int)y)+((int)z*(int)z));
     return result;
 }
 
@@ -513,8 +498,7 @@ void renderPolygon(transformedPolygon* polygon) {
 
         // Ratios that make the math faster (means we can multiply instead of divide)
         const Fixed24 reciprocalOfLength = (Fixed24)1/(Fixed24)length;
-        Fixed24 reciprocalOfTextureRatio;
-        reciprocalOfTextureRatio.n = reciprocalOfLength.n<<4;
+
         // Another ratio that makes the math faster
         Fixed24 divI = 0;
         Fixed24 lineCX = lineEquations[1].px;
@@ -525,161 +509,19 @@ void renderPolygon(transformedPolygon* polygon) {
         Fixed24 PXdiff = (lineEquations[0].dx)*reciprocalOfLength;
         Fixed24 CYdiff = (-lineEquations[1].dy)*reciprocalOfLength;
         Fixed24 PYdiff = (lineEquations[0].dy)*reciprocalOfLength;
-        {
-            Fixed24 x1 = (lineCX);
-            Fixed24 dx = (linePX - PXdiff) - x1;
-            Fixed24 y1 = (lineCY);
-            Fixed24 dy = (linePY - PYdiff) - y1;
-            int textureLineLength;
-            if (abs(dx) > abs(dy)) {
-                textureLineLength = abs(dx);
-            } else {
-                textureLineLength = abs(dy);
-            }
-            Fixed24 reciprocalOfTextureLineLength = (Fixed24)1/(Fixed24)textureLineLength;
-            Fixed24 textureLineRatio;
-            textureLineRatio.n = reciprocalOfTextureLineLength.n << 4;
-            Fixed24 column = 0;
-            // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
-            Fixed24 xDiff = (Fixed24)dx * reciprocalOfTextureLineLength;
-            Fixed24 yDiff = (Fixed24)dy * reciprocalOfTextureLineLength;
-            
-            // Draw each pixel of the texture row
-            for (int a = 0; a < textureLineLength; a++) {
-                uint8_t color = texture[column.floor()] + colorOffset;
-                // 255 is reserved for transparency
-                if (color != 255) {
-                    int x = (int)x1;
-                    int y = ((int)y1)*320;
-                    gfx_vram[y + x] = color;
-                    gfx_vram[y + x - 320] = color;
-                }
-                // Move along the line 
-                x1 += xDiff;
-                y1 += yDiff;
-                column += textureLineRatio;
-            }
-            {
-                uint8_t color = texture[15] + colorOffset;
-                // 255 is reserved for transparency
-                if (color != 255) {
-                    int x = (int)x1;
-                    int y = ((int)y1)*320;
-                    gfx_vram[y + x] = color;
-                    gfx_vram[y + x - 320] = color;
-                }
-            }
-        }
+        
+        // main body
         for (int i = 0; i < length; i++) {
-            // The line we will draw a row of the texture along
-            lineEquation textureLine = {lineCX, linePX, lineCY, linePY};
             int row = (divI.n >> 4) & 0xFFFFF0;
-
-            // Declare/Init the x/y of the lines we will need
-            Fixed24 x1 = textureLine.cx;
-            //Fixed24 x2 = textureLine.cx;
-            Fixed24 y1 = textureLine.cy;
-            //Fixed24 y2 = textureLine.cy;
-            int dx = textureLine.px - textureLine.cx;
-            int dy = textureLine.py - textureLine.cy;
-            int textureLineLength;
-            if (abs(dx) > abs(dy)) {
-                textureLineLength = abs(dx);
-            } else {
-                textureLineLength = abs(dy);
-            }
-            Fixed24 reciprocalOfTextureLineLength = (Fixed24)1/(Fixed24)textureLineLength;
-            Fixed24 textureLineRatio;
-            textureLineRatio.n = reciprocalOfTextureLineLength.n << 4;
-            Fixed24 column = 0;
-            // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
-            Fixed24 xDiff = (Fixed24)dx * reciprocalOfTextureLineLength;
-            Fixed24 yDiff = (Fixed24)dy * reciprocalOfTextureLineLength;
-            
-            // Draw each pixel of the texture row
-            for (int a = 0; a < textureLineLength; a++) {
-                uint8_t color = texture[row + column.floor()] + colorOffset;
-                // 255 is reserved for transparency
-                if (color != 255) {
-                    int x = (int)x1;
-                    int y = ((int)y1)*320;
-                    gfx_vram[y + x] = color;
-                    if (y >= 320) {
-                        gfx_vram[y + x - 320] = color;
-                    }
-                }
-                // Move along the line 
-                x1 += xDiff;
-                y1 += yDiff;
-                column += textureLineRatio;
-            }
-            {
-                uint8_t color = texture[row + 15] + colorOffset;
-                // 255 is reserved for transparency
-                if (color != 255) {
-                    int x = (int)x1;
-                    int y = ((int)y1)*320;
-                    gfx_vram[y + x] = color;
-                    if (y >= 320) {
-                        gfx_vram[y + x - 320] = color;
-                    }
-                }
-            }
+            drawTextureLineA(lineCX, linePX, lineCY, linePY, &texture[row], colorOffset);
             divI += reciprocalOfLength;
             lineCX += CXdiff;
             linePX += PXdiff;
             lineCY += CYdiff;
             linePY += PYdiff;
         }
-        {
-            Fixed24 x1 = (lineCX);
-            Fixed24 dx = (linePX) - x1;
-            Fixed24 y1 = (lineCY);
-            Fixed24 dy = (linePY) - y1;
-            int textureLineLength;
-            if (abs(dx) > abs(dy)) {
-                textureLineLength = abs(dx);
-            } else {
-                textureLineLength = abs(dy);
-            }
-            Fixed24 reciprocalOfTextureLineLength = (Fixed24)1/(Fixed24)textureLineLength;
-            Fixed24 textureLineRatio;
-            textureLineRatio.n = reciprocalOfTextureLineLength.n << 4;
-            Fixed24 column = 0;
-            // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
-            Fixed24 xDiff = (Fixed24)dx * reciprocalOfTextureLineLength;
-            Fixed24 yDiff = (Fixed24)dy * reciprocalOfTextureLineLength;
-            
-            // Draw each pixel of the texture row
-            for (int a = 0; a < textureLineLength; a++) {
-                uint8_t color = texture[240 + column.floor()] + colorOffset;
-                // 255 is reserved for transparency
-                if (color != 255) {
-                    int x = (int)x1;
-                    int y = ((int)y1)*320;
-                    gfx_vram[y + x] = color;
-                    if (y >= 320) {
-                        gfx_vram[y + x - 320] = color;
-                    }
-                }
-                // Move along the line 
-                x1 += xDiff;
-                y1 += yDiff;
-                column += textureLineRatio;
-            }
-            {
-                uint8_t color = texture[255] + colorOffset;
-                // 255 is reserved for transparency
-                if (color != 255) {
-                    int x = (int)x1;
-                    int y = ((int)y1)*320;
-                    gfx_vram[y + x] = color;
-                    if (y >= 320) {
-                        gfx_vram[y + x - 320] = color;
-                    }
-                }
-            }
-        }
+        // last line
+        drawTextureLineA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset);
     }
 }
 
@@ -710,7 +552,8 @@ unsigned char bit_width(unsigned x) {
 
 // Thank you Jan Schultke of Stack Overflow! (seriously it's ludicrious how much faster this is)
 // https://stackoverflow.com/questions/34187171/fast-integer-square-root-approximation
-// implementation for all unsigned integer types
+// probably could be optimized in assembly -- just a matter of how
+// I know that previously square root was one of the longest parts of the math, and I suspect it still is
 unsigned int_sqrt(unsigned n) {
     unsigned char shift = bit_width(n);
     shift += shift & 1; // round up to next multiple of 2
@@ -718,11 +561,38 @@ unsigned int_sqrt(unsigned n) {
     unsigned result = 0;
 
     do {
+        // decrement shift
         shift -= 2;
+        // shift result left 1
         result <<= 1; // leftshift the result to make the next guess
+        // or result with 1
         result |= 1;  // guess that the next bit is 1
+        // xor(?) result with bool (result * result) > (n >> shift)
         result ^= result * result > (n >> shift); // revert if guess too high
     } while (shift != 0);
 
     return result;
 }
+
+// Implemented in assembly now
+/*void drawTextureLine(Fixed24 startingX, Fixed24 startingY, Fixed24 endingX, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset) {
+    Fixed24 x1 = startingX;
+    Fixed24 y1 = startingY;
+    Fixed24 dx = (endingX) - startingX;
+    Fixed24 dy = (endingY) - startingY;
+    int textureLineLength;
+    if (abs(dx) > abs(dy)) {
+        textureLineLength = abs(dx) + (Fixed24)1;
+    } else {
+        textureLineLength = abs(dy) + (Fixed24)1;
+    }
+    Fixed24 reciprocalOfTextureLineLength = (Fixed24)1/(Fixed24)textureLineLength;
+    Fixed24 textureLineRatio;
+    textureLineRatio.n = reciprocalOfTextureLineLength.n << 4;
+    // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
+    Fixed24 xDiff = (Fixed24)dx * reciprocalOfTextureLineLength;
+    Fixed24 yDiff = (Fixed24)dy * reciprocalOfTextureLineLength;
+    // call out to assembly
+    fillLine(x1, y1, xDiff, yDiff, textureLineLength, textureLineRatio, texture, colorOffset);
+    //drawTextureLineA(startingX, endingX, startingY, endingY, texture, colorOffset);
+}*/
