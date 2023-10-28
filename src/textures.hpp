@@ -23,6 +23,13 @@ extern const uint8_t* smooth_stone_texture[];
 extern const uint8_t* sponge_texture[];
 extern const uint8_t* stone_texture[];
 extern const uint8_t* cursor_texture[];
+extern const uint8_t* diamond_texture[];
+extern const uint8_t* glass_texture[];
+extern const uint8_t* stonebrick_texture[];
+extern const uint8_t* emerald_texture[];
+extern const uint8_t* lapis_texture[];
+extern const uint8_t* pumpkin_texture[];
+extern const uint8_t* snow_texture[];
 
 // order is likely to change in the future
 extern const uint8_t** textures[];

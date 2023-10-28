@@ -1,38 +1,49 @@
 section .text
 assume adl = 1
-; 29-48 cycles
-; probably has room for improvement
+; can you tell I didn't write this code?
 section .text
 public abs
 abs:
-    inc sp    ; 1
-    inc sp    ; 1
-    inc sp    ; 1
-    or a, a    ; 1
-    sbc hl, hl ; 2
-    add hl, sp ; 1
-    inc hl    ; 1
-    inc hl    ; 1
-    ld a, (hl) ; 2
-    pop hl    ; 4
-    dec sp    ; 1
-    dec sp    ; 1
-    dec sp    ; 1
-    dec sp    ; 1
-    dec sp    ; 1
-    dec sp    ; 1
-    or a, a   ; 1
-    ret p     ; 2 if false, 7 if true -- 24 / 29
-    push de ; 4
-    ex de, hl  ; 1
-    sbc hl, hl ; 2
-    sbc hl, de ; 2
-    pop de ; 4
-    ret       ; 6 -- 43
+    ; First, we need to figure out the memory location of the type byte of our 24-bit value to be negated.
+    ; Set HL to 5 (so that we get past the first thing on the stack -- the return address -- and the first 2 bytes of our argument)
+    ld hl,5    ; 4 (4)
+
+    ; Add the value of SP
+    add hl,sp  ; 1 (5)
+
+    ; Test the top bit of the byte at HL.  The Z flag will get set to 1 if the top bit is positive, or 0 if it's negative.
+    bit 7,(hl) ; 3 (8)
+
+    ; Now load the whole 24-bit value into HL
+    dec hl     ; 1 (8)
+    dec hl     ; 1 (9)
+    ld hl,(hl) ; 5 (14)
+
+    ; Return if the value is already positive
+    ret z      ; 2 if Z is 0, 7 if Z is 1 (16/21)
+
+    push de ; 4 (20)
+    ; The value in HL needs to be negated
+    ex de,hl   ; 1 (21)
+
+    ; Clear the flags
+    or a,a     ; 1 (22)
+
+    ; Set HL to 0
+    sbc hl,hl  ; 2 (22)
+
+    ; Negate our value by subtracting it it from 0
+    sbc hl,de  ; 2 (24)
+
+    pop de ; 4 (28)
+
+    ; And we're done
+    ret        ; 6 (34)
 section .text
 public _drawTextureLineA
 ; Fixed24 startingX, Fixed24 endingX, Fixed24 startingY, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset
 ; definitely has room for optimization
+; probably could be optimized using Bresenham's line algorithm (or the line algorithm used by graphx ... as soon as I figure out how it works)
 _drawTextureLineA:
     di
     ; x1, y1, xStep, yStep, ratio, and column are Fixed24's (the numbers are effectively multiplied by 4096) FYI
@@ -263,6 +274,8 @@ _drawTextureLineA:
         ; Copy pixel
         ; 19 cycles
         ld a, (iy + 0) ; 4
+        cp a, 255 ; 2
+        jr z, endOfLoop ; 2
         add a, c ; 1
         ld (ix + 0),a ; 4
         ld de,320 ; 4
@@ -270,6 +283,7 @@ _drawTextureLineA:
         ld (ix + 0),a ; 4
 
         ; advance column
+        endOfLoop:
         ld iy, x1 ; 5
         ld de,(iy + 12) ; 5
         ld hl,(iy + 15) ; 5
@@ -277,7 +291,6 @@ _drawTextureLineA:
         ld (iy + 12),hl ; 6
 
         ; 10 cycles
-        endOfLoop:
         exx ; 1
         or a,a ; 1
         sbc hl, bc ; 2
@@ -365,18 +378,16 @@ _int_sqrt_a:
         ld hl, (iy + 6) ; 6
         or a, a ; 1
         jr z, shift_cont ; 3
-        ld b, (iy + 8) ; 4
-        ld c, a ; 1
-        ; 11 cycles -- nice
+        ld c, (iy + 8) ; 4
+        ld b, a ; 1
+        ; 10 cycles -- nice
         shift_loop:
-            sra b ; 2
+            sra c ; 2
             rr h ; 2
             rr l ; 2
-            sub a, 1 ; 2
-            jr nz, shift_loop ; 3
-        ld a, c ; 1
+            djnz shift_loop ; 4
         push hl ; 4
-        ld (iy - 4), b ; 4
+        ld (iy - 4), c ; 4
         pop hl ; 4
         ; at this point, shifted n is in hl
         shift_cont:
@@ -405,37 +416,6 @@ _int_sqrt_a:
     pop iy
     ei
     ret
-section .text
-; Takes a Fixed24 and converts it to an int
-; is this faster? IDK!
-public _fp_to_int
-_fp_to_int:
-    push ix ; 4
-    ld ix, 0 ; 5
-    add ix, sp ; 2
-    ld d, (ix + 8) ; 4
-    ld a, (ix + 7) ; 4  
-    sra d ; 2
-    rra ; 1
-    sra d ; 2
-    rra ; 1
-    sra d ; 2
-    rra ; 1
-    sra d ; 2
-    rra ; 1
-    ld e, a ; 1 // put middle bits into e
-    ld a, d ; 1 // put upper bits into a
-    or a, a ; 1
-    jp p, number_is_positive ; 4/5 (38/39)
-    ld hl, $FFFFFF ; 4
-    jr fp_to_int_end
-    number_is_positive:
-    sbc hl, hl ; 2
-    fp_to_int_end:
-    ld h, d ; 1
-    ld l, e ; 1
-    pop ix ; 4
-    ret ; 6 (53/57)
 section .data
 private gfx_vram
 gfx_vram = $D40000

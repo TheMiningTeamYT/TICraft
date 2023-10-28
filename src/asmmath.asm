@@ -278,13 +278,16 @@ _fp_div:
 section .text
 ; Computes the square root of a Fixed24 value and returns the new value in HL
 ; Assumes HL is unsigned since negative sqrt is undefined
+; what is this magic -- loganius
 public _fp_sqrt
 _fp_sqrt:
+  push iy
   ; Align iy to last byte of the argument in the stack
-  ld iy, 5
+  ld iy, 8
   add iy, sp
 
   ; Initialize de and hl to 0
+  or a, a
   sbc hl, hl
   ex de, hl
   sbc hl, hl
@@ -302,6 +305,7 @@ _fp_sqrt:
   ex de, hl
   ret nc
   dec hl
+  pop iy
   ret
 
 .process_byte:
@@ -325,4 +329,36 @@ _fp_sqrt:
   add a, a
   adc hl, hl
   djnz .loop
+  pop iy
   ret
+section .text
+; Takes a Fixed24 and converts it to an int
+; is this faster? IDK!
+public _fp_to_int
+_fp_to_int:
+  push ix ; 4
+  ld ix, 0 ; 5
+  add ix, sp ; 2
+  ld d, (ix + 8) ; 4
+  ld a, (ix + 7) ; 4  
+  sra d ; 2
+  rra ; 1
+  sra d ; 2
+  rra ; 1
+  sra d ; 2
+  rra ; 1
+  sra d ; 2
+  rra ; 1
+  ld e, a ; 1 // put middle bits into e
+  ld a, d ; 1 // put upper bits into a
+  or a, a ; 1
+  jp p, number_is_positive ; 4/5 (38/39)
+  ld hl, $FFFFFF ; 4
+  jr fp_to_int_end
+  number_is_positive:
+  sbc hl, hl ; 2
+  fp_to_int_end:
+  ld h, d ; 1
+  ld l, e ; 1
+  pop ix ; 4
+  ret ; 6 (53/57)

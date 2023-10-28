@@ -6,7 +6,7 @@
 
 #define maxNumberOfPolygons 1000
 #define zCullingDistance 2000
-#define maxNumberOfObjects 500
+#define maxNumberOfObjects 850
 #define showDraw false
 #define outlineColor 0
 #define diagnostics false
@@ -102,10 +102,10 @@ class object {
     void deleteObject();
 
     // Offset the cube
-    void moveBy(Fixed24 x, Fixed24 y, Fixed24 z);
+    void moveBy(Fixed24 newX, Fixed24 newY, Fixed24 newZ);
 
     // Move the cube
-    void moveTo(Fixed24 x, Fixed24 y, Fixed24 z);
+    void moveTo(Fixed24 newX, Fixed24 newY, Fixed24 newZ);
 
     // Prepare the cube's polygons for rendering
     void generatePolygons(bool clip);
@@ -214,10 +214,10 @@ void renderPolygon(transformedPolygon* polygon);
 object** xSearch(object* key);
 
 // An array of all the objects in the world
-extern object* objects[maxNumberOfObjects];
+extern object** objects;
 
 // An array of all the polygons that are ready to be rendered
-extern transformedPolygon* preparedPolygons[maxNumberOfPolygons];
+extern transformedPolygon** preparedPolygons;
 
 // The number of polygons ready to be rendered
 extern unsigned int numberOfPreparedPolygons;

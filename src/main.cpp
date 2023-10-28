@@ -10,12 +10,21 @@
 #include "saves.hpp"
 #include "crc32.h"
 
-uint8_t* cursorBackgroundBuffer;
-gfx_sprite_t* cursorBackground = (gfx_sprite_t*) cursorBackgroundBuffer;
+/*
+Implement chunking
+Idea:
+Load 1 chunk into the list of cubes at a time (say, when the cursor moves into a new chunk or the camera moves)
+Generate the polygons for each chunk, then delete it from the list of cubes and load the next one
+At the end load the current chunk into the list of cubes
+Pros:
+Allows many more blocks at theoretically no additional RAM cost
+Cons:
+Doing a re-render will be INSANELY expensive
+*/
+gfx_sprite_t* cursorBackground = (gfx_sprite_t*) 0xD2A000;
 
-int playerCursorX;
-int playerCursorY;
-char buffer2[200];
+int playerCursorX = 0;
+int playerCursorY = 0;
 
 void drawCursor(bool generatePoints);
 void getBuffer();
@@ -27,6 +36,8 @@ void selectNewObject();
 
 int main() {
     boot_Set48MHzMode();
+    cursorBackground->height = 1;
+    cursorBackground->width = 1;
     bool userSelected = false;
     bool toSaveOrNotToSave = true;
     gfxStart();
@@ -63,9 +74,13 @@ int main() {
         printStringAndMoveDownCentered("Made by Logan C.");
         // implement more controls in the near future
         if (!toSaveOrNotToSave) {
-            for (int i = 0; i < 256; i++) {
+            playerCursor.moveTo(20, 20, 20);
+            cameraXYZ[0] = -100;
+            cameraXYZ[1] = 150;
+            cameraXYZ[2] = -100;
+            for (int i = 0; i < 441; i++) {
                 if (numberOfObjects < maxNumberOfObjects) {
-                    objects[numberOfObjects] = new object((i%16)*20, (i/256)*-20, ((i%256)/16)*20, 20, 10, false);
+                    objects[numberOfObjects] = new object((i%20)*20, 0, (i/21)*20, 20, 10, false);
                     numberOfObjects++;
                 }
             }
@@ -267,6 +282,8 @@ int main() {
         }
         deleteEverything();
     }
+    // clear out pixel shadow
+    memset((void*) 0xD031F6, 0, 8400);
     gfx_SetDrawScreen();
     gfx_FillScreen(254);
     gfx_End();
@@ -276,15 +293,13 @@ int main() {
 // still has problems
 void drawCursor(bool generatePoints) {
     deletePolygons();
-    if (cursorBackgroundBuffer) {
-        drawBuffer();
-    }
+    drawBuffer();
     if (generatePoints) {
         playerCursor.generatePoints();
     }
     if (playerCursor.visible) {
         playerCursor.generatePolygons(false);
-        delete[] cursorBackgroundBuffer;
+        //delete[] cursorBackgroundBuffer;
         int minX = playerCursor.renderedPoints[0].x;
         int minY = playerCursor.renderedPoints[0].x;
         int maxX = playerCursor.renderedPoints[0].x;
@@ -305,8 +320,8 @@ void drawCursor(bool generatePoints) {
         minY--;
         int width = (maxX-minX) + 1;
         int height = (maxY-minY) + 1;
-        cursorBackgroundBuffer = new uint8_t[width*height + 2];
-        cursorBackground = (gfx_sprite_t*) cursorBackgroundBuffer;
+        //cursorBackgroundBuffer = new uint8_t[width*height + 2];
+        //cursorBackground = (gfx_sprite_t*) cursorBackgroundBuffer;
         cursorBackground->width = width;
         cursorBackground->height = height;
         playerCursorX = minX;
@@ -443,21 +458,21 @@ void selectBlock() {
     drawBuffer();
     gfx_SetDrawBuffer();
     gfx_SetColor(255);
-    gfx_FillRectangle(80, 60, 160, 120);
+    gfx_FillRectangle(92, 54, 136, 132);
     gfx_SetDrawScreen();
-    gfx_SetColor(102);
-    gfx_FillRectangle(80, 60, 160, 120);
-    for (uint8_t i = 0; i < 23; i++) {
+    gfx_SetColor(253);
+    gfx_FillRectangle(92, 54, 136, 132);
+    for (uint8_t i = 0; i < 30; i++) {
         if (i == selectedObject) {
             gfx_SetColor(254);
-            gfx_FillRectangle(98 + (20*(i%6)), 68 + (24*(i/6)), 20, 20);
+            gfx_FillRectangle(100 + (20*(i%6)), 62 + (24*(i/6)), 20, 20);
         }
         uint8_t* blockBuffer = new uint8_t[258];
         memcpy(&blockBuffer[2], textures[i][1], 256);
         gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
         block->width = 16;
         block->height = 16;
-        gfx_Sprite_NoClip(block, 100 + (20*(i%6)), 70 + (24*(i/6)));
+        gfx_Sprite_NoClip(block, 102 + (20*(i%6)), 64 + (24*(i/6)));
         delete[] blockBuffer;
     }
     bool quit = false;
@@ -472,26 +487,18 @@ void selectBlock() {
                         selectNewObject();
                     } else {
                         redrawSelectedObject();
-                        if (selectedObject != 5) {
-                            selectedObject += 18;
-                        } else {
-                            selectedObject += 12;
-                        }
+                        selectedObject += 24;
                         selectNewObject();
                     }
                     break;
                 case sk_Down:
-                    if (selectedObject/6 < 3 && selectedObject != 17) {
+                    if (selectedObject/6 < 4) {
                         redrawSelectedObject();
                         selectedObject += 6;
                         selectNewObject();
                     } else {
                         redrawSelectedObject();
-                        if (selectedObject != 17) {
-                            selectedObject -= 18;
-                        } else {
-                            selectedObject -= 12;
-                        }
+                        selectedObject -= 24;
                         selectNewObject();
                     }
                     break;
@@ -502,12 +509,12 @@ void selectBlock() {
                         selectNewObject();
                     } else {
                         redrawSelectedObject();
-                        selectedObject = 22;
+                        selectedObject = 29;
                         selectNewObject();
                     }
                     break;
                 case sk_Right:
-                    if (selectedObject < 22) {
+                    if (selectedObject < 29) {
                         redrawSelectedObject();
                         selectedObject++;
                         selectNewObject();
@@ -527,32 +534,32 @@ void selectBlock() {
         }
     }
     gfx_SetColor(255);
-    gfx_FillRectangle(80, 60, 160, 120);
+    gfx_FillRectangle(92, 54, 136, 132);
     drawScreen(2);
     getBuffer();
     drawCursor(true);
 }
 
 void redrawSelectedObject() {
-    gfx_SetColor(102);
-    gfx_FillRectangle(98 + (20*(selectedObject%6)), 68 + (24*(selectedObject/6)), 20, 20);
+    gfx_SetColor(253);
+    gfx_FillRectangle(100 + (20*(selectedObject%6)), 62 + (24*(selectedObject/6)), 20, 20);
     uint8_t* blockBuffer = new uint8_t[258];
     memcpy(&blockBuffer[2], textures[selectedObject][1], 256);
     gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
     block->width = 16;
     block->height = 16;
-    gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 70 + (24*(selectedObject/6)));
+    gfx_Sprite_NoClip(block, 102 + (20*(selectedObject%6)), 64 + (24*(selectedObject/6)));
     delete[] blockBuffer;
 }
 
 void selectNewObject() {
     gfx_SetColor(254);
-    gfx_FillRectangle(98 + (20*(selectedObject%6)), 68 + (24*(selectedObject/6)), 20, 20);
+    gfx_FillRectangle(100 + (20*(selectedObject%6)), 62 + (24*(selectedObject/6)), 20, 20);
     uint8_t* blockBuffer = new uint8_t[258];
     memcpy(&blockBuffer[2], textures[selectedObject][1], 256);
     gfx_sprite_t* block = (gfx_sprite_t*) blockBuffer;
     block->width = 16;
     block->height = 16;
-    gfx_Sprite_NoClip(block, 100 + (20*(selectedObject%6)), 70 + (24*(selectedObject/6)));
+    gfx_Sprite_NoClip(block, 102 + (20*(selectedObject%6)), 64 + (24*(selectedObject/6)));
     delete[] blockBuffer;
 }

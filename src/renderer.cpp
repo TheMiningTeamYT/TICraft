@@ -26,9 +26,9 @@ The only problem is --- how the heck do I (a first time eZ80 assembly developer)
 Based on prior experience whatever I cobble together will probably be faster than what the compiler spits out, but I still have to get something working first.
 */
 
-object* objects[maxNumberOfObjects];
-object** zSortedObjects;
-transformedPolygon* preparedPolygons[maxNumberOfPolygons];
+object** objects = (object**) 0xD3A000;
+object** zSortedObjects = objects + maxNumberOfObjects;
+transformedPolygon** preparedPolygons = (transformedPolygon**) (zSortedObjects + maxNumberOfObjects);
 
 // Buffer for creating diagnostic strings
 char buffer[200];
@@ -75,6 +75,15 @@ const Fixed24 sz = sinf(cameraAngle[2]);
 // Reciprocal needed for texture rendering
 const Fixed24 reciprocalOf16 = (Fixed24)1/(Fixed24)16;
 
+/*
+clip:
+least significant bit controls if the polygon will be affected by clipping
+next most significant bit controls if the polygon will write to the zBuffer
+ex:
+clip = 1 // affected by clipping, no z buffer
+clip = 2 // not affected by clipping, write to z buffer
+clip = 3 // affected by clipping, write to z buffer
+*/
 void object::generatePolygons(bool clip) {
     // A local copy of the polygons of a cube (Not sure this is necessary)
     polygon polygons[3];
@@ -102,13 +111,15 @@ void object::generatePolygons(bool clip) {
             // Protection against polygon buffer overflow
             if (numberOfPreparedPolygons < maxNumberOfPolygons) {
                 // The polygon we are rendering
-                polygon* polygon = &polygons[polygonNum];
+                polygon polygon = polygons[polygonNum];
 
                 // Are we going to render the polygon?
                 bool render = true;
+
+                bool zBufferEmpty = false;
                 
                 // Normalized z (0-255)
-                unsigned int normalizedZ = ::abs(polygon->z) >> 3;
+                unsigned int normalizedZ = ::abs(polygon.z) >> 3;
 
                 // Clamp the Z to the range of the uint8_t
                 if (normalizedZ > 255) {
@@ -122,8 +133,8 @@ void object::generatePolygons(bool clip) {
                     int totalX = 0;
                     int totalY = 0;
                     for (uint8_t i = 0; i < 4; i++) {
-                        totalX += renderedPoints[polygon->points[i]].x;
-                        totalY += renderedPoints[polygon->points[i]].y;
+                        totalX += renderedPoints[polygon.points[i]].x;
+                        totalY += renderedPoints[polygon.points[i]].y;
                     }
                     int x = totalX >> 2;
                     int y = totalY >> 2;
@@ -135,9 +146,13 @@ void object::generatePolygons(bool clip) {
                     }*/
                     uint8_t obscuredPoints = 0;
                     for (uint8_t i = 0; i < 4; i++) {
-                        screenPoint* point = &renderedPoints[polygon->points[i]];
-                        if (normalizedZ >= gfx_GetPixel((point->x + x)>>1, (point->y + y)>>1)) {
+                        screenPoint* point = &renderedPoints[polygon.points[i]];
+                        uint8_t bufferZ = gfx_GetPixel((point->x + x)>>1, (point->y + y)>>1);
+                        if (normalizedZ >= bufferZ) {
                             obscuredPoints++;
+                        }
+                        if (bufferZ == 255) {
+                            zBufferEmpty = true;
                         }
                     }
                     if (obscuredPoints == 4) {
@@ -149,7 +164,11 @@ void object::generatePolygons(bool clip) {
                 // Prepare this polygon for rendering
                 if (render) {
                     // Draw the polygon to the z buffer (just the screen)
-                    if (clip == true) {
+                    // For the transparent textures (glass & leaves), if the zBuffer has been cleared out (set to 255) around the glass, DON't draw to the zBuffer.
+                    // Otherwise, do
+                    // This is to avoid situations where either the glass doesn't draw to the zBuffer in a partial redraw, breaking the partial redraw engine,
+                    // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
+                    if (clip == true && !(zBufferEmpty && (texture == 15 || texture == 23))) {
                         gfx_SetColor(normalizedZ);
                         int x1 = renderedPoints[polygons[polygonNum].points[0]].x;
                         int x2 = renderedPoints[polygons[polygonNum].points[1]].x;
@@ -164,7 +183,7 @@ void object::generatePolygons(bool clip) {
                     }
 
                     // Create a new transformed (prepared) polygon and set initialize it;
-                    preparedPolygons[numberOfPreparedPolygons] = new transformedPolygon{this, polygon->z, polygon->polygonNum};
+                    preparedPolygons[numberOfPreparedPolygons] = new transformedPolygon{this, polygon.z, polygon.polygonNum};
                     
                     // Increment the number of prepared polygons
                     numberOfPreparedPolygons++;
@@ -266,7 +285,7 @@ void object::generatePoints() {
 
         // If any part of the object is off screen, don't render it
         // Not ideal, but makes a lot of other things easier (and faster)
-        if (renderedPoints[0].x < 0 || renderedPoints[0].x > 320 || renderedPoints[0].y < 0 || renderedPoints[0].y > 240) {
+        if (renderedPoints[0].x < 0 || renderedPoints[0].x > 319 || renderedPoints[0].y < 0 || renderedPoints[0].y > 239) {
             visible = false;
         }
     }
@@ -279,7 +298,7 @@ void object::generatePoints() {
                 visible = false;
                 break;
             }
-            if (renderedPoints[i].x < 0 || renderedPoints[i].x > 320 || renderedPoints[i].y < 0 || renderedPoints[i].y > 240) {
+            if (renderedPoints[i].x < 0 || renderedPoints[i].x > 319 || renderedPoints[i].y < 0 || renderedPoints[i].y > 239) {
                 visible = false;
                 break;
             }
@@ -464,7 +483,7 @@ void renderPolygon(transformedPolygon* polygon) {
     } else {
         uint8_t colorOffset = 0;
         if (polygon->polygonNum == 2) {
-            colorOffset = 64;
+            colorOffset = 126;
         }
         // Generate the lines from the points of the polygon
         for (unsigned int i = 0; i < 2; i++) {
@@ -538,8 +557,6 @@ object** xSearch(object* key) {
 
 void xSort() {
     qsort(objects, numberOfObjects, sizeof(object *), xCompare);
-    delete[] zSortedObjects;
-    zSortedObjects = new object*[numberOfObjects];
     memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
     // Sort all objects front to back
     // improves polygon culling but sorting can be slow
