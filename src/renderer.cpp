@@ -28,7 +28,7 @@ Based on prior experience whatever I cobble together will probably be faster tha
 
 object** objects = (object**) 0xD3A000;
 object** zSortedObjects = objects + maxNumberOfObjects;
-transformedPolygon** preparedPolygons = (transformedPolygon**) (zSortedObjects + maxNumberOfObjects);
+transformedPolygon* preparedPolygons = (transformedPolygon*) (zSortedObjects + maxNumberOfObjects);
 
 // Buffer for creating diagnostic strings
 char buffer[200];
@@ -77,14 +77,11 @@ const Fixed24 reciprocalOf16 = (Fixed24)1/(Fixed24)16;
 
 /*
 clip:
-least significant bit controls if the polygon will be affected by clipping
-next most significant bit controls if the polygon will write to the zBuffer
-ex:
+clip = 0 // not affected by clipping
 clip = 1 // affected by clipping, no z buffer
-clip = 2 // not affected by clipping, write to z buffer
-clip = 3 // affected by clipping, write to z buffer
+clip = 2 // affected by clipping, write to z buffer
 */
-void object::generatePolygons(bool clip) {
+void object::generatePolygons(uint8_t clip) {
     // A local copy of the polygons of a cube (Not sure this is necessary)
     polygon polygons[3];
 
@@ -128,7 +125,7 @@ void object::generatePolygons(bool clip) {
 
                 // If there are any other polygons this one could be overlapping with, check the z buffer
                 // The z culling still has problems
-                if (clip == true) {
+                if (clip > 0) {
                     // Get the average x & y of the polygon
                     int totalX = 0;
                     int totalY = 0;
@@ -168,7 +165,7 @@ void object::generatePolygons(bool clip) {
                     // Otherwise, do
                     // This is to avoid situations where either the glass doesn't draw to the zBuffer in a partial redraw, breaking the partial redraw engine,
                     // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
-                    if (clip == true && !(zBufferEmpty && (texture == 15 || texture == 23))) {
+                    if (clip > 1) {
                         gfx_SetColor(normalizedZ);
                         int x1 = renderedPoints[polygons[polygonNum].points[0]].x;
                         int x2 = renderedPoints[polygons[polygonNum].points[1]].x;
@@ -183,7 +180,7 @@ void object::generatePolygons(bool clip) {
                     }
 
                     // Create a new transformed (prepared) polygon and set initialize it;
-                    preparedPolygons[numberOfPreparedPolygons] = new transformedPolygon{this, polygon.z, polygon.polygonNum};
+                    preparedPolygons[numberOfPreparedPolygons] = transformedPolygon{this, polygon.z, polygon.polygonNum};
                     
                     // Increment the number of prepared polygons
                     numberOfPreparedPolygons++;
@@ -333,8 +330,8 @@ int zCompare(const void *arg1, const void *arg2) {
 }
 
 int renderedZCompare(const void *arg1, const void *arg2) {
-    transformedPolygon* polygon1 = *((transformedPolygon **) arg1);
-    transformedPolygon* polygon2 = *((transformedPolygon **) arg2);
+    transformedPolygon* polygon1 = ((transformedPolygon *) arg1);
+    transformedPolygon* polygon2 = ((transformedPolygon *) arg2);
     return polygon2->z - polygon1->z;
 }
 
@@ -372,16 +369,13 @@ screenPoint transformPoint(point point) {
     const Fixed24 dy = sx*sum2 + cx*sum3;
     const Fixed24 dz = cx*sum2 - sx*sum3;
     const Fixed24 sum4 = (focalDistance/dz);
-    result.x = ((Fixed24)160 + sum4*dx).floor();
-    result.y = ((Fixed24)120 - sum4*dy).floor();
+    result.x = (int)((Fixed24)160 + sum4*dx);
+    result.y = (int)((Fixed24)120 - sum4*dy);
     result.z = int_sqrt_a(((int)x*(int)x)+((int)y*(int)y)+((int)z*(int)z));
     return result;
 }
 
 void deletePolygons() {
-    for (unsigned int i = 0; i < numberOfPreparedPolygons; i++) {
-        delete preparedPolygons[i];
-    }
     numberOfPreparedPolygons = 0;
 }
 
@@ -399,9 +393,10 @@ void deleteEverything() {
 0: Normal full render
 1: Redraw without regenerating polygons
 2: Redraw with regenerating polygons (but not z buffer)
+3: 1 with special handling for transparent objects
 */
 void drawScreen(uint8_t mode) {
-    if (mode == 0 || mode == 2) {
+    if (mode == 0 || mode == 2 || mode == 3) {
         // Move the camera (for the demo that is the state of the program)
         //cameraXYZ[2] += 5;
         gfx_SetDrawBuffer();
@@ -414,13 +409,34 @@ void drawScreen(uint8_t mode) {
         deletePolygons();
         outOfBoundsPolygons = 0;
         obscuredPolygons = 0;
-        for (unsigned int i = 0; i < numberOfObjects; i++) {
-            zSortedObjects[i]->generatePolygons(true);
+        if (mode == 3) {
+            for (unsigned int i = 0; i < numberOfObjects; i++) {
+                if (zSortedObjects[i]->texture != 15 && zSortedObjects[i]->texture != 23) {
+                    zSortedObjects[i]->generatePolygons(2);
+                }
+            }
+            for (unsigned int i = 0; i < numberOfObjects; i++) {
+                if (zSortedObjects[i]->texture == 15 || zSortedObjects[i]->texture == 23) {
+                    zSortedObjects[i]->generatePolygons(1);
+                }
+            }
+        } else if (mode == 0) {
+            for (unsigned int i = 0; i < numberOfObjects; i++) {
+                if (zSortedObjects[i]->texture == 15 || zSortedObjects[i]->texture == 23) {
+                    zSortedObjects[i]->generatePolygons(1);
+                } else {
+                    zSortedObjects[i]->generatePolygons(2);
+                }
+            }
+        } else {
+            for (unsigned int i = 0; i < numberOfObjects; i++) {
+                zSortedObjects[i]->generatePolygons(2);
+            }
         }
         gfx_SetDrawScreen();
     }
     // Sort all polygons back to front
-    qsort(preparedPolygons, numberOfPreparedPolygons, sizeof(transformedPolygon *), renderedZCompare);
+    qsort(preparedPolygons, numberOfPreparedPolygons, sizeof(transformedPolygon), renderedZCompare);
     
     // I think this is slower but there will be no leftovers from polygon generation
     #if showDraw == false
@@ -430,7 +446,7 @@ void drawScreen(uint8_t mode) {
     }
     #endif
     for (unsigned int i = 0; i < numberOfPreparedPolygons; i++) {
-        renderPolygon(preparedPolygons[i]);
+        renderPolygon(&preparedPolygons[i]);
     }
 
     // Print some diagnostic information

@@ -4,9 +4,9 @@
 #include <cstdio>
 #include "fixedpoint.h"
 
-#define maxNumberOfPolygons 1000
+#define maxNumberOfPolygons 2000
 #define zCullingDistance 2000
-#define maxNumberOfObjects 850
+#define maxNumberOfObjects 1000
 #define showDraw false
 #define outlineColor 0
 #define diagnostics false
@@ -108,7 +108,7 @@ class object {
     void moveTo(Fixed24 newX, Fixed24 newY, Fixed24 newZ);
 
     // Prepare the cube's polygons for rendering
-    void generatePolygons(bool clip);
+    void generatePolygons(uint8_t clip);
 
     void generatePoints();
     
@@ -217,7 +217,7 @@ object** xSearch(object* key);
 extern object** objects;
 
 // An array of all the polygons that are ready to be rendered
-extern transformedPolygon** preparedPolygons;
+extern transformedPolygon* preparedPolygons;
 
 // The number of polygons ready to be rendered
 extern unsigned int numberOfPreparedPolygons;

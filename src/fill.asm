@@ -1,44 +1,16 @@
 section .text
 assume adl = 1
-; can you tell I didn't write this code?
+; stole some code from people on a forum
 section .text
 public abs
 abs:
-    ; First, we need to figure out the memory location of the type byte of our 24-bit value to be negated.
-    ; Set HL to 5 (so that we get past the first thing on the stack -- the return address -- and the first 2 bytes of our argument)
-    ld hl,5    ; 4 (4)
-
-    ; Add the value of SP
-    add hl,sp  ; 1 (5)
-
-    ; Test the top bit of the byte at HL.  The Z flag will get set to 1 if the top bit is positive, or 0 if it's negative.
-    bit 7,(hl) ; 3 (8)
-
-    ; Now load the whole 24-bit value into HL
-    dec hl     ; 1 (8)
-    dec hl     ; 1 (9)
-    ld hl,(hl) ; 5 (14)
-
-    ; Return if the value is already positive
-    ret z      ; 2 if Z is 0, 7 if Z is 1 (16/21)
-
-    push de ; 4 (20)
-    ; The value in HL needs to be negated
-    ex de,hl   ; 1 (21)
-
-    ; Clear the flags
-    or a,a     ; 1 (22)
-
-    ; Set HL to 0
-    sbc hl,hl  ; 2 (22)
-
-    ; Negate our value by subtracting it it from 0
-    sbc hl,de  ; 2 (24)
-
-    pop de ; 4 (28)
-
-    ; And we're done
-    ret        ; 6 (34)
+    ex de, hl ; 1
+    or a, a ; 1
+    sbc hl, hl ; 2
+    sbc hl, de ; 2
+    ret p ; 2/6
+    ex de, hl ; 1
+    ret ; 6
 section .text
 public _drawTextureLineA
 ; Fixed24 startingX, Fixed24 endingX, Fixed24 startingY, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset
@@ -75,30 +47,31 @@ _drawTextureLineA:
     push hl ; dy
     push de ; dx
     ; grab absolute value of dx & dy
-    ; hl: dy, de: dx
-    push hl
-    call abs
-    ; hl: dx, de: abs(dy)
     ex de, hl
-    ld (iy - 18), hl
+    ; hl: dx, de: dy
     call abs
-    ld (iy - 18), hl; save abs(dx) to the stack
+    push hl ; save abs(dx) to the stack
+    ld hl, (iy - 12)
+    ; hl: dy, de: garbage
+    call abs
+    ; hl: abs(dy) de: garbage
+    ex de, hl
+    ld hl, (iy - 18)
     ; hl: abs(dx), de: abs(dy)
     or a, a
     sbc hl, de
     pop hl
-    jp m, y_is_greater
-    ex de, hl
+    jr nc, cont_length
 
     y_is_greater:
     ex de, hl
 
     cont_length:
     ; length is in hl
-    ld bc, 4096
-    add hl, bc
+    ld de, 4096
+    add hl, de
     push hl
-    push bc
+    push de
     ld l, (iy - 16) ; upper bits in l
     ld a, h ; middle bits in a
     srl l
@@ -110,8 +83,6 @@ _drawTextureLineA:
     srl l
     rra
     ex de, hl
-    or a, a
-    sbc hl, hl
     ld h, e
     ld l, a
     ld (ix + 21), hl
@@ -145,43 +116,43 @@ _drawTextureLineA:
     add hl, hl
     add hl, hl
     add hl, hl
-    ld (ix + 15), hl
+    push hl
     exx
     ld hl, (iy + 12)
     ld (ix + 18), hl
     ld a, (iy + 15)
-    ld b, 160
-    ld c, a
+    pop bc
     exx
     ld hl, (ix + 21)
     ld bc, 1
+    ld d, a
+    ld e, 255
     exx
     ld iy, x1 
-    ; 321 cycles -- probably room for optimization
+    ; 165-182 cycles -- optimization successful
     fillLoop:
         ; ix: screen pointer
-        ; iy: variable pointer (later texture pointer)
+        ; iy: variable pointer
 
         ; 5 cycles
-        ld ix, gfx_vram ; 5
+        ld ix, gfx_vram + 127 ; 5
 
         ; 11 cyles
         ; move on X
         ld de, (iy) ; 5
         ld hl, (iy + 6) ; 5
-        add hl,de ; 1
+        add hl, de ; 1
 
-        ; 17 cycles
+        ; 10/13 cycles
         ; make sure that x isn't 320 or greater, else cap it to 319
         ex de, hl ; 1
         ld hl, 1310719 ; 4
-        or a, a ; 1
         sbc hl, de ; 2
-        jp p, x_1 ; 5
+        jr nc, x_1 ; 2/3
         ld de, 1306624 ; 4
 
         x_1:
-        ; 32 cycles
+        ; 29 cycles
         ld (iy), de ; 6
         ld e, (iy + 2) ; 4 // upper bits in e
         ld a, d ; 1 // middle bits in a
@@ -204,7 +175,7 @@ _drawTextureLineA:
 
         ; 2 cycles
         ; Set ix
-        add ix,de ; 2
+        add ix, de ; 2
 
         ; 11 cycles
         ; move on Y
@@ -212,13 +183,12 @@ _drawTextureLineA:
         ld hl, (iy + 9) ; 5
         add hl,de ; 1
 
-        ; 21 cycles
+        ; 10/13 cycles
         ; check that y is less than 239, else cap it to 238
         ex de, hl ; 1
         ld hl, 978944 ; 4
-        or a, a ; 1
         sbc hl, de ; 2
-        jp p, y_1 ; 5
+        jr nc, y_1 ; 2/3
         ld de, 974848 ; 4
 
         ; 28 cycles
@@ -239,7 +209,6 @@ _drawTextureLineA:
         sbc hl, hl ; 2
         ; effectively shift it right 8 by putting the upper 8 bits (e) into the middle 8 bits of hl (h)
         ; and the middle 8 bits (a) into the lower 8 bits of hl (l)
-        ld h,e ; 1
         ld l,a ; 1
 
 
@@ -249,7 +218,7 @@ _drawTextureLineA:
         ; since hl (the y value) should be less than 256 (or 240),
         ; we can discard the middle and upper 8 bits and use mlt
         ; muliply l by 160
-        ld h, b ; 1
+        ld h, 160 ; 2
         mlt hl ; 6
         ; add hl to itself (multiply by 2)
         add hl,hl ; 1
@@ -258,41 +227,42 @@ _drawTextureLineA:
         add ix, de ; 2
 
         ; Get column
-        ; 26 cycles
-        ld d, (iy + 13) ; 4
-        srl d ; 2
-        srl d ; 2
-        srl d ; 2
-        srl d ; 2
-        ld hl, (iy + 18) ; 5
-        ld iy, 0 ; 4
-        ld iyl, d ; 2
-        ex de, hl ; 1
-        add iy, de ; 2
+        ; 22 cycles
+        ld a, (iy + 13) ; 4
+        srl a ; 2
+        srl a ; 2
+        srl a ; 2
+        srl a ; 2
+        ld de, (iy + 18) ; 5
+        or a, a ; 1
+        sbc hl, hl ; 2
+        ld l, a ; 1
+        add hl, de ; 1
 
-        ; At this point we should have a pointer to the texture in IX and a pointer to the screen location in IY
-        ; Copy pixel
-        ; 19 cycles
-        ld a, (iy + 0) ; 4
-        cp a, 255 ; 2
-        jr z, endOfLoop ; 2
-        add a, c ; 1
-        ld (ix + 0),a ; 4
-        ld de,320 ; 4
-        add ix, de ; 2
-        ld (ix + 0),a ; 4
+        ; At this point we should have a pointer to the texture in hl and a pointer to the screen location in IX
+        ; Load pixel
+        ; 2 cycles
+        ld a, (hl) ; 2
 
         ; advance column
-        endOfLoop:
-        ld iy, x1 ; 5
-        ld de,(iy + 12) ; 5
-        ld hl,(iy + 15) ; 5
-        add hl,de ; 1
-        ld (iy + 12),hl ; 6
+        ; 12 cycles
+        ld hl, (iy + 12) ; 5
+        ; texture ratio is in bc
+        add hl, bc ; 1
+        ld (iy + 12), hl ; 6
 
-        ; 10 cycles
+        ; Copy pixel (continuted)
+        ; 5/16 cycles
         exx ; 1
-        or a,a ; 1
+        cp a, e ; 1
+        jr z, endOfLoop ; 2/3
+        add a, d ; 1
+        ld (ix-127), a ; 4
+        lea ix, ix+127 ; 3
+        ld (ix+66), a ; 4
+
+        ; 8 cycles
+        endOfLoop:
         sbc hl, bc ; 2
         exx ; 1
         jp p, fillLoop ; 5
@@ -302,18 +272,6 @@ _drawTextureLineA:
     pop ix
     ei
     ret
-    ; trick the compiler
-    ld (x1), hl
-    ld (y1), hl
-    ld (xStep), hl
-    ld (yStep), hl
-    ld (column), hl
-    ld (ratio), hl
-    ld (length), hl
-    ld (texture), hl
-    ld (startingSP), hl
-    ld (colorOffset), hl
-    ld (returnAddress), hl
 section .text
 public _int_sqrt_a
 ; unsigned int n
@@ -331,7 +289,7 @@ _int_sqrt_a:
     inc hl
     sbc hl, de
     ; if number is 0 or 1, the square root is no different
-    jp p, zero_or_one
+    jr nc, zero_or_one
 
     ; get number of bits
     or a, a
@@ -339,7 +297,7 @@ _int_sqrt_a:
     ld hl, $7FFFFF
     sbc hl, de
     ; if the number already has 1 in the first position, move on
-    jp m, count_cont ; 5
+    jr c, count_cont ; 3
     count_loop:
         add hl, de ; 1
         dec a ; 1
@@ -347,7 +305,7 @@ _int_sqrt_a:
         add hl, hl ; 1
         ex de, hl ; 1
         sbc hl, de ; 2
-        jp p, count_loop ; 5
+        jr nc, count_loop ; 3
     count_cont:
     ld b, a
     and a, 1
@@ -395,7 +353,7 @@ _int_sqrt_a:
         ; result squared is now in de
         or a, a ; 1
         sbc hl, de ; 2
-        jp p, sqrt_loop_end ; 5
+        jr nc, sqrt_loop_end ; 3
             exx ; 1
             or a, a ; 1
             sbc hl, de ; 2
@@ -420,28 +378,15 @@ section .data
 private gfx_vram
 gfx_vram = $D40000
 private x1
-x1: db 3 dup 00h
-private y1
-y1: db 3 dup 0
-private xStep
-xStep: db 3 dup 0
-private yStep
-yStep: db 3 dup 0
-private column
-column: db 3 dup 0
-private ratio
-ratio: db 3 dup 0
-private texture
-texture: db 3 dup 0
-private length
-length: db 3 dup 0
+x1: db 33 dup 00h
 private startingSP
-startingSP: db 3 dup 0
-private colorOffset
-colorOffset: db 3 dup 0
-private returnAddress
-returnAddress: db 3 dup 0
+startingSP: db 3 dup 00h
 extern _fp_div
 extern _fp_mul
-extern __imulu
-extern __ishru
+extern _cameraXYZ
+extern _sx
+extern _cx
+extern _sy
+extern _cy
+extern _sz
+extern _cz

@@ -47,7 +47,6 @@ void save(const char* name) {
         }
     }
     if (toSaveOrNotToSave) {
-        ti_SetGCBehavior(gfx_End, gfxStart);
         handle = ti_Open(name, "w+");
         if (handle) {
             bool saveGood = true;
@@ -290,11 +289,15 @@ void gfxStart() {
 }
 
 bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
-    const char* saveNames[] = {"WORLD1", "WORLD2", "WORLD3", "WORLD4"};
+    if (nameBufferLength < 9) {
+        return false;
+    }
+    const char* saveNames[] = {"WORLD1","WORLD2","WORLD3","WORLD4","WORLD5","WORLD6","WORLD7","WORLD8","WORLD9","WORLD10","WORLD11","WORLD12","WORLD13","WORLD14","WORLD15","WORLD16","WORLD17","WORLD18","WORLD19","WORLD20","WORLD21","WORLD22","WORLD23","WORLD24","WORLD25","WORLD26","WORLD27","WORLD28","WORLD29","WORLD30","WORLD31","WORLD32","WORLD33","WORLD34","WORLD35","WORLD36","WORLD37","WORLD38","WORLD39","WORLD40","WORLD41","WORLD42","WORLD43","WORLD44","WORLD45","WORLD46","WORLD47","WORLD48","WORLD49","WORLD50","WORLD51","WORLD52","WORLD53","WORLD54","WORLD55","WORLD56","WORLD57","WORLD58","WORLD59","WORLD60","WORLD61","WORLD62","WORLD63","WORLD64","WORLD65","WORLD66","WORLD67","WORLD68","WORLD69","WORLD70","WORLD71","WORLD72","WORLD73","WORLD74","WORLD75","WORLD76","WORLD77","WORLD78","WORLD79","WORLD80","WORLD81","WORLD82","WORLD83","WORLD84","WORLD85","WORLD86","WORLD87","WORLD88","WORLD89","WORLD90","WORLD91","WORLD92","WORLD93","WORLD94","WORLD95","WORLD96","WORLD97","WORLD98","WORLD99", "WORLD100"};
     gfx_FillScreen(252);
     uint8_t selectedSave = 0;
+    uint8_t offset = 0;
     for (unsigned int i = 0; i < 4; i++) {
-        drawSaveOption(i, (i == selectedSave), saveNames[i]);
+        drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
     }
     bool quit = false;
     while (!quit) {
@@ -303,21 +306,38 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
             switch (key) {
                 case sk_Up:
                     if (selectedSave > 0) {
-                        drawSaveOption(selectedSave, false, saveNames[selectedSave]);
+                        drawSaveOption(selectedSave, false, saveNames[selectedSave + offset]);
                         selectedSave--;
-                        drawSaveOption(selectedSave, true, saveNames[selectedSave]);
+                        drawSaveOption(selectedSave, true, saveNames[selectedSave + offset]);
                     }
                     break;
                 case sk_Down:
                     if (selectedSave < 3) {
-                        drawSaveOption(selectedSave, false, saveNames[selectedSave]);
+                        drawSaveOption(selectedSave, false, saveNames[selectedSave + offset]);
                         selectedSave++;
-                        drawSaveOption(selectedSave, true, saveNames[selectedSave]);
+                        drawSaveOption(selectedSave, true, saveNames[selectedSave + offset]);
+                    }
+                    break;
+                case sk_Left:
+                    if (offset > 3) {
+                        offset -= 4;
+                        gfx_FillScreen(252);
+                        for (unsigned int i = 0; i < 4; i++) {
+                            drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
+                        }
+                    }
+                    break;
+                case sk_Right:
+                    if (offset < 96) {
+                        offset += 4;
+                        gfx_FillScreen(252);
+                        for (unsigned int i = 0; i < 4; i++) {
+                            drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
+                        }
                     }
                     break;
                 case sk_Enter:
-                    strncpy(nameBuffer, saveNames[selectedSave], nameBufferLength);
-                    nameBuffer[nameBufferLength - 1] = 0;
+                    strcpy(nameBuffer, saveNames[selectedSave + offset]);
                     return true;
                     quit = true;
                     break;
@@ -332,7 +352,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                 case sk_Del:
                     gfx_FillScreen(252);
                     char buffer[100] = "Are you sure you'd like to delete ";
-                    strcat(buffer, saveNames[selectedSave]);
+                    strcat(buffer, saveNames[selectedSave + offset]);
                     strcat(buffer, "?");
                     printStringCentered(buffer, 110);
                     printStringCentered("Press 1 for yes, 2 for no.", 120);
@@ -343,17 +363,17 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                             switch (key2) {
                                 case sk_1:
                                     userSelected = true;
-                                    ti_Delete(saveNames[selectedSave]);
+                                    ti_Delete(saveNames[selectedSave + offset]);
                                     gfx_FillScreen(252);
                                     for (unsigned int i = 0; i < 4; i++) {
-                                        drawSaveOption(i, (i == selectedSave), saveNames[i]);
+                                        drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
                                     }
                                     break;
                                 case sk_2:
                                     userSelected = true;
                                     gfx_FillScreen(252);
                                     for (unsigned int i = 0; i < 4; i++) {
-                                        drawSaveOption(i, (i == selectedSave), saveNames[i]);
+                                        drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
                                     }
                                     break;
                                 default:
