@@ -26,7 +26,7 @@ The only problem is --- how the heck do I (a first time eZ80 assembly developer)
 Based on prior experience whatever I cobble together will probably be faster than what the compiler spits out, but I still have to get something working first.
 */
 
-object** objects = (object**) 0xD3A000;
+object** objects = (object**) 0xD3B900;
 object** zSortedObjects = objects + maxNumberOfObjects;
 transformedPolygon* preparedPolygons = (transformedPolygon*) (zSortedObjects + maxNumberOfObjects);
 
@@ -44,7 +44,7 @@ unsigned int obscuredPolygons = 0;
 // Faces of a cube
 uint8_t face1Points[] = {0, 1, 2, 3};
 const polygon face1 = {face1Points, 2};
-uint8_t face4Points[] = {4, 0, 3, 7};
+uint8_t face4Points[] = {4, 0, 3, 6};
 const polygon face4 = {face4Points, 1};
 uint8_t face0Points[] = {4, 0, 1, 5};
 const polygon face0 = {face0Points, 0};
@@ -60,20 +60,6 @@ const polygon cubePolygons[] = {face0, face4, face1};
 
 // Position of the camera
 Fixed24 cameraXYZ[3] = {-100, 150, -100};
-
-// Angle of the camera
-const float cameraAngle[3] = {0.5235988, 0.7853982, 0};
-
-// Constant ratios needed for projection
-const Fixed24 cx = cosf(cameraAngle[0]);
-const Fixed24 sx = sinf(cameraAngle[0]);
-const Fixed24 cy = cosf(cameraAngle[1]);
-const Fixed24 sy = sinf(cameraAngle[1]);
-const Fixed24 cz = cosf(cameraAngle[2]);
-const Fixed24 sz = sinf(cameraAngle[2]);
-
-// Reciprocal needed for texture rendering
-const Fixed24 reciprocalOf16 = (Fixed24)1/(Fixed24)16;
 
 /*
 clip:
@@ -91,15 +77,20 @@ void object::generatePolygons(uint8_t clip) {
         memcpy(polygons, cubePolygons, sizeof(polygon)*3);
         for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
             // Set the polygon's distance from the camera
-            int z = 0;
             polygon* polygon = &polygons[polygonNum];
+            int z = 0;
             for (unsigned int i = 0; i < 4; i++) {
                 z += renderedPoints[polygon->points[i]].z;
             }
             z >>= 2;
+            /*int z = renderedPoints[polygon->points[0]].z;
+            for (uint8_t i = 1; i < 4; i++) {
+                if (z < renderedPoints[polygon->points[i]].z) {
+                    z = renderedPoints[polygon->points[i]].z;
+                }
+            } */
             polygon->z = z;
         }
-
         // Sort the polygons by distance from the camera, front to back
         qsort((void *) polygons, 3, sizeof(polygon), zCompare);
 
@@ -112,13 +103,14 @@ void object::generatePolygons(uint8_t clip) {
 
                 // Are we going to render the polygon?
                 bool render = true;
-
-                bool zBufferEmpty = false;
                 
                 // Normalized z (0-255)
-                unsigned int normalizedZ = ::abs(polygon.z) >> 3;
+                unsigned int normalizedZ = polygon.z >> 3;
 
                 // Clamp the Z to the range of the uint8_t
+                /*if (normalizedZ > 146) {
+                    normalizedZ = 146 + ((normalizedZ - 146) >> 3);
+                }*/
                 if (normalizedZ > 255) {
                     normalizedZ = 255;
                 }
@@ -147,9 +139,6 @@ void object::generatePolygons(uint8_t clip) {
                         uint8_t bufferZ = gfx_GetPixel((point->x + x)>>1, (point->y + y)>>1);
                         if (normalizedZ >= bufferZ) {
                             obscuredPoints++;
-                        }
-                        if (bufferZ == 255) {
-                            zBufferEmpty = true;
                         }
                     }
                     if (obscuredPoints == 4) {
@@ -270,10 +259,10 @@ void object::deleteObject() {
 void object::generatePoints() {
     visible = true;
     // The verticies of the cube
-    point points[] = {{x, y, z}, {x+size, y, z}, {x+size, y-size, z}, {x, y-size, z}, {x, y, z+size}, {x+size, y, z+size}, {x+size, y-size, z+size}, {x, y-size, z+size}};
+    point points[] = {{x, y, z}, {x+size, y, z}, {x+size, y-size, z}, {x, y-size, z}, {x, y, z+size}, {x+size, y, z+size}, {x, y-size, z+size}};
     // rough but hopefully effective optimization
     {
-        renderedPoints[0] = transformPoint(points[0]);
+        renderedPoints[0] = transformPointNewA(points[0]);
 
         // If the object is outside the culling distance, don't render it
         if (renderedPoints[0].z >= zCullingDistance) {
@@ -289,8 +278,8 @@ void object::generatePoints() {
 
     // Check all the other points if the origin of the cube is on screen
     if (visible) {
-        for (uint8_t i = 1; i < 8; i++) {
-            renderedPoints[i] = transformPoint(points[i]);
+        for (uint8_t i = 1; i < 7; i++) {
+            renderedPoints[i] = transformPointNewA(points[i]);
             if (renderedPoints[i].z >= zCullingDistance) {
                 visible = false;
                 break;
@@ -348,31 +337,6 @@ int xCompare(const void *arg1, const void *arg2) {
     /*snprintf(buffer, 200, "XComp X1: %f, X2: %f", (float)object1->x, (float)object2->x);
     gfx_PrintString(buffer);*/
     return object1->x - object2->x;
-}
-
-// possible target for optimization -- as soon as I figure out how
-screenPoint transformPoint(point point) {
-    // Result we will return
-    screenPoint result;
-    
-    // Convert from global space to relative to the camera
-    Fixed24 x = point.x - cameraXYZ[0];
-    Fixed24 y = point.y - cameraXYZ[1];
-    Fixed24 z = point.z - cameraXYZ[2];
-    
-    // Components of the transform equation that get reused
-    const Fixed24 sum1 = (sz*y+cz*x);
-    const Fixed24 sum2 = (cy*z+sy*sum1);
-    const Fixed24 sum3 = (cz*y - sz*x);
-    // This is mostly magic I found on Wikipedia that I don't really understand
-    const Fixed24 dx = cy*sum1 - sy*z;
-    const Fixed24 dy = sx*sum2 + cx*sum3;
-    const Fixed24 dz = cx*sum2 - sx*sum3;
-    const Fixed24 sum4 = (focalDistance/dz);
-    result.x = (int)((Fixed24)160 + sum4*dx);
-    result.y = (int)((Fixed24)120 - sum4*dy);
-    result.z = int_sqrt_a(((int)x*(int)x)+((int)y*(int)y)+((int)z*(int)z));
-    return result;
 }
 
 void deletePolygons() {
@@ -530,12 +494,15 @@ void renderPolygon(transformedPolygon* polygon) {
             // length = int_sqrt(lineEquations[0].length);
             length = lineEquations[0].length;
         }
+        length++;
 
         // Ratios that make the math faster (means we can multiply instead of divide)
         const Fixed24 reciprocalOfLength = (Fixed24)1/(Fixed24)length;
-
-        // Another ratio that makes the math faster
-        Fixed24 divI = 0;
+        
+        // Trick to use as close to (but not exactly) 16 as a Fixed24 can hold
+        Fixed24 textureRatio = reciprocalOfLength;
+        textureRatio.n <<=4;
+        Fixed24 row = 0;
         Fixed24 lineCX = lineEquations[1].px;
         Fixed24 linePX = lineEquations[0].cx;
         Fixed24 lineCY = lineEquations[1].py;
@@ -544,19 +511,19 @@ void renderPolygon(transformedPolygon* polygon) {
         Fixed24 PXdiff = (lineEquations[0].dx)*reciprocalOfLength;
         Fixed24 CYdiff = (-lineEquations[1].dy)*reciprocalOfLength;
         Fixed24 PYdiff = (lineEquations[0].dy)*reciprocalOfLength;
-        
+        length--;
+
         // main body
         for (int i = 0; i < length; i++) {
-            int row = (divI.n >> 4) & 0xFFFFF0;
-            drawTextureLineA(lineCX, linePX, lineCY, linePY, &texture[row], colorOffset);
-            divI += reciprocalOfLength;
+            drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[((int)row)*16], colorOffset);
             lineCX += CXdiff;
             linePX += PXdiff;
             lineCY += CYdiff;
             linePY += PYdiff;
+            row += textureRatio;
         }
         // last line
-        drawTextureLineA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset);
+        drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset);
     }
 }
 
@@ -564,7 +531,7 @@ int getPointDistance(point point) {
     int x = point.x - cameraXYZ[0];
     int y = point.y - cameraXYZ[1];
     int z = point.z - cameraXYZ[2];
-    return int_sqrt((x*x)+(y*y)+(z*z));
+    return approx_sqrt_a((x*x)+(y*y)+(z*z));
 }
 
 object** xSearch(object* key) {
@@ -629,3 +596,54 @@ unsigned int_sqrt(unsigned n) {
     fillLine(x1, y1, xDiff, yDiff, textureLineLength, textureLineRatio, texture, colorOffset);
     //drawTextureLineA(startingX, endingX, startingY, endingY, texture, colorOffset);
 }*/
+
+// code stolen from wikipedia again
+// needs to be reimplemented in assembly
+void drawTextureLineNew(Fixed24 startingX, Fixed24 endingX, Fixed24 startingY, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset) {
+    int x0 = startingX;
+    int y0 = startingY;
+    int x1 = endingX;
+    int y1 = endingY;
+    int dx = abs(x1 - x0);
+    int sx;
+    if (x0 < x1) {
+        sx = 1;
+    } else {
+        sx = -1;
+    }
+    int dy = -abs(y1 - y0);
+    int sy;
+    if (y0 < y1) {
+        sy = 1;
+    } else {
+        sy = -1;
+    }
+    int error = dx + dy;
+    Fixed24 textureRatio;
+    Fixed24 column;
+    if (dx > -dy) {
+        textureRatio = (Fixed24)15.99F/(Fixed24)dx;
+    } else {
+        textureRatio = (Fixed24)15.99F/(Fixed24)-dy;
+    }
+    while (true) {
+        uint8_t color = texture[(int)column];
+        if (color != 255) {
+            gfx_vram[(y0*320)+x0] = color + colorOffset;
+            gfx_vram[(y0*320)+x0+320] = color + colorOffset;
+        }
+        column += textureRatio;
+        if (x0 == x1 && y0 == y1) break;
+        int e2 = error*2;
+        if (e2 >= dy) {
+            if (x0 == x1) break;
+            error = error + dy;
+            x0 = x0 + sx;
+        }
+        if (e2 <= dx) {
+            if (y0 == y1) break;
+            error = error + dx;
+            y0 = y0 + sy;
+        }
+    }
+}

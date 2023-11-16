@@ -6,6 +6,10 @@
 #include "renderer.hpp"
 #include "saves.hpp"
 #include "crc32.h"
+extern "C" {
+    #include "usb.h"
+}
+// I want to include save file compression... just thinking about how, especially without breaking backwards compatibility.
 
 uint8_t selectedObject = 10;
 object playerCursor(20, 20, 20, 20, selectedObject, true);
@@ -26,7 +30,6 @@ void save(const char* name) {
     gfx_SetTextXY(0, 110);
     bool userSelected = false;
     bool toSaveOrNotToSave = true;
-    uint8_t handle;
     printStringAndMoveDownCentered("Would you like to save?");
     printStringAndMoveDownCentered("Press 1 for yes, 2 for no.");
     while (!userSelected) {
@@ -47,153 +50,171 @@ void save(const char* name) {
         }
     }
     if (toSaveOrNotToSave) {
-        handle = ti_Open(name, "w+");
-        if (handle) {
-            bool saveGood = true;
-            bool error = false;
-            unsigned int version = saveFileVersion;
-            Fixed24 cursorPos[3] = {playerCursor.x, playerCursor.y, playerCursor.z};
-            uint32_t checksum;
-            saveGood = ti_Write("BLOCKS", 7, 1, handle) == 1;
-            if (saveGood) {
-                saveGood = ti_Write(&version, sizeof(unsigned int), 1, handle) == 1;
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to write signature.");
-            }
-            if (saveGood) {
-                saveGood = ti_Write(&numberOfObjects, sizeof(unsigned int), 1, handle) == 1;
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to write version.");
-            }
-            if (saveGood) {
-                for (unsigned int i = 0; i < numberOfObjects; i++) {
-                    cubeSave cube = {objects[i]->x, objects[i]->y, objects[i]->z, objects[i]->size, objects[i]->texture};
-                    if (ti_Write(&cube, sizeof(cubeSave), 1, handle) != 1) {
-                        saveGood = false;
-                        break;
-                    }
-                }
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to write number of blocks.");
-            }
-            if (saveGood) {
-                saveGood = ti_Write(&selectedObject, sizeof(uint8_t), 1, handle) == 1;
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to write blocks.");
-            }
-            if (saveGood) {
-                saveGood = ti_Write(cameraXYZ, sizeof(Fixed24), 3, handle) == 3;
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to write selected object.");
-            }
-            if (saveGood) {
-                saveGood = ti_Write(cursorPos, sizeof(Fixed24), 3, handle) == 3;
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to write camera pos.");
-            }
-            if (saveGood) {
-                saveGood = ti_Seek(0, SEEK_SET, handle) != EOF;
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to write cursor pos.");
-            }
-            if (saveGood) {
-                checksum = crc32((char*) ti_GetDataPtr(handle), ti_GetSize(handle));
-                saveGood = ti_Seek(0, SEEK_END, handle) != EOF;
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to seek to beginning.");
-            }
-            if (saveGood) {
-                saveGood = ti_Write(&checksum, sizeof(uint32_t), 1, handle) == 1;
-            } else if (error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to seek to end.");
-            }
-            if (!saveGood && error == false) {
-                error = true;
-                printStringAndMoveDownCentered("Failed to write checksum.");
-            }
-            if (!saveGood && error) {
-                failedToSave();
-                ti_Close(handle);
-                ti_Delete("WORLD");
-            } else {
-                ti_SetArchiveStatus(true, handle);
-                ti_Close(handle);
-            }
+        uint8_t* saveData = (uint8_t*) saveDataBuffer;
+        bool saveGood = true;
+        bool error = false;
+        unsigned int version = saveFileVersion;
+        Fixed24 cursorPos[3] = {playerCursor.x, playerCursor.y, playerCursor.z};
+        uint32_t checksum;
+        // is using memcpy a bunch the best way to write this data out to memory? I DON'T KNOW!
+        memcpy(saveData, "BLOCKS", 7);
+        saveData += 7;
+        memcpy(saveData, &version, sizeof(unsigned int));
+        saveData += sizeof(unsigned int);
+        memcpy(saveData, &numberOfObjects, sizeof(unsigned int));
+        saveData += sizeof(unsigned int);
+        for (unsigned int i = 0; i < numberOfObjects; i++) {
+            cubeSave cube = {objects[i]->x, objects[i]->y, objects[i]->z, objects[i]->size, objects[i]->texture};
+            memcpy(saveData, &cube, sizeof(cubeSave));
+            saveData += sizeof(cubeSave);
         }
-        if (handle) {
-            ti_Close(handle);
+        memcpy(saveData, &selectedObject, 1);
+        saveData += 1;
+        memcpy(saveData, cameraXYZ, sizeof(Fixed24)*3);
+        saveData += sizeof(Fixed24)*3;
+        memcpy(saveData, cursorPos, sizeof(Fixed24)*3);
+        saveData += sizeof(Fixed24)*3;
+        checksum = crc32((char*) saveDataBuffer, (int)(saveData - (uint8_t*)saveDataBuffer));
+        memcpy(saveData, &checksum, sizeof(uint32_t));
+        saveData += sizeof(uint32_t);
+        deleteEverything();
+        bool quit = false;
+        while (quit == false) {
+            gfx_FillScreen(255);
+            gfx_SetTextXY(0, 105);
+            printStringAndMoveDownCentered("Would you like to archive or USB?");
+            printStringAndMoveDownCentered("Press 1 for archive, press 2 for USB.");
+            printStringAndMoveDownCentered("Or press clear to cancel.");
+            uint8_t key = os_GetCSC();
+            uint8_t handle;
+            while (!key) {
+                key = os_GetCSC();
+            }
+            char nameBuffer[128];
+            switch (key) {
+                case sk_1:
+                    handle = ti_Open(name, "w+");
+                    if (handle) {
+                        saveGood = ti_Write((void*)saveDataBuffer, 1, (size_t)(saveData - (uint8_t*)saveDataBuffer), handle) == (size_t)(saveData - (uint8_t*)saveDataBuffer);
+                        if (saveGood) {
+                            ti_SetArchiveStatus(true, handle);
+                            ti_Close(handle);
+                            quit = true;
+                        } else {
+                            ti_Close(handle);
+                            ti_Delete(name);
+                            printStringAndMoveDownCentered("Failed to write save");
+                            failedToSave();
+                        }
+                        ti_Close(handle);
+                    }
+                    break;
+                case sk_2:
+                    gfx_FillScreen(255);
+                    gfx_SetTextXY(0, 110);
+                    printStringAndMoveDownCentered("Please plug in a USB drive now.");
+                    printStringAndMoveDownCentered("Press any key to cancel");
+                    saveGood = init_USB();
+                    if (saveGood) {
+                        printStringAndMoveDownCentered("Please do not disconnect the USB drive.");
+                        createDirectory("/", "saves");
+                        strncpy(nameBuffer, name, 128);
+                        nameBuffer[127] = 0;
+                        strncat(nameBuffer, ".bin", 128-strlen(nameBuffer));
+                        saveGood = writeFile("/saves", nameBuffer, (size_t)(saveData - (uint8_t*)saveDataBuffer), (void*) saveDataBuffer);
+                    } else {
+                        printStringAndMoveDownCentered("Failed to init USB.");
+                        failedToSave();
+                    }
+                    close_USB();
+                    if (saveGood) {
+                        printStringAndMoveDownCentered("You may now remove the drive.");
+                        printStringAndMoveDownCentered("Press any key to continue.");
+                        while (!os_GetCSC());
+                        quit = true;
+                    }
+                    break;
+                case sk_Clear:
+                    gfx_FillScreen(255);
+                    gfx_SetTextXY(0, 110);
+                    printStringAndMoveDownCentered("Are you sure you don't want to save?");
+                    printStringAndMoveDownCentered("Press 1 for yes, 2 for no.");
+                    key = os_GetCSC();
+                    while (!key) {
+                        key = os_GetCSC();
+                    }
+                    switch (key) {
+                        case sk_1:
+                            quit = true;
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }
 
-bool checkSave(const char* name) {
+bool checkSave(const char* name, bool USB) {
     bool toSaveOrNotToSave = true;
     bool userSelected = false;
-    uint8_t handle = ti_Open(name, "r");
-    if (handle) {
-        toSaveOrNotToSave = true;
+    uint8_t* saveData = (uint8_t*)saveDataBuffer;
+    int fileSize = 0;
+    if (USB) {
+        if (init_USB()) {
+            char nameBuffer[128];
+            strncpy(nameBuffer, name, 128);
+            nameBuffer[127] = 0;
+            strncat(nameBuffer, ".bin", 128-strlen(nameBuffer));
+            toSaveOrNotToSave = readFile("/saves", nameBuffer, saveBufferSize, saveData);
+            if (toSaveOrNotToSave) {
+                fileSize = getSizeOf("/saves", nameBuffer);
+            }
+        } else {
+            toSaveOrNotToSave = false;
+        }
+        close_USB();
     } else {
-        toSaveOrNotToSave = false;
+        uint8_t handle = ti_Open(name, "r");
+        if (handle) {
+            toSaveOrNotToSave = ti_Read(saveData, 1, ti_GetSize(handle), handle) == ti_GetSize(handle);
+            if (toSaveOrNotToSave) {
+                fileSize = ti_GetSize(handle);
+            }
+            ti_Close(handle);
+        } else {
+            toSaveOrNotToSave = false;
+        }
     }
     if (toSaveOrNotToSave) {
         char signature[7];
         bool error = false;
-        bool saveGood = ti_Read(signature, 7, 1, handle) == 1;
         unsigned int version;
+        bool saveGood = true;
         uint32_t checksum;
         uint32_t properChecksum;
-
         if (saveGood) {
+            memcpy(signature, saveData, 7);
+            saveData += 7;
             saveGood = strcmp(signature, "BLOCKS") == 0;
-        } else if (error == false) {
-            error = true;
-            printStringAndMoveDownCentered("Bad signature read.");
-        }
-        if (saveGood) {
-            saveGood = ti_Read(&version, sizeof(unsigned int), 1, handle) == 1;
-        } else if (error == false) {
-            error = true;
-            printStringAndMoveDownCentered("Bad signature.");
-        }
-        if (saveGood) {
+            version = *((unsigned int*)saveData);
+            saveData += sizeof(unsigned int);
             saveGood = version == 1 || version == saveFileVersion;
         } else if (error == false) {
             error = true;
-            printStringAndMoveDownCentered("Failed to read save file version.");
+            printStringAndMoveDownCentered("Bad read.");
         }
         if (saveGood) {
-            saveGood = ti_Seek(0, SEEK_SET, handle) != EOF;
-        } else if (error == false) {
-            error = true;
-            printStringAndMoveDownCentered("Wrong save file version");
-        }
-        if (saveGood) {
-            checksum = crc32((char*) ti_GetDataPtr(handle), ti_GetSize(handle) - sizeof(uint32_t));
-            saveGood = ti_Seek(-4, SEEK_END, handle) != EOF;
-        } else if (error == false) {
-            error = true;
-            printStringAndMoveDownCentered("Failed to seek to beginning.");
-        }
-        if (saveGood) {
-            saveGood = ti_Read(&properChecksum, sizeof(uint32_t), 1, handle) == 1;
-        } else if (error == false) {
-            error = true;
-            printStringAndMoveDownCentered("Failed to seek to end.");
-        }
-        if (saveGood) {
+            checksum = crc32((char*) saveDataBuffer, fileSize - sizeof(uint32_t));
+            saveData = ((uint8_t*) saveDataBuffer) + (fileSize - sizeof(uint32_t));
+            properChecksum = *((uint32_t*)saveData);
             saveGood = checksum == properChecksum;
         } else if (error == false) {
             error = true;
-            printStringAndMoveDownCentered("Failed to read checksum.");
+            printStringAndMoveDownCentered("Wrong save file version");
         }
         if (saveGood) {
             toSaveOrNotToSave = true;
@@ -204,44 +225,46 @@ bool checkSave(const char* name) {
         if (!saveGood && error) {
             failedToLoadSave();
             toSaveOrNotToSave = false;
-            ti_Close(handle);
-            ti_Delete("WORLD");
         }
-    }
-    if (handle) {
-        ti_Close(handle);
     }
     return toSaveOrNotToSave;
 }
 
-void load(const char* name) {
-    uint8_t handle = ti_Open(name, "r");
-
-    if (handle) {
+void load(const char* name, bool USB) {
+    uint8_t* saveData = (uint8_t*) saveDataBuffer;
+    bool good;
+    if (USB) {
+        if (init_USB()) {
+            char nameBuffer[128];
+            strncpy(nameBuffer, name, 128);
+            nameBuffer[127] = 0;
+            strncat(nameBuffer, ".bin", 128-strlen(nameBuffer));
+            good = readFile("/saves", nameBuffer, saveBufferSize, saveData);
+        }
+        close_USB();
+    } else {
+        uint8_t handle = ti_Open(name, "r");
+        if (handle) {
+            good = ti_Read(saveData, sizeof(uint8_t), ti_GetSize(handle), handle);
+            ti_Close(handle);
+        }
+    }
+    if (good) {
         bool saveGood = true;
         bool error = false;
         unsigned int version;
-        saveGood = ti_Seek(7, SEEK_SET, handle) != EOF;
+        saveGood = true;
         if (saveGood) {
-            saveGood = ti_Read(&version, sizeof(unsigned int), 1, handle) == 1;
-        } else if (error == false) {
-            error = true;
-        }
-        if (saveGood) {
-            saveGood = ti_Read(&numberOfObjects, sizeof(unsigned int), 1, handle) == 1;
-        } else if (error == false) {
-            error = true;
-        }
-        if (saveGood) {
+            saveData += 7;
+            version = *((unsigned int*)saveData);
+            saveData += sizeof(unsigned int);
+            numberOfObjects = *((unsigned int*)saveData);
+            saveData += sizeof(unsigned int);
             for (unsigned int i = 0; i < numberOfObjects && i < maxNumberOfObjects; i++) {
-                cubeSave cube;
-                if (ti_Read(&cube, sizeof(cubeSave), 1, handle) == 1) {
-                    if (i < maxNumberOfObjects) {
-                        objects[i] = new object(cube.x, cube.y, cube.z, cube.size, cube.texture, false);
-                    }
-                } else {
-                    saveGood = false;
-                    break;
+                cubeSave cube = *((cubeSave*)saveData);
+                saveData += sizeof(cubeSave);
+                if (i < maxNumberOfObjects) {
+                    objects[i] = new object(cube.x, cube.y, cube.z, cube.size, cube.texture, false);
                 }
             }
         } else if (error == false) {
@@ -252,17 +275,12 @@ void load(const char* name) {
         }
         if (version == 2 && saveGood) {
             Fixed24 cursorPos[3];
-            saveGood = ti_Read(&selectedObject, sizeof(uint8_t), 1, handle) == 1;
-            if (saveGood) {
-                saveGood = ti_Read(cameraXYZ, sizeof(Fixed24), 3, handle) == 3;
-            } else if (error == false) {
-                error = true;
-            }
-            if (saveGood) {
-                saveGood = ti_Read(cursorPos, sizeof(Fixed24), 3, handle) == 3;
-            } else if (error == false) {
-                error = true;
-            }
+            selectedObject = *saveData;
+            saveData += 1;
+            memcpy(cameraXYZ, saveData, sizeof(Fixed24)*3);
+            saveData += sizeof(Fixed24)*3;
+            memcpy(cursorPos, saveData, sizeof(Fixed24)*3);
+            saveData += sizeof(Fixed24)*3;
             if (saveGood) {
                 playerCursor.x = cursorPos[0];
                 playerCursor.y = cursorPos[1];
@@ -274,7 +292,6 @@ void load(const char* name) {
         if (!saveGood && error) {
             failedToLoadSave();
         }
-        ti_Close(handle);
     } else {
         failedToLoadSave();
     }
@@ -292,6 +309,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
     if (nameBufferLength < 9) {
         return false;
     }
+    gfx_SetDrawBuffer();
     const char* saveNames[] = {"WORLD1","WORLD2","WORLD3","WORLD4","WORLD5","WORLD6","WORLD7","WORLD8","WORLD9","WORLD10","WORLD11","WORLD12","WORLD13","WORLD14","WORLD15","WORLD16","WORLD17","WORLD18","WORLD19","WORLD20","WORLD21","WORLD22","WORLD23","WORLD24","WORLD25","WORLD26","WORLD27","WORLD28","WORLD29","WORLD30","WORLD31","WORLD32","WORLD33","WORLD34","WORLD35","WORLD36","WORLD37","WORLD38","WORLD39","WORLD40","WORLD41","WORLD42","WORLD43","WORLD44","WORLD45","WORLD46","WORLD47","WORLD48","WORLD49","WORLD50","WORLD51","WORLD52","WORLD53","WORLD54","WORLD55","WORLD56","WORLD57","WORLD58","WORLD59","WORLD60","WORLD61","WORLD62","WORLD63","WORLD64","WORLD65","WORLD66","WORLD67","WORLD68","WORLD69","WORLD70","WORLD71","WORLD72","WORLD73","WORLD74","WORLD75","WORLD76","WORLD77","WORLD78","WORLD79","WORLD80","WORLD81","WORLD82","WORLD83","WORLD84","WORLD85","WORLD86","WORLD87","WORLD88","WORLD89","WORLD90","WORLD91","WORLD92","WORLD93","WORLD94","WORLD95","WORLD96","WORLD97","WORLD98","WORLD99", "WORLD100"};
     gfx_FillScreen(252);
     uint8_t selectedSave = 0;
@@ -299,6 +317,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
     for (unsigned int i = 0; i < 4; i++) {
         drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
     }
+    gfx_BlitBuffer();
     bool quit = false;
     while (!quit) {
         uint8_t key = os_GetCSC();
@@ -309,6 +328,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                         drawSaveOption(selectedSave, false, saveNames[selectedSave + offset]);
                         selectedSave--;
                         drawSaveOption(selectedSave, true, saveNames[selectedSave + offset]);
+                        gfx_BlitBuffer();
                     }
                     break;
                 case sk_Down:
@@ -316,6 +336,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                         drawSaveOption(selectedSave, false, saveNames[selectedSave + offset]);
                         selectedSave++;
                         drawSaveOption(selectedSave, true, saveNames[selectedSave + offset]);
+                        gfx_BlitBuffer();
                     }
                     break;
                 case sk_Left:
@@ -325,6 +346,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                         for (unsigned int i = 0; i < 4; i++) {
                             drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
                         }
+                        gfx_BlitBuffer();
                     }
                     break;
                 case sk_Right:
@@ -334,20 +356,21 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                         for (unsigned int i = 0; i < 4; i++) {
                             drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
                         }
+                        gfx_BlitBuffer();
                     }
                     break;
                 case sk_Enter:
                     strcpy(nameBuffer, saveNames[selectedSave + offset]);
+                    gfx_SetDrawScreen();
                     return true;
-                    quit = true;
                     break;
                 case sk_Clear:
+                    gfx_SetDrawScreen();
                     return false;
-                    quit = true;
                     break;
                 case sk_Graph:
+                    gfx_SetDrawScreen();
                     return false;
-                    quit = true;
                     break;
                 case sk_Del:
                     gfx_FillScreen(252);
@@ -356,6 +379,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                     strcat(buffer, "?");
                     printStringCentered(buffer, 110);
                     printStringCentered("Press 1 for yes, 2 for no.", 120);
+                    gfx_BlitBuffer();
                     bool userSelected = false;
                     while (!userSelected) {
                         uint8_t key2 = os_GetCSC();
@@ -363,11 +387,53 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                             switch (key2) {
                                 case sk_1:
                                     userSelected = true;
-                                    ti_Delete(saveNames[selectedSave + offset]);
+                                    quit = false;
+                                    while (!quit) {
+                                        gfx_FillScreen(252);
+                                        printStringAndMoveDownCentered("Would you like to delete the save from USB or archive?");
+                                        printStringAndMoveDownCentered("Press 1 for archive, 2 for USB.");
+                                        gfx_BlitBuffer();
+                                        uint8_t key = os_GetCSC();
+                                        while (!key) {
+                                            key = os_GetCSC();
+                                        }
+                                        switch (key) {
+                                            case sk_1:
+                                                ti_Delete(saveNames[selectedSave + offset]);
+                                                quit = true;
+                                                break;
+                                            case sk_2:
+                                                printStringAndMoveDownCentered("Please do not disconnect the USB drive.");
+                                                printStringAndMoveDownCentered("Press any key to cancel.");
+                                                gfx_BlitBuffer();
+                                                if (init_USB()) {
+                                                    char nameBuffer[128];
+                                                    strncpy(nameBuffer, saveNames[selectedSave + offset], 128);
+                                                    nameBuffer[127] = 0;
+                                                    strncat(nameBuffer, ".bin", 128-strlen(nameBuffer));
+                                                    deleteFile("/saves", nameBuffer);
+                                                    quit = true;
+                                                } else {
+                                                    printStringAndMoveDownCentered("Failed to init USB.");
+                                                    printStringAndMoveDownCentered("Press any key to continue.");
+                                                    gfx_BlitBuffer();
+                                                    uint8_t key = os_GetCSC();
+                                                    while (!key) {
+                                                        key = os_GetCSC();
+                                                    }
+                                                }
+                                                close_USB();
+                                                break;
+                                            default:
+                                                break;
+                                        }
+                                    }
+                                    quit = false;
                                     gfx_FillScreen(252);
                                     for (unsigned int i = 0; i < 4; i++) {
                                         drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
                                     }
+                                    gfx_BlitBuffer();
                                     break;
                                 case sk_2:
                                     userSelected = true;
@@ -375,6 +441,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                                     for (unsigned int i = 0; i < 4; i++) {
                                         drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
                                     }
+                                    gfx_BlitBuffer();
                                     break;
                                 default:
                                     break;
@@ -385,6 +452,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
             }
         }
     }
+    gfx_SetDrawScreen();
     return false;
 }
 

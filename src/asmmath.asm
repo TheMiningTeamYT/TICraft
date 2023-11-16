@@ -336,29 +336,23 @@ section .text
 ; is this faster? IDK!
 public _fp_to_int
 _fp_to_int:
-  push ix ; 4
-  ld ix, 0 ; 5
-  add ix, sp ; 2
-  ld d, (ix + 8) ; 4
-  ld a, (ix + 7) ; 4  
-  sra d ; 2
+  ld hl, 5 ; 4
+  add hl, sp ; 1
+  ld b, (hl) ; 2
+  dec hl ; 1
+  ld a, (hl) ; 2  
+  sra b ; 2
   rra ; 1
-  sra d ; 2
+  sra b ; 2
   rra ; 1
-  sra d ; 2
+  sra b ; 2
   rra ; 1
-  sra d ; 2
+  sra b ; 2
   rra ; 1
-  ld e, a ; 1 // put middle bits into e
-  ld a, d ; 1 // put upper bits into a
-  or a, a ; 1
-  jp p, number_is_positive ; 4/5 (38/39)
-  ld hl, $FFFFFF ; 4
-  jr fp_to_int_end
-  number_is_positive:
-  sbc hl, hl ; 2
-  fp_to_int_end:
-  ld h, d ; 1
-  ld l, e ; 1
-  pop ix ; 4
-  ret ; 6 (53/57)
+  ld c, a ; 1 // put middle bits into c
+  ld a, 127 ; 2 // test if original number was negative
+  cp a, b ; 1 // if upper byte (b) > 127, original number was negative
+  sbc hl, hl ; 2 // if original number was negative, set hl to -1. else, set it to 0.
+  ld h, b ; 1
+  ld l, c ; 1
+  ret ; 6 (36)

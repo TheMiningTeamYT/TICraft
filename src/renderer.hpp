@@ -116,7 +116,7 @@ class object {
     int getDistance();
 
     // The position of each of the cubes points (verticies) in screen space, once rendered
-    screenPoint renderedPoints[8];
+    screenPoint renderedPoints[7];
 
     // An index into an array of pointers representing the texture of the cube
     uint8_t texture;
@@ -186,9 +186,6 @@ struct saveFile {
 };
 */
 
-// Convert a point from 3D space to screen space
-screenPoint transformPoint(point point);
-
 // Get the distance from a point to the camera
 int getPointDistance(point point);
 
@@ -237,9 +234,11 @@ void xSort();
 
 unsigned int_sqrt(const unsigned n);
 
-void drawTextureLine(Fixed24 startingX, Fixed24 startingY, Fixed24 endingX, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset);
+void drawTextureLineNew(Fixed24 startingX, Fixed24 endingX, Fixed24 startingY, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset);
 
 extern "C" {
-    void drawTextureLineA(Fixed24 startingX, Fixed24 endingX, Fixed24 startingY, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset);
-    unsigned int_sqrt_a(unsigned n);
+    // Convert a point from 3D space to screen space
+    screenPoint transformPointNewA(point x);
+    void drawTextureLineNewA(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset);
+    uint16_t approx_sqrt_a(unsigned int n);
 }

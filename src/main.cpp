@@ -21,7 +21,7 @@ Allows many more blocks at theoretically no additional RAM cost
 Cons:
 Doing a re-render will be INSANELY expensive
 */
-gfx_sprite_t* cursorBackground = (gfx_sprite_t*) 0xD2C000;
+gfx_sprite_t* cursorBackground = (gfx_sprite_t*) 0xD30000;
 
 int playerCursorX = 0;
 int playerCursorY = 0;
@@ -40,14 +40,49 @@ int main() {
     bool userSelected = false;
     bool toSaveOrNotToSave = true;
     gfxStart();
-    gfx_FillScreen(255);
     gfx_SetColor(0);
-    gfx_FillScreen(255);
     gfx_SetTextScale(1, 1);
     char nameBuffer[10];
     bool emergencyExit = false;
+    bool usb = false;
+    load_save:
     while (!emergencyExit && mainMenu(nameBuffer, 10)) {
-        toSaveOrNotToSave = checkSave(nameBuffer);
+        bool quit = false;
+        while (quit == false) {
+            gfx_FillScreen(255);
+            gfx_SetTextXY(0, 105);
+            printStringAndMoveDownCentered("Would you like to load from archive or USB?");
+            printStringAndMoveDownCentered("Press 1 for archive, press 2 for USB.");
+            printStringAndMoveDownCentered("Or press clear to cancel.");
+            uint8_t key = os_GetCSC();
+            while (!key) {
+                key = os_GetCSC();
+            }
+            switch (key) {
+                case sk_1:
+                    usb = false;
+                    quit = true;
+                    break;
+                case sk_2:
+                    printStringAndMoveDownCentered("Please plug in a USB drive now.");
+                    printStringAndMoveDownCentered("Then press a key to continue.");
+                    printStringAndMoveDownCentered("Please do not unplug the drive until");
+                    printStringAndMoveDownCentered("the save is loaded.");
+                    while (!os_GetCSC());
+                    printStringAndMoveDownCentered("Press any key to cancel loading from USB");
+                    printStringAndMoveDownCentered("(Doing so will result in the genration of");
+                    printStringAndMoveDownCentered("a new world)");
+                    usb = true;
+                    quit = true;
+                    break;
+                case sk_Clear:
+                    goto load_save;
+                    break;
+                default:
+                    break;
+            }
+        }
+        toSaveOrNotToSave = checkSave(nameBuffer, usb);
         gfx_FillScreen(255);
         gfx_SetTextScale(4, 4);
         gfx_SetTextXY(0, 0);
@@ -85,7 +120,7 @@ int main() {
                 }
             }
         } else {
-            load(nameBuffer);
+            load(nameBuffer, usb);
         }
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             objects[i]->generatePoints();
@@ -103,7 +138,7 @@ int main() {
         drawScreen(0);
         getBuffer();
         drawCursor(true);
-        bool quit = false;
+        quit = false;
         while (!quit) {
             uint8_t key = os_GetCSC();
             if (key) {
@@ -312,7 +347,7 @@ void drawCursor(bool generatePoints) {
         int minY = playerCursor.renderedPoints[0].x;
         int maxX = playerCursor.renderedPoints[0].x;
         int maxY = playerCursor.renderedPoints[0].x;
-        for (uint8_t i = 1; i < 8; i++) {
+        for (uint8_t i = 1; i < 7; i++) {
             if (playerCursor.renderedPoints[i].x < minX) {
                 minX = playerCursor.renderedPoints[i].x;
             } else if (playerCursor.renderedPoints[i].x > maxX) {
@@ -328,11 +363,13 @@ void drawCursor(bool generatePoints) {
         minY--;
         int width = (maxX-minX) + 1;
         int height = (maxY-minY) + 1;
-        cursorBackground->width = width;
-        cursorBackground->height = height;
-        playerCursorX = minX;
-        playerCursorY = minY;
-        getBuffer();
+        if (width*height <= 47360) {
+            cursorBackground->width = width;
+            cursorBackground->height = height;
+            playerCursorX = minX;
+            playerCursorY = minY;
+            getBuffer();
+        }
         drawScreen(1);
     }
 }
