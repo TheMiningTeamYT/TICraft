@@ -21,18 +21,18 @@ Allows many more blocks at theoretically no additional RAM cost
 Cons:
 Doing a re-render will be INSANELY expensive
 */
-gfx_sprite_t* cursorBackground = (gfx_sprite_t*) 0xD30000;
+gfx_sprite_t* cursorBackground = (gfx_sprite_t*) 0xD2E1FD;
 
 int playerCursorX = 0;
 int playerCursorY = 0;
 
-void drawCursor(bool generatePoints);
+void drawCursor();
 void getBuffer();
 void drawBuffer();
 void moveCursor(uint8_t direction);
 void selectBlock();
-void redrawSelectedObject();
-void selectNewObject();
+void drawSelection(int offset);
+void redrawScreen();
 
 int main() {
     boot_Set48MHzMode();
@@ -49,8 +49,9 @@ int main() {
     while (!emergencyExit && mainMenu(nameBuffer, 10)) {
         bool quit = false;
         while (quit == false) {
-            gfx_FillScreen(255);
+            fillDirt();
             gfx_SetTextXY(0, 105);
+            gfx_SetTextFGColor(254);
             printStringAndMoveDownCentered("Would you like to load from archive or USB?");
             printStringAndMoveDownCentered("Press 1 for archive, press 2 for USB.");
             printStringAndMoveDownCentered("Or press clear to cancel.");
@@ -83,6 +84,7 @@ int main() {
             }
         }
         toSaveOrNotToSave = checkSave(nameBuffer, usb);
+        gfx_SetTextFGColor(0);
         gfx_FillScreen(255);
         gfx_SetTextScale(4, 4);
         gfx_SetTextXY(0, 0);
@@ -103,19 +105,18 @@ int main() {
         printStringAndMoveDownCentered("7: Diagonally Left");
         printStringAndMoveDownCentered("3: Diagonally Right");
         printStringAndMoveDownCentered("Enter: Block selection menu");
-        printStringAndMoveDownCentered("2nd: Re-render the screen");
+        printStringAndMoveDownCentered("Alpha: Move the camera to show the cursor");
         printStringAndMoveDownCentered("Mode: Perform a full re-render of the screen");
         printStringAndMoveDownCentered("Made by Logan C.");
         // implement more controls in the near future
         if (!toSaveOrNotToSave) {
             playerCursor.moveTo(20, 20, 20);
-            cameraXYZ[0] = -100;
-            cameraXYZ[1] = 150;
-            cameraXYZ[2] = -100;
+            resetCamera();
             for (int i = 0; i < 400; i++) {
                 if (numberOfObjects < maxNumberOfObjects) {
                     // workaround for compiler bug
-                    objects[numberOfObjects] = new object((i%20)*20, 0, (int)((float)i/(float)20)*20, 20, 10, false);
+                    div_t xy = div(i, 20);
+                    objects[numberOfObjects] = new object((xy.rem)*20, 0, (xy.quot)*20, 20, 10, false);
                     numberOfObjects++;
                 }
             }
@@ -135,9 +136,9 @@ int main() {
         printStringCentered("Loaded!", 5);
         gfx_SetTextScale(1,1);
         while (!os_GetCSC());
-        drawScreen(0);
+        drawScreen(true);
         getBuffer();
-        drawCursor(true);
+        drawCursor();
         quit = false;
         while (!quit) {
             uint8_t key = os_GetCSC();
@@ -145,19 +146,59 @@ int main() {
                 switch (key) {
                     // forward
                     case sk_9:
-                        moveCursor(4);
+                        if (angleY <= -67.5f) {
+                            moveCursor(6);
+                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                            moveCursor(2);
+                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                            moveCursor(8);
+                        } else if (angleY >= 67.5f) {
+                            moveCursor(7);
+                        } else {
+                            moveCursor(4);
+                        }
                         break;
                     // backward
                     case sk_1:
-                        moveCursor(5);
+                        if (angleY <= -67.5f) {
+                            moveCursor(7);
+                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                            moveCursor(3);
+                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                            moveCursor(9);
+                        } else if (angleY >= 67.5f) {
+                            moveCursor(6);
+                        } else {
+                            moveCursor(5);
+                        }
                         break;
                     // left
                     case sk_7:
-                        moveCursor(2);
+                        if (angleY <= -67.5f) {
+                            moveCursor(9);
+                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                            moveCursor(5);
+                        } else if (angleY <= 22.5f && angleY >= -67.5f) {
+                            moveCursor(6);
+                        } else if (angleY >= 67.5f) {
+                            moveCursor(8);
+                        } else {
+                            moveCursor(2);
+                        }
                         break;
                     // right
                     case sk_3:
-                        moveCursor(3);
+                        if (angleY <= -67.5f) {
+                            moveCursor(8);
+                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                            moveCursor(4);
+                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                            moveCursor(7);
+                        } else if (angleY >= 67.5f) {
+                            moveCursor(9);
+                        } else {
+                            moveCursor(3);
+                        }
                         break;
                     // up
                     case sk_Mul:
@@ -167,16 +208,56 @@ int main() {
                         moveCursor(1);
                         break;
                     case sk_8:
-                        moveCursor(8);
+                        if (angleY <= -67.5f) {
+                            moveCursor(5);
+                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                            moveCursor(6);
+                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                            moveCursor(2);
+                        } else if (angleY >= 67.5f) {
+                            moveCursor(4);
+                        } else {
+                            moveCursor(8);
+                        }
                         break;
                     case sk_2:
-                        moveCursor(9);
+                        if (angleY <= -67.5f) {
+                            moveCursor(4);
+                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                            moveCursor(7);
+                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                            moveCursor(3);
+                        } else if (angleY >= 67.5f) {
+                            moveCursor(5);
+                        } else {
+                            moveCursor(9);
+                        }
                         break;
                     case sk_4:
-                        moveCursor(6);
+                        if (angleY <= -67.5f) {
+                            moveCursor(3);
+                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                            moveCursor(9);
+                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                            moveCursor(5);
+                        } else if (angleY >= 67.5f) {
+                            moveCursor(2);
+                        } else {
+                            moveCursor(6);
+                        }
                         break;
                     case sk_6:
-                        moveCursor(7);
+                        if (angleY <= -67.5f) {
+                            moveCursor(2);
+                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                            moveCursor(8);
+                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                            moveCursor(4);
+                        } else if (angleY >= 67.5f) {
+                            moveCursor(3);
+                        } else {
+                            moveCursor(7);
+                        }
                         break;
                     case sk_5: {
                         object* annoyingPointer = &playerCursor;
@@ -194,14 +275,14 @@ int main() {
                                 if ((*matchingObject)->x > playerCursor.x) {
                                     break;
                                 }
-                                if ((*matchingObject)->x == playerCursor.x && (*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
+                                if ((*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
                                     object* matchingObjectReference = *matchingObject;
-                                    memmove(matchingObject, matchingObject + 1, sizeof(object *) * (&objects[numberOfObjects - 1] - matchingObject));
+                                    memmove(matchingObject, matchingObject + 1, sizeof(object*) * (&objects[numberOfObjects - 1] - matchingObject));
                                     numberOfObjects--;
                                     matchingObjectReference->deleteObject();
                                     delete matchingObjectReference;
                                     xSort();
-                                    drawScreen(3);
+                                    drawScreen(false);
                                     getBuffer();
                                     deletedObject = true;
                                     break;
@@ -211,39 +292,29 @@ int main() {
                         }
                         if (!deletedObject) {
                             if (numberOfObjects < maxNumberOfObjects) {
-                                deletePolygons();
-                                objects[numberOfObjects] = new object(playerCursor.x, playerCursor.y, playerCursor.z, 20, selectedObject, false);
-                                gfx_SetDrawBuffer();
-                                objects[numberOfObjects]->generatePoints();
-                                objects[numberOfObjects]->generatePolygons(2);
-                                gfx_SetDrawScreen();
+                                object* newObject = new object(playerCursor.x, playerCursor.y, playerCursor.z, 20, selectedObject, false);
+                                newObject->generatePoints();
+                                objects[numberOfObjects] = newObject;
                                 numberOfObjects++;
                                 xSort();
-                                drawScreen(1);
+                                gfx_SetDrawBuffer();
+                                newObject->generatePolygons(true);
+                                gfx_SetDrawScreen();
                                 getBuffer();
                             }
                         }
-                        drawCursor(true);
+                        drawCursor();
                         break;
                     }
                     case sk_Mode:
-                        drawScreen(0);
+                        drawScreen(true);
                         getBuffer();
-                        drawCursor(true);
-                        break;
-                    // redraw the screen
-                    case sk_2nd:
-                        drawBuffer();
-                        drawScreen(2);
-                        getBuffer();
-                        drawCursor(true);
+                        drawCursor();
                         break;
                     // exit
                     case sk_Graph:
                         quit = true;
                         gfx_SetDrawScreen();
-                        gfx_FillScreen(255);
-                        deletePolygons();
                         save(nameBuffer);
                         break;
                     case sk_Clear:
@@ -254,68 +325,50 @@ int main() {
                         selectBlock();
                         break;
                     case sk_Up:
-                        cameraXYZ[0] += 40;
-                        cameraXYZ[2] += 40;
-                        for (unsigned int i = 0; i < numberOfObjects; i++) {
-                            objects[i]->generatePoints();
-                        }
-                        xSort();
-                        drawScreen(0);
-                        getBuffer();
-                        drawCursor(true);
+                        cameraXYZ[0] += (Fixed24)56.56854251f*sy;
+                        cameraXYZ[2] += (Fixed24)56.56854251f*cy;
+                        redrawScreen();
                         break;
                     case sk_Down:
-                        cameraXYZ[0] -= 40;
-                        cameraXYZ[2] -= 40;
-                        for (unsigned int i = 0; i < numberOfObjects; i++) {
-                            objects[i]->generatePoints();
-                        }
-                        xSort();
-                        drawScreen(0);
-                        getBuffer();
-                        drawCursor(true);
+                        cameraXYZ[0] -= (Fixed24)56.56854251f*sy;
+                        cameraXYZ[2] -= (Fixed24)56.56854251f*cy;
+                        redrawScreen();
                         break;
                     case sk_Left:
-                        cameraXYZ[0] -= 40;
-                        cameraXYZ[2] += 40;
-                        for (unsigned int i = 0; i < numberOfObjects; i++) {
-                            objects[i]->generatePoints();
-                        }
-                        xSort();
-                        drawScreen(0);
-                        getBuffer();
-                        drawCursor(true);
+                        cameraXYZ[0] -= (Fixed24)56.56854251f*cy;
+                        cameraXYZ[2] += (Fixed24)56.56854251f*sy;
+                        redrawScreen();
                         break;
                     case sk_Right:
-                        cameraXYZ[0] += 40;
-                        cameraXYZ[2] -= 40;
-                        for (unsigned int i = 0; i < numberOfObjects; i++) {
-                            objects[i]->generatePoints();
-                        }
-                        xSort();
-                        drawScreen(0);
-                        getBuffer();
-                        drawCursor(true);
+                        cameraXYZ[0] += (Fixed24)56.56854251f*cy;
+                        cameraXYZ[2] -= (Fixed24)56.56854251f*sy;
+                        redrawScreen();
                         break;
                     case sk_Del:
-                        cameraXYZ[1] += 40;
-                        for (unsigned int i = 0; i < numberOfObjects; i++) {
-                            objects[i]->generatePoints();
-                        }
-                        xSort();
-                        drawScreen(0);
-                        getBuffer();
-                        drawCursor(true);
+                        cameraXYZ[1] += 20;
+                        redrawScreen();
                         break;
                     case sk_Stat:
-                        cameraXYZ[1] -= 40;
-                        for (unsigned int i = 0; i < numberOfObjects; i++) {
-                            objects[i]->generatePoints();
-                        }
-                        xSort();
-                        drawScreen(0);
-                        getBuffer();
-                        drawCursor(true);
+                        cameraXYZ[1] -= 20;
+                        redrawScreen();
+                        break;
+                    case sk_Prgm:
+                        rotateCamera(-5, 0);
+                        break;
+                    case sk_Cos:
+                        rotateCamera(5, 0);
+                        break;
+                    case sk_Sin:
+                        rotateCamera(0, -5);
+                        break;
+                    case sk_Tan:
+                        rotateCamera(0, 5);
+                        break;
+                    case sk_Alpha:
+                        cameraXYZ[0] = playerCursor.x - (((Fixed24)84.85281375f)*sy);
+                        cameraXYZ[1] = playerCursor.y + (Fixed24)75;
+                        cameraXYZ[2] = playerCursor.z - (((Fixed24)84.85281375f)*cy);
+                        redrawScreen();
                         break;
                     default:
                         break;
@@ -335,19 +388,15 @@ int main() {
 }
 
 // still has problems
-void drawCursor(bool generatePoints) {
-    deletePolygons();
+void drawCursor() {
     drawBuffer();
-    if (generatePoints) {
-        playerCursor.generatePoints();
-    }
+    playerCursor.generatePoints();
     if (playerCursor.visible) {
-        playerCursor.generatePolygons(0);
         int minX = playerCursor.renderedPoints[0].x;
-        int minY = playerCursor.renderedPoints[0].x;
+        int minY = playerCursor.renderedPoints[0].y;
         int maxX = playerCursor.renderedPoints[0].x;
-        int maxY = playerCursor.renderedPoints[0].x;
-        for (uint8_t i = 1; i < 7; i++) {
+        int maxY = playerCursor.renderedPoints[0].y;
+        for (uint8_t i = 1; i < 8; i++) {
             if (playerCursor.renderedPoints[i].x < minX) {
                 minX = playerCursor.renderedPoints[i].x;
             } else if (playerCursor.renderedPoints[i].x > maxX) {
@@ -363,14 +412,14 @@ void drawCursor(bool generatePoints) {
         minY--;
         int width = (maxX-minX) + 1;
         int height = (maxY-minY) + 1;
-        if (width*height <= 47360) {
+        if (width*height <= 65025) {
             cursorBackground->width = width;
             cursorBackground->height = height;
             playerCursorX = minX;
             playerCursorY = minY;
             getBuffer();
         }
-        drawScreen(1);
+        playerCursor.generatePolygons(false);
     }
 }
 /*
@@ -431,75 +480,21 @@ void moveCursor(uint8_t direction) {
         default:
             return;
     }
-    playerCursor.generatePoints();
-    if (playerCursor.visible) {
-        drawCursor(false);
-    } else if (visibleBefore) {
-        switch (direction) {
-            case 0:
-                if (playerCursor.y > (Fixed24)-2027)
-                    playerCursor.moveBy(0, -20, 0);
-                break;
-            case 1:
-                if (playerCursor.y < (Fixed24)2027)
-                    playerCursor.moveBy(0, 20, 0);
-                break;
-            case 2:
-                if (playerCursor.z > (Fixed24)-2027)
-                    playerCursor.moveBy(0, 0, -20);
-                break;
-            case 3:
-                if (playerCursor.z < (Fixed24)2027)
-                    playerCursor.moveBy(0, 0, 20);
-                break;
-            case 4:
-                if (playerCursor.x > (Fixed24)-2027)
-                    playerCursor.moveBy(-20, 0, 0);
-                break;
-            case 5:
-                if (playerCursor.x < (Fixed24)2027)
-                    playerCursor.moveBy(20, 0, 0);
-                break;
-            case 6:
-                if (playerCursor.x < (Fixed24)2027 && playerCursor.z > (Fixed24)-2027)
-                    playerCursor.moveBy(20, 0, -20);
-                break;
-            case 7:
-                if (playerCursor.x > (Fixed24)-2027 && playerCursor.z < (Fixed24)2027)
-                    playerCursor.moveBy(-20, 0, 20);
-                break;
-            case 8:
-                if (playerCursor.x > (Fixed24)-2027 && playerCursor.z > (Fixed24)-2027)
-                    playerCursor.moveBy(-20, 0, -20);
-                break;
-            case 9:
-                if (playerCursor.x < (Fixed24)2027 && playerCursor.z < (Fixed24)2027)
-                    playerCursor.moveBy(20, 0, 20);
-                break;
-            default:
-                return;
-        }
-        playerCursor.generatePoints();
-    }
+    drawCursor();
 }
 
 void getBuffer() {
-    if (cursorBackground) {
-        gfx_GetSprite(cursorBackground, playerCursorX, playerCursorY);
-    }
+    gfx_GetSprite(cursorBackground, playerCursorX, playerCursorY);
 }
 
 void drawBuffer() {
-    if (playerCursorX > 0 && cursorBackground->width + playerCursorX < 320 && playerCursorY > 0 && cursorBackground->height + playerCursorY < 240) {
-        gfx_Sprite_NoClip(cursorBackground, playerCursorX, playerCursorY);
-    } else {
-        gfx_Sprite(cursorBackground, playerCursorX, playerCursorY);
-    }
+    gfx_Sprite(cursorBackground, playerCursorX, playerCursorY);
 }
 
 void selectBlock() {
     drawBuffer();
-    gfx_SetDrawScreen();
+    cursorBackground->width = 16;
+    cursorBackground->height = 16;
     gfx_SetColor(253);
     gfx_FillRectangle(72, 42, 176, 156);
     for (uint8_t i = 0; i < 48; i++) {
@@ -508,8 +503,6 @@ void selectBlock() {
             gfx_FillRectangle(80 + (20*(i%8)), 50 + (24*(i/8)), 20, 20);
         }
         memcpy(cursorBackground->data, textures[i][1], 256);
-        cursorBackground->width = 16;
-        cursorBackground->height = 16;
         gfx_Sprite_NoClip(cursorBackground, 82 + (20*(i%8)), 52 + (24*(i/8)));
     }
     bool quit = false;
@@ -518,47 +511,35 @@ void selectBlock() {
         if (key) {
             switch (key) {
                 case sk_Up:
+                case sk_8:
                     if (selectedObject/8 > 0) {
-                        redrawSelectedObject();
-                        selectedObject -= 8;
-                        selectNewObject();
+                        drawSelection(-8);
                     } else {
-                        redrawSelectedObject();
-                        selectedObject += 40;
-                        selectNewObject();
+                        drawSelection(40);
                     }
                     break;
                 case sk_Down:
+                case sk_2:
                     if (selectedObject/8 < 5) {
-                        redrawSelectedObject();
-                        selectedObject += 8;
-                        selectNewObject();
+                        drawSelection(8);
                     } else {
-                        redrawSelectedObject();
-                        selectedObject -= 40;
-                        selectNewObject();
+                        drawSelection(-40);
                     }
                     break;
                 case sk_Left:
+                case sk_4:
                     if (selectedObject > 0) {
-                        redrawSelectedObject();
-                        selectedObject--;
-                        selectNewObject();
+                        drawSelection(-1);
                     } else {
-                        redrawSelectedObject();
-                        selectedObject = 47;
-                        selectNewObject();
+                        drawSelection(((int)-selectedObject) + 47);
                     }
                     break;
                 case sk_Right:
+                case sk_6:
                     if (selectedObject < 47) {
-                        redrawSelectedObject();
-                        selectedObject++;
-                        selectNewObject();
+                        drawSelection(1);
                     } else {
-                        redrawSelectedObject();
-                        selectedObject = 0;
-                        selectNewObject();
+                        drawSelection(((int)-selectedObject));
                     }
                     break;
                 case sk_Enter:
@@ -574,27 +555,30 @@ void selectBlock() {
     gfx_SetColor(255);
     gfx_FillRectangle(72, 42, 176, 156);
     gfx_SetDrawScreen();
-    gfx_SetColor(255);
     gfx_FillRectangle(72, 42, 176, 156);
-    drawScreen(3);
+    drawScreen(false);
     getBuffer();
-    drawCursor(true);
+    drawCursor();
 }
 
-void redrawSelectedObject() {
+void drawSelection(int offset) {
     gfx_SetColor(253);
     gfx_FillRectangle(80 + (20*(selectedObject%8)), 50 + (24*(selectedObject/8)), 20, 20);
     memcpy(cursorBackground->data, textures[selectedObject][1], 256);
-    cursorBackground->width = 16;
-    cursorBackground->height = 16;
     gfx_Sprite_NoClip(cursorBackground, 82 + (20*(selectedObject%8)), 52 + (24*(selectedObject/8)));
-}
-
-void selectNewObject() {
+    selectedObject += offset;
     gfx_SetColor(254);
     gfx_FillRectangle(80 + (20*(selectedObject%8)), 50 + (24*(selectedObject/8)), 20, 20);
     memcpy(cursorBackground->data, textures[selectedObject][1], 256);
-    cursorBackground->width = 16;
-    cursorBackground->height = 16;
     gfx_Sprite_NoClip(cursorBackground, 82 + (20*(selectedObject%8)), 52 + (24*(selectedObject/8)));
+}
+
+void redrawScreen() {
+    for (unsigned int i = 0; i < numberOfObjects; i++) {
+        objects[i]->generatePoints();
+    }
+    xSort();
+    drawScreen(true);
+    getBuffer();
+    drawCursor();
 }

@@ -12,25 +12,22 @@ abs:
     ex de, hl ; 1
     ret ; 6
 section .text
-public _drawTextureLineNewA
+public _drawTextureLineNewA_NoClip
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
-_drawTextureLineNewA:
+_drawTextureLineNewA_NoClip:
     di
-    ; Save the index registers
     push ix
     ; Copy the arguments from the stack to the variable space
-    ld iy, 0
+    ld iy, vars
     ld hl, 6
     add hl, sp
-    ld de, vars
-    add iy, de
-    ld bc, 18
+    lea de, iy
+    ld bc, 19
     ldir
     ; BC will be sx
-    ld bc, 1
+    inc bc
     ; Compute dx
     ld hl, (iy + x1)
-    dec hl
     ld de, (iy + x0)
     or a, a
     sbc hl, de
@@ -42,7 +39,6 @@ _drawTextureLineNewA:
     sx_cont:
     ; Store sx
     ld (iy + sx), bc
-    inc hl
     ; Compute abs(dx)
     call abs
     ; Store dx
@@ -51,7 +47,6 @@ _drawTextureLineNewA:
     ld bc, 320
     ; Compute dy
     ld hl, (iy + y1)
-    dec hl
     ld de, (iy + y0)
     or a, a
     sbc hl, de
@@ -62,7 +57,6 @@ _drawTextureLineNewA:
     sy_cont:
     ; Store sy
     ld (iy + sy), bc
-    inc hl
     ; Compute abs(dy)
     call abs
     ; save abs(dy) to the stack
@@ -77,10 +71,9 @@ _drawTextureLineNewA:
     ; Load dx
     ld de, (iy + dx)
     add hl, de
-    ; Store dx + dy to error
-    ld (iy + error), hl
-    ; Retrieve abs(dy) from the stack
-    pop hl
+    add hl, hl
+    ; Push error*2 to the stack and retrieve abs(dy) from the stack
+    ex (sp), hl
     or a, a
     sbc hl, de
     ex de, hl
@@ -103,12 +96,16 @@ _drawTextureLineNewA:
     add hl, hl
     add hl, hl
     add hl, hl
-    ; Divide ~15.99 by hl
+    ; Take the reciprocal of hl
     push hl
-    ; ~15.99
-    ld hl, $00FFFF
+    ; 1
+    ld hl, $001000
     push hl
     ; But first, some other stuff
+    ; offset ix (screen pointer) by gfx_vram
+    ld ix, (iy + x0)
+    ld de, $D40000
+    add ix, de
     ; Pre-multiply y0 & y1
     ld de, 160
     ld h, (iy + y0)
@@ -117,107 +114,80 @@ _drawTextureLineNewA:
     add hl, hl
     ld (iy + y0), hl
     ex de, hl
+    add ix, de
     ld h, (iy + y1)
     mlt hl
     add hl, hl
     ld (iy + y1), hl
-    ; offset x by gfx_vram
-    ld de, gfx_vram
-    ld hl, (iy + x0)
-    add hl, de
-    ld (iy + x0), hl
-    ld hl, (iy + x1)
-    add hl, de
-    ld (iy + x1), hl
     ; Init column & texture ratio & draw first pixel
     exx
         ; Divide
         call _fp_div
-        dec hl
-        ; load whole number part of texture ratio into c
-        ld bc, 0
-        ld c, h ; middle 8 bits of texture ratio
-        srl c
-        srl c
-        srl c
-        srl c
-        ; c now contains the whole number portion of texture ratio
-        ; shift texture ratio left 12
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        ; put texture ratio into de
+        ; Restore stack pointer
+        inc sp
+        inc sp
+        inc sp
+        inc sp
+        inc sp
+        inc sp
         ex de, hl
-        ; Restore the stack pointer
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        ; Init hl to 0
-        or a, a
-        sbc hl, hl
-        ; Put colorOffset into l
-        ld l, (iy + colorOffset)
-        dec l
-        ; Init IX
-        ld ix, (iy + texture)
+        dec de
+        ld b, e
+        ld e, d
+        ld c, (iy + colorOffset)
+        inc c
+        ld hl, (iy + texture)
+        ex af, af'
+            xor a, a
+            ld d, a
+        ex af, af'
     exx
-    ; At this point, all our variables should be initialized
-    ; hl': column << 12 (0)
-    ; l': colorOffset
-    ; de': textureRatio << 12
-    ; bc': floor(textureRatio)
-    ; ix: texture
-    ; 78-191 cycles per pixel
-    ; a LOT of memory access going on here that could potentially be optimized
+    ; At this point, all our registers/variables should be initialized
+    ; hl': texture
+    ; c': colorOffset
+    ; b': (textureRatio << 12) & 0xF00000 (textureRatio % 1) (Fractional component of textureRatio)
+    ; de': floor(textureRatio)
+    ; a': Running total of the fractional component of column
+    ; 75-208 cycles per pixel
     new_fillLoop:
-        ; Load the pixel value
-        ld a, (ix) ; 4
-        inc a ; 1
-        ; If it is 255 (the transparency color), skip drawing the pixel
-        jr z, fill_cont ; 2/3
+        ; Load the texel value and advance column
+        exx ; 1
             ; Add the color offset to the pixel
-            exx ; 1
-            add a, l ; 1
-            exx ; 1
-            ; init hl to y0
-            ld hl, (iy + y0) ; 5
-            ; We're going to use hl as a pointer to the location on the screen to write to
-            ; Add the x value to hl
-            ld de, (iy + x0) ; 5
+            ld a, (hl) ; 2
+            add a, c ; 1
+            ex af, af' ; 1
+                add a, b ; 1
+                adc hl, de ; 2
+            ex af, af' ; 1
+        exx ; 1
+        ; If the texel is 255 (the transparency color), skip drawing the pixel
+        jr c, fill_cont ; 2/3
+            dec a ; 1
+            lea hl, ix ; 3
+            ld de, 76800 ; 4
             add hl, de ; 1
-            ; Write the pixel
-            ld (hl), a ; 2
-            ; Move down 1 row
+            ld c, a ; 1
+            ld a, (iy + polygonZ) ; 4
+            cp a, (hl) ; 2
+            jr nc, fill_upper_cont ; 2/3
+                ld (hl), a ; 2
+                ld (ix), c ; 4
+            fill_upper_cont:
             ld de, 320 ; 4
             add hl, de ; 1
-            ; Write the pixel (again)
-            ld (hl), a ; 2
+            cp a, (hl) ; 2
+            jr nc, fill_lower_cont ; 2/3
+                ld (hl), a ; 2
+                lea hl, ix ; 3
+                add hl, de ; 1
+                ld (hl), c ; 4
+            fill_lower_cont:
         fill_cont:
-        ; Advance column
-        exx ; 1
-            add ix, bc ; 2
-            add hl, de ; 1
-            jr nc, ix_cont ; 2/3
-                inc ix ; 1
-            ix_cont:
-        exx ; 1
         ; Test if x0 == x1
-        ld hl, (iy + x0) ; 5
-        ld de, (iy + x1) ; 5
+        ld hl, (iy + x1) ; 5
+        ld bc, (iy + x0) ; 6
         or a, a ; 1
-        sbc hl, de ; 2
+        sbc hl, bc ; 2
         ; If x0 != x1, move on
         jr nz, end_cont ; 2/3
             ; Else, test if y0 == y1
@@ -227,12 +197,11 @@ _drawTextureLineNewA:
             ; If y0 == y1 as well, jump out of the loop
             jr z, real_end ; 2/3
         end_cont:
-        ; Multiply error by 2 (e2)
-        ld hl, (iy + error) ; 5
-        add hl, hl ; 1
-        ; At this point, e2 is in hl
-        ; Save e2 to the stack
-        push hl ; 4
+        ; Grab e2 from the stack
+        pop hl ; 4
+        dec sp ; 1
+        dec sp ; 1
+        dec sp ; 1
         ; Compare e2 to dy
         ld de, (iy + dy) ; 5
         or a, a ; 1
@@ -241,22 +210,27 @@ _drawTextureLineNewA:
         jp m, dy_cont ; 4/5
             ; Check if x0 == x1
             ld hl, (iy + x1) ; 5
-            ld bc, (iy + x0) ; 6
             or a, a ; 1
             sbc hl, bc ; 2
             ; If x0 == x1, jump out of the loop
             jr z, real_end ; 2/3
-            ; Else, add sx to x0
-            ld hl, (iy + sx) ; 5
+            ; Else, add dy to error
+            pop hl ; 4
+            add hl, de ; 1
+            add hl, de ; 1
+            push hl ; 4
+            ; Add sx to x0
+            ld de, (iy + sx) ; 5
+            add ix, de ; 2
+            ex de, hl ; 1
             add hl, bc ; 1
             ld (iy + x0), hl ; 6
-            ; Add dy to error
-            ld hl, (iy + error) ; 5
-            add hl, de ; 1
-            ld (iy + error), hl ; 6
         dy_cont:
-        ; Retrieve e2 from the stack
+        ; Grab e2 from the stack
         pop hl ; 4
+        dec sp ; 1
+        dec sp ; 1
+        dec sp ; 1
         dec hl ; 1
         ; Compare e2 to dx
         ld de, (iy + dx) ; 5
@@ -271,18 +245,24 @@ _drawTextureLineNewA:
             sbc hl, bc ; 2
             ; If y0 == y1, jump out of the loop
             jr z, real_end ; 2/3
-            ; Else, add sy to y0
-            ld hl, (iy + sy) ; 5
+            ; Else, add dx to error
+            pop hl ; 4
+            add hl, de ; 1
+            add hl, de ; 1
+            push hl ; 4
+            ; Add sy to y0
+            ld de, (iy + sy) ; 5
+            add ix, de ; 2
+            ex de, hl ; 1
             add hl, bc ; 1
             ld (iy + y0), hl ; 6
-            ; Add dx to error
-            ld hl, (iy + error) ; 5
-            add hl, de ; 1
-            ld (iy + error), hl ; 6
         dx_cont:
         ; Jump to the beginning of the loop
         jp new_fillLoop ; 5
     real_end:
+    inc sp
+    inc sp
+    inc sp
     pop ix
     ei
     ret
@@ -457,13 +437,15 @@ private texture
 texture = 12
 private colorOffset
 colorOffset = 15
+private polygonZ
+polygonZ = 18
 private dx
-dx = 18
+dx = 19
 private sx
-sx = 21
+sx = 23
 private dy
-dy = 24
+dy = 26
 private sy
-sy = 27
+sy = 29
 private error
-error = 30
+error = 32

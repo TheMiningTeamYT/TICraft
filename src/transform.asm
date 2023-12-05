@@ -13,7 +13,7 @@ _transformPointNewA:
     add ix, sp
     exx
         lea hl, ix-9
-        ld de, sx
+        ld de, (_sx)
         ld bc, 3
     exx
     ; Compute (distance from camera on) x, y, and z
@@ -46,14 +46,15 @@ _transformPointNewA:
         sbc hl, bc
     exx
 
-    ld hl, (ix + z)
-    ld de, (_cameraXYZ + z)
+    ld hl, (ix + zz)
+    ld de, (_cameraXYZ + zz)
     or a, a
     sbc hl, de
     push hl
     call _fp_to_int
-    ld (iy + z), hl
-    ld hl, cy
+    ld (iy + zz), hl
+    ; somewhere in here could you put a check for z > zCulllingDistance?
+    ld hl, (_cy)
     push hl
     call _fp_mul
     exx
@@ -62,7 +63,7 @@ _transformPointNewA:
         add hl, bc
     exx
     ld (iy + cyz), hl
-    ld hl, sy
+    ld hl, (_sy)
     push hl
     call _fp_mul
     exx
@@ -80,7 +81,7 @@ _transformPointNewA:
     ld hl, (iy + czx)
     push hl
     ; cy*sum1
-    ld hl, cy
+    ld hl, (_cy)
     push hl
     call _fp_mul
     exx
@@ -96,7 +97,7 @@ _transformPointNewA:
     ; sy*sum1
     ld hl, (iy + czx)
     push hl
-    ld hl, sy
+    ld hl, (_sy)
     push hl
     call _fp_mul
     exx
@@ -120,7 +121,7 @@ _transformPointNewA:
     push hl
     ; czy (sum3)
     ld hl, (iy + czy)
-    ld de, cx
+    ld de, (_cx)
     push de
     push hl
     call _fp_mul
@@ -214,14 +215,16 @@ _transformPointNewA:
     ld bc, (iy + x)
     call __imuls_fast
     push hl
+    ; y*y
     ld hl, (iy + y)
     ld bc, (iy + y)
     call __imuls_fast
     pop de
     add hl, de
     push hl
-    ld hl, (iy + z)
-    ld bc, (iy + z)
+    ; z*z
+    ld hl, (iy + zz)
+    ld bc, (iy + zz)
     call __imuls_fast
     pop de
     add hl, de
@@ -229,9 +232,8 @@ _transformPointNewA:
     ;push hl
     ;ld hl, 2
     ;add hl, sp
-    ;exx
-    ;    ld sp, hl
-    ;exx
+    ;ld hl, sp
+    ;inc sp
     ;ld d, (hl)
     ;dec hl
     ;ld a, (hl)
@@ -261,26 +263,18 @@ extern _cameraXYZ
 extern _fp_to_int
 extern __imuls_fast
 extern approx_sqrt_a
-private cx
-cx = $000DDB
-private sx
-sx = $000800
-private cy
-cy = $000B50
-private sy
-sy = $000B50
-private cz
-cz = $001000
-private sz
-sz = $000000
+extern _cx
+extern _sx
+extern _cy
+extern _sy
 private focalLength
-focalLength = $12C000
+focalLength = $AB60B
 private x
 x = 0
 private y
 y = 3
-private z
-z = 6
+private zz 
+zz  = 6
 private sum1
 sum1 = 9
 private sum2

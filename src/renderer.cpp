@@ -7,33 +7,18 @@
 #include <graphx.h>
 #include "renderer.hpp"
 #include "textures.hpp"
-
-#define focalDistance (Fixed24)300
+#include "saves.hpp"
 /*
-todo:
-handle bad alloc
-
 feature add ideas:
 Lighting:
 still thinking about how to do it
-It's probably time to move on to making a game with this
-*/
-/*
-Optimization ideas:
-With the latest advancements in polygon drawing optimizations, generating the z buffer now takes about as long as filling the polygons themselves
-This implies to me that generating the zBuffer could benefit from assembly optimization
-The only problem is --- how the heck do I (a first time eZ80 assembly developer) do that?
-Based on prior experience whatever I cobble together will probably be faster than what the compiler spits out, but I still have to get something working first.
 */
 
-object** objects = (object**) 0xD3B900;
+object** objects = (object**) 0xD3E000;
 object** zSortedObjects = objects + maxNumberOfObjects;
-transformedPolygon* preparedPolygons = (transformedPolygon*) (zSortedObjects + maxNumberOfObjects);
 
 // Buffer for creating diagnostic strings
 char buffer[200];
-
-unsigned int numberOfPreparedPolygons = 0;
 
 unsigned int numberOfObjects = 0;
 
@@ -42,24 +27,37 @@ unsigned int outOfBoundsPolygons = 0;
 unsigned int obscuredPolygons = 0;
 
 // Faces of a cube
-uint8_t face1Points[] = {0, 1, 2, 3};
-const polygon face1 = {face1Points, 2};
-uint8_t face4Points[] = {4, 0, 3, 6};
-const polygon face4 = {face4Points, 1};
-uint8_t face0Points[] = {4, 0, 1, 5};
+uint8_t face5points[] = {7, 6, 2, 3};
+const polygon face5 = {face5points, 5};
+uint8_t face4points[] = {5, 4, 7, 6};
+const polygon face4 = {face4points, 4};
+uint8_t face3points[] = {1, 5, 6, 2};
+const polygon face3 = {face3points, 3};
+uint8_t face2Points[] = {0, 1, 2, 3};
+const polygon face2 = {face2Points, 2};
+uint8_t face1Points[] = {4, 0, 3, 7};
+const polygon face1 = {face1Points, 1};
+uint8_t face0Points[] = {4, 5, 1, 0};
 const polygon face0 = {face0Points, 0};
 
 /*
 Array of the polygons that make up a cube
 Unwrapping order:
-top, front, bottom, back, left, right
-Unwrapping order with the optimized version:
-top, front, right
+top, front, left, right, back, bottom
 */ 
-const polygon cubePolygons[] = {face0, face4, face1};
+const polygon cubePolygons[] = {face0, face1, face2, face3, face4, face5};
 
 // Position of the camera
 Fixed24 cameraXYZ[3] = {-100, 150, -100};
+
+float angleX = 30;
+float angleY = 45;
+float degRadRatio = M_PI/180;
+
+Fixed24 cx = 0.8660254037844387f;
+Fixed24 sx = 0.49999999999999994f;
+Fixed24 cy = 0.7071067811865476f;
+Fixed24 sy = 0.7071067811865476f;
 
 /*
 clip:
@@ -67,113 +65,91 @@ clip = 0 // not affected by clipping
 clip = 1 // affected by clipping, no z buffer
 clip = 2 // affected by clipping, write to z buffer
 */
-void object::generatePolygons(uint8_t clip) {
+void object::generatePolygons(bool clip) {
     // A local copy of the polygons of a cube (Not sure this is necessary)
-    polygon polygons[3];
+    polygon polygons[6];
 
     // Rendering the object (Preparing polygons for rendering)
     if (visible) {
         // Init local copy of polygons
-        memcpy(polygons, cubePolygons, sizeof(polygon)*3);
-        for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
+        memcpy(polygons, cubePolygons, sizeof(polygon)*6);
+        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
             // Set the polygon's distance from the camera
             polygon* polygon = &polygons[polygonNum];
             int z = 0;
-            for (unsigned int i = 0; i < 4; i++) {
+            int totalX = 0;
+            int totalY = 0;
+            for (uint8_t i = 0; i < 4; i++) {
+                totalX += renderedPoints[polygon->points[i]].x;
+                totalY += renderedPoints[polygon->points[i]].y;
                 z += renderedPoints[polygon->points[i]].z;
             }
-            z >>= 2;
-            /*int z = renderedPoints[polygon->points[0]].z;
-            for (uint8_t i = 1; i < 4; i++) {
-                if (z < renderedPoints[polygon->points[i]].z) {
-                    z = renderedPoints[polygon->points[i]].z;
-                }
-            } */
+            totalX /= 4;
+            totalY /= 4;
+            z /= 4;
+            polygon->x = totalX;
+            polygon->y = totalY;
             polygon->z = z;
         }
         // Sort the polygons by distance from the camera, front to back
-        qsort((void *) polygons, 3, sizeof(polygon), zCompare);
+        qsort((void *) polygons, 6, sizeof(polygon), zCompare);
 
         // Prepare the polygons for rendering
-        for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
-            // Protection against polygon buffer overflow
-            if (numberOfPreparedPolygons < maxNumberOfPolygons) {
-                // The polygon we are rendering
-                polygon polygon = polygons[polygonNum];
+        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
+            // The polygon we are rendering
+            polygon polygon = polygons[polygonNum];
 
-                // Are we going to render the polygon?
-                bool render = true;
-                
-                // Normalized z (0-255)
-                unsigned int normalizedZ = polygon.z >> 3;
-
-                // Clamp the Z to the range of the uint8_t
-                /*if (normalizedZ > 146) {
-                    normalizedZ = 146 + ((normalizedZ - 146) >> 3);
-                }*/
-                if (normalizedZ > 255) {
-                    normalizedZ = 255;
-                }
-
+            // Are we going to render the polygon?
+            bool render = true;
+            
+            // Normalized z (0-255)
+            uint16_t normalizedZ = (polygon.z / 8);
+            if (polygon.z < 12) {
+                render = false;
+            } else {
                 // If there are any other polygons this one could be overlapping with, check the z buffer
                 // The z culling still has problems
-                if (clip > 0) {
+                if (clip == true) {
                     // Get the average x & y of the polygon
-                    int totalX = 0;
-                    int totalY = 0;
-                    for (uint8_t i = 0; i < 4; i++) {
-                        totalX += renderedPoints[polygon.points[i]].x;
-                        totalY += renderedPoints[polygon.points[i]].y;
-                    }
-                    int x = totalX >> 2;
-                    int y = totalY >> 2;
-                    /*
-                    // If this polygon is behind whatever is at (x,y), don't render it
-                    if (normalizedZ >= gfx_GetPixel(x, y)) {
-                        obscuredPolygons++;
-                        render = false;
-                    }*/
+                    int x = polygon.x;
+                    int y = polygon.y;
+
                     uint8_t obscuredPoints = 0;
                     for (uint8_t i = 0; i < 4; i++) {
                         screenPoint* point = &renderedPoints[polygon.points[i]];
-                        uint8_t bufferZ = gfx_GetPixel((point->x + x)>>1, (point->y + y)>>1);
-                        if (normalizedZ >= bufferZ) {
+                        if (point->x < 0 || point->x > 319 || point->y < 0 || point->y > 239) {
                             obscuredPoints++;
+                        } else {
+                            int pointX = (point->x + x)>>1;
+                            int pointY = (point->y + y)>>1;
+                            if (!(pointX < 0 || pointX > 319 || pointY < 0 || pointY > 239)) {
+                                uint8_t bufferZ = gfx_GetPixel(pointX, pointY);
+                                if (normalizedZ >= bufferZ) {
+                                    obscuredPoints++;
+                                }
+                            }
                         }
                     }
                     if (obscuredPoints == 4) {
                         render = false;
+                        #if diagnostics == true
                         obscuredPolygons++;
+                        #endif
                     }
                 }
+            }
 
-                // Prepare this polygon for rendering
-                if (render) {
-                    // Draw the polygon to the z buffer (just the screen)
-                    // For the transparent textures (glass & leaves), if the zBuffer has been cleared out (set to 255) around the glass, DON't draw to the zBuffer.
-                    // Otherwise, do
-                    // This is to avoid situations where either the glass doesn't draw to the zBuffer in a partial redraw, breaking the partial redraw engine,
-                    // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
-                    if (clip > 1) {
-                        gfx_SetColor(normalizedZ);
-                        int x1 = renderedPoints[polygons[polygonNum].points[0]].x;
-                        int x2 = renderedPoints[polygons[polygonNum].points[1]].x;
-                        int x3 = renderedPoints[polygons[polygonNum].points[2]].x;
-                        int x4 = renderedPoints[polygons[polygonNum].points[3]].x;
-                        int y1 = renderedPoints[polygons[polygonNum].points[0]].y;
-                        int y2 = renderedPoints[polygons[polygonNum].points[1]].y;
-                        int y3 = renderedPoints[polygons[polygonNum].points[2]].y;
-                        int y4 = renderedPoints[polygons[polygonNum].points[3]].y;
-                        gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-                        gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-                    }
+            // Prepare this polygon for rendering
+            if (render) {
+                // Draw the polygon to the z buffer (just the screen)
+                // For the transparent textures (glass & leaves), if the zBuffer has been cleared out (set to 255) around the glass, DON't draw to the zBuffer.
+                // Otherwise, do
+                // This is to avoid situations where either the glass doesn't draw to the zBuffer in a partial redraw, breaking the partial redraw engine,
+                // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
 
-                    // Create a new transformed (prepared) polygon and set initialize it;
-                    preparedPolygons[numberOfPreparedPolygons] = transformedPolygon{this, polygon.z, polygon.polygonNum};
-                    
-                    // Increment the number of prepared polygons
-                    numberOfPreparedPolygons++;
-                }
+                // Create a new transformed (prepared) polygon and set initialize it;
+                transformedPolygon preparedPolygon = {this, normalizedZ, polygon.polygonNum};
+                renderPolygon(preparedPolygon);
             }
         }
     }
@@ -181,113 +157,106 @@ void object::generatePolygons(uint8_t clip) {
 
 void object::deleteObject() {
     if (visible) {
-        gfx_SetDrawBuffer();
-        // A local copy of the polygons of a cube (Not sure this is necessary)
-        polygon polygons[3];
-        memcpy(polygons, cubePolygons, sizeof(polygon)*3);
-        for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
-            // Set the polygon's distance from the camera
-            int z = 0;
-            polygon* polygon = &polygons[polygonNum];
-            for (unsigned int i = 0; i < 4; i++) {
-                z += renderedPoints[polygon->points[i]].z;
+        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
+            gfx_SetDrawBuffer();
+            gfx_SetColor(255);
+            /*int x1 = renderedPoints[cubePolygons[polygonNum].points[0]].x;
+            int x2 = renderedPoints[cubePolygons[polygonNum].points[1]].x;
+            int x3 = renderedPoints[cubePolygons[polygonNum].points[2]].x;
+            int x4 = renderedPoints[cubePolygons[polygonNum].points[3]].x;
+            int y1 = renderedPoints[cubePolygons[polygonNum].points[0]].y;
+            int y2 = renderedPoints[cubePolygons[polygonNum].points[1]].y;
+            int y3 = renderedPoints[cubePolygons[polygonNum].points[2]].y;
+            int y4 = renderedPoints[cubePolygons[polygonNum].points[3]].y;
+            gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+            gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+            gfx_SetDrawScreen();
+            gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+            gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+            gfx_SetDrawBuffer();*/
+            int16_t minX = renderedPoints[cubePolygons[polygonNum].points[0]].x;
+            int16_t minY = renderedPoints[cubePolygons[polygonNum].points[0]].y;
+            int16_t maxX = renderedPoints[cubePolygons[polygonNum].points[0]].x;
+            int16_t maxY = renderedPoints[cubePolygons[polygonNum].points[0]].y;
+            for (uint8_t i = 1; i < 4; i++) {
+                if (renderedPoints[cubePolygons[polygonNum].points[i]].x < minX) {
+                    minX = renderedPoints[cubePolygons[polygonNum].points[i]].x;
+                } else if (renderedPoints[cubePolygons[polygonNum].points[i]].x > maxX) {
+                    maxX = renderedPoints[cubePolygons[polygonNum].points[i]].x;
+                }
+                if (renderedPoints[cubePolygons[polygonNum].points[i]].y < minY) {
+                    minY = renderedPoints[cubePolygons[polygonNum].points[i]].y;
+                } else if (renderedPoints[cubePolygons[polygonNum].points[i]].y > maxY) {
+                    maxY = renderedPoints[cubePolygons[polygonNum].points[i]].y;
+                }
             }
-            z >>= 2;
-            polygon->z = z;
-        }
-
-        // Sort the polygons by distance from the camera, front to back
-        qsort((void *) polygons, 3, sizeof(polygon), zCompare);
-
-        // Prepare the polygons for rendering
-        if (visible) {
-            for (uint8_t polygonNum = 0; polygonNum < 3; polygonNum++) {
-                // The polygon we are rendering
-                gfx_SetColor(255);
-                /*int x1 = renderedPoints[polygons[polygonNum].points[0]].x;
-                int x2 = renderedPoints[polygons[polygonNum].points[1]].x;
-                int x3 = renderedPoints[polygons[polygonNum].points[2]].x;
-                int x4 = renderedPoints[polygons[polygonNum].points[3]].x;
-                int y1 = renderedPoints[polygons[polygonNum].points[0]].y;
-                int y2 = renderedPoints[polygons[polygonNum].points[1]].y;
-                int y3 = renderedPoints[polygons[polygonNum].points[2]].y;
-                int y4 = renderedPoints[polygons[polygonNum].points[3]].y;
-                gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-                gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-                gfx_SetDrawScreen();
-                gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-                gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-                gfx_SetDrawBuffer();*/
-                int16_t minX = renderedPoints[polygons[polygonNum].points[0]].x;
-                int16_t minY = renderedPoints[polygons[polygonNum].points[0]].y;
-                int16_t maxX = renderedPoints[polygons[polygonNum].points[0]].x;
-                int16_t maxY = renderedPoints[polygons[polygonNum].points[0]].y;
-                for (uint8_t i = 1; i < 4; i++) {
-                    if (renderedPoints[polygons[polygonNum].points[i]].x < minX) {
-                        minX = renderedPoints[polygons[polygonNum].points[i]].x;
-                    } else if (renderedPoints[polygons[polygonNum].points[i]].x > maxX) {
-                        maxX = renderedPoints[polygons[polygonNum].points[i]].x;
-                    }
-                    if (renderedPoints[polygons[polygonNum].points[i]].y < minY) {
-                        minY = renderedPoints[polygons[polygonNum].points[i]].y;
-                    } else if (renderedPoints[polygons[polygonNum].points[i]].y > maxY) {
-                        maxY = renderedPoints[polygons[polygonNum].points[i]].y;
-                    }
-                }
-                if (minX > 1) {
-                    minX -= 2;
-                }
-                if (maxX < 318) {
-                    maxX += 2;
-                }
-                if (minY > 1) {
-                    minY -= 2;
-                }
-                if (maxY < 238) {
-                    maxY += 2;
-                }
-                gfx_FillRectangle_NoClip(minX, minY, (maxX-minX), (maxY-minY));
-                gfx_SetDrawScreen();
-                gfx_FillRectangle_NoClip(minX, minY, (maxX-minX), (maxY-minY));
-                gfx_SetDrawBuffer();
-            }
+            minX -= 1;
+            maxX += 1;
+            minY -= 1;
+            maxY += 1;
+            gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
+            gfx_SetDrawScreen();
+            gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
         }
     }
-    gfx_SetDrawScreen();
 }
 
 void object::generatePoints() {
     visible = true;
+    uint8_t nonVisiblePoints = 0;
     // The verticies of the cube
-    point points[] = {{x, y, z}, {x+size, y, z}, {x+size, y-size, z}, {x, y-size, z}, {x, y, z+size}, {x+size, y, z+size}, {x, y-size, z+size}};
-    // rough but hopefully effective optimization
-    {
-        renderedPoints[0] = transformPointNewA(points[0]);
-
-        // If the object is outside the culling distance, don't render it
-        if (renderedPoints[0].z >= zCullingDistance) {
-            visible = false;
+    point points[] = {{x, y, z}, {x+size, y, z}, {x+size, y-size, z}, {x, y-size, z}, {x, y, z+size}, {x+size, y, z+size}, {x+size, y-size, z+size}, {x, y-size, z+size}};;
+    for (unsigned int i = 0; i < 8; i++) {
+        Fixed24 offset = 0;
+        if (cameraXYZ[1] < (Fixed24)40) {
+            offset = (Fixed24)20;
         }
-
-        // If any part of the object is off screen, don't render it
-        // Not ideal, but makes a lot of other things easier (and faster)
-        if (renderedPoints[0].x < 0 || renderedPoints[0].x > 319 || renderedPoints[0].y < 0 || renderedPoints[0].y > 239) {
-            visible = false;
+        if ((angleY >= -22.5 && angleY <= 22.5)) {
+            if (z + offset < cameraXYZ[2]) {
+                visible = false;
+                renderedPoints[0].z = getPointDistance(points[0]);
+                break;
+            }
+        } else if (angleY >= 67.5) {
+            if (x + offset < cameraXYZ[0]) {
+                visible = false;
+                renderedPoints[0].z = getPointDistance(points[0]);
+                break;
+            }
+        } else if (angleY > 22.5 && angleY < 67.5) {
+            if ((x + z) + offset < (cameraXYZ[0] + cameraXYZ[2])) {
+                visible = false;
+                renderedPoints[0].z = getPointDistance(points[0]);
+                break;
+            }
+        } else if (angleY <= -67.5) {
+            if (x > cameraXYZ[0] + offset) {
+                visible = false;
+                renderedPoints[0].z = getPointDistance(points[0]);
+                break;
+            }
+        } else if (angleY < -22.5 && angleY > -67.5) {
+            if ((x - z) > (cameraXYZ[0] - cameraXYZ[2]) + offset) {
+                visible = false;
+                renderedPoints[0].z = getPointDistance(points[0]);
+                break;
+            }
         }
     }
 
-    // Check all the other points if the origin of the cube is on screen
     if (visible) {
-        for (uint8_t i = 1; i < 7; i++) {
+        for (uint8_t i = 0; i < 8; i++) {
             renderedPoints[i] = transformPointNewA(points[i]);
-            if (renderedPoints[i].z >= zCullingDistance) {
+            if (renderedPoints[i].z > zCullingDistance || renderedPoints[i].x < -200 || renderedPoints[i].x > 519 || renderedPoints[i].y < -200 || renderedPoints[i].y > 439) {
                 visible = false;
                 break;
             }
             if (renderedPoints[i].x < 0 || renderedPoints[i].x > 319 || renderedPoints[i].y < 0 || renderedPoints[i].y > 239) {
-                visible = false;
-                break;
+                nonVisiblePoints++;
             }
+        }
+        if (nonVisiblePoints == 8) {
+            visible = false;
         }
     }
 }
@@ -318,19 +287,12 @@ int zCompare(const void *arg1, const void *arg2) {
     return polygon1->z - polygon2->z;
 }
 
-int renderedZCompare(const void *arg1, const void *arg2) {
-    transformedPolygon* polygon1 = ((transformedPolygon *) arg1);
-    transformedPolygon* polygon2 = ((transformedPolygon *) arg2);
-    return polygon2->z - polygon1->z;
-}
-
 int distanceCompare(const void *arg1, const void *arg2) {
     object* object1 = *((object**) arg1);
     object* object2 = *((object**) arg2);
     return object1->getDistance() - object2->getDistance();
 }
 
-// why don't you work???
 int xCompare(const void *arg1, const void *arg2) {
     object* object1 = *((object**) arg1);
     object* object2 = *((object**) arg2);
@@ -339,12 +301,8 @@ int xCompare(const void *arg1, const void *arg2) {
     return object1->x - object2->x;
 }
 
-void deletePolygons() {
-    numberOfPreparedPolygons = 0;
-}
-
 void deleteEverything() {
-    deletePolygons();
+    // deletePolygons();
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         if (objects[i]) {
             delete objects[i];
@@ -353,65 +311,31 @@ void deleteEverything() {
     numberOfObjects = 0;
 }
 
-/*
-0: Normal full render
-1: Redraw without regenerating polygons
-2: Redraw with regenerating polygons (but not z buffer)
-3: 1 with special handling for transparent objects
-*/
-void drawScreen(uint8_t mode) {
-    if (mode == 0 || mode == 2 || mode == 3) {
-        // Move the camera (for the demo that is the state of the program)
-        //cameraXYZ[2] += 5;
-        gfx_SetDrawBuffer();
-        if (mode == 0) {
-            gfx_SetTextXY(0, 0);
-            // Clear the screen
-            gfx_FillScreen(255);
-        }
-        // Clear the list of polygons
-        deletePolygons();
-        outOfBoundsPolygons = 0;
-        obscuredPolygons = 0;
-        if (mode == 3) {
-            for (unsigned int i = 0; i < numberOfObjects; i++) {
-                if (zSortedObjects[i]->texture != 15 && zSortedObjects[i]->texture != 23) {
-                    zSortedObjects[i]->generatePolygons(2);
-                }
-            }
-            for (unsigned int i = 0; i < numberOfObjects; i++) {
-                if (zSortedObjects[i]->texture == 15 || zSortedObjects[i]->texture == 23) {
-                    zSortedObjects[i]->generatePolygons(1);
-                }
-            }
-        } else if (mode == 0) {
-            for (unsigned int i = 0; i < numberOfObjects; i++) {
-                if (zSortedObjects[i]->texture == 15 || zSortedObjects[i]->texture == 23) {
-                    zSortedObjects[i]->generatePolygons(1);
-                } else {
-                    zSortedObjects[i]->generatePolygons(2);
-                }
-            }
-        } else {
-            for (unsigned int i = 0; i < numberOfObjects; i++) {
-                zSortedObjects[i]->generatePolygons(2);
-            }
-        }
-        gfx_SetDrawScreen();
-    }
-    // Sort all polygons back to front
-    qsort(preparedPolygons, numberOfPreparedPolygons, sizeof(transformedPolygon), renderedZCompare);
-    
-    // I think this is slower but there will be no leftovers from polygon generation
-    #if showDraw == false
-    // Clear the screen again
-    if (mode == 0) {
+void drawScreen(bool fullRedraw) {
+    if (fullRedraw) {
         gfx_FillScreen(255);
     }
-    #endif
-    for (unsigned int i = 0; i < numberOfPreparedPolygons; i++) {
-        renderPolygon(&preparedPolygons[i]);
+    gfx_SetDrawBuffer();
+    if (fullRedraw) {
+        gfx_SetTextXY(0, 0);
+        // Clear the screen
+        gfx_FillScreen(255);
     }
+    # if diagnostics == true
+    outOfBoundsPolygons = 0;
+    obscuredPolygons = 0;
+    #endif
+    for (unsigned int i = 0; i < numberOfObjects; i++) {
+        if (zSortedObjects[i]->texture != 15 && zSortedObjects[i]->texture != 23) {
+            zSortedObjects[i]->generatePolygons(true);
+        }
+    }
+    for (unsigned int i = 0; i < numberOfObjects; i++) {
+        if (zSortedObjects[i]->texture == 15 || zSortedObjects[i]->texture == 23) {
+            zSortedObjects[i]->generatePolygons(true);
+        }
+    }
+    gfx_SetDrawScreen();
 
     // Print some diagnostic information
     #if diagnostics == true
@@ -438,19 +362,17 @@ void drawScreen(uint8_t mode) {
 // implementation of affine texture mapping (i think thats what you'd call this anyway)
 // as noted in The Science Elf's original video, affine texture mapping can look very weird on triangles
 // but on quads, it looks pretty good at a fraction of the cost
-void renderPolygon(transformedPolygon* polygon) {
+void renderPolygon(transformedPolygon polygon) {
     // Quick shorthand
-    uint8_t* points = cubePolygons[polygon->polygonNum].points;
+    uint8_t* points = cubePolygons[polygon.polygonNum].points;
     // Another useful shortand
-    object* sourceObject = polygon->object;
+    object* sourceObject = polygon.object;
+    // Another useful shorthand
+    screenPoint renderedPoints[] = {sourceObject->renderedPoints[points[0]], sourceObject->renderedPoints[points[1]], sourceObject->renderedPoints[points[2]], sourceObject->renderedPoints[points[3]]};
     // result of memory optimization
-    const uint8_t* texture = textures[polygon->object->texture][polygon->polygonNum];
+    const uint8_t* texture = textures[sourceObject->texture][polygon.polygonNum];
 
-    point sourcePoints[] = {{sourceObject->x, sourceObject->y, sourceObject->z}, {sourceObject->x+sourceObject->size, sourceObject->y, sourceObject->z}, {sourceObject->x+sourceObject->size, sourceObject->y-sourceObject->size, sourceObject->z}, {sourceObject->x, sourceObject->y-sourceObject->size, sourceObject->z}, {sourceObject->x, sourceObject->y, sourceObject->z+sourceObject->size}, {sourceObject->x+sourceObject->size, sourceObject->y, sourceObject->z+sourceObject->size}, {sourceObject->x+sourceObject->size, sourceObject->y-sourceObject->size, sourceObject->z+sourceObject->size}, {sourceObject->x, sourceObject->y-sourceObject->size, sourceObject->z+sourceObject->size}};
-
-    // Array of the 2 lines of the polygon we will need for this
-    lineEquation lineEquations[2];
-    // uint8_t* points = polygon->points;
+    // uint8_t* points = polygon.points;
     if (sourceObject->outline) {
         gfx_SetColor(outlineColor);
         for (uint8_t i = 0; i < 4; i++) {
@@ -458,72 +380,79 @@ void renderPolygon(transformedPolygon* polygon) {
             if (nextPoint > 3) {
                 nextPoint = 0;
             }
-            gfx_Line_NoClip(sourceObject->renderedPoints[points[i]].x, sourceObject->renderedPoints[points[i]].y, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[nextPoint]].y);
+            gfx_Line(renderedPoints[i].x, renderedPoints[i].y, renderedPoints[nextPoint].x, renderedPoints[nextPoint].y);
         }
     } else {
+        bool clipLines = false;
+        for (unsigned int i = 0; i < 4; i++) {
+            if (renderedPoints[i].x < 1 || renderedPoints[i].x > 318 || renderedPoints[i].y < 1 || renderedPoints[i].y > 238) {
+                clipLines = true;
+                break;
+            }
+        }
         uint8_t colorOffset = 0;
-        if (polygon->polygonNum == 2) {
+        if (polygon.polygonNum == 2 || polygon.polygonNum == 5) {
             colorOffset = 126;
         }
         // Generate the lines from the points of the polygon
-        for (unsigned int i = 0; i < 2; i++) {
-            unsigned int nextPoint = (2*i) + 2;
-            unsigned int currentPoint = (2*i) + 1;
-            if (nextPoint > 3) {
-                nextPoint = 0;
-            }
-            //lines[i] = {points[i], points[nextPoint]};
-            Fixed24 dx = sourceObject->renderedPoints[points[nextPoint]].x - sourceObject->renderedPoints[points[currentPoint]].x;
-            Fixed24 dy = sourceObject->renderedPoints[points[nextPoint]].y - sourceObject->renderedPoints[points[currentPoint]].y;
-
-            // Find the length of the line
-            //int length = ((int)dx*(int)dx)+((int)dy*(int)dy);
-            int length;
-            if (abs(dx) > abs(dy)) {
-                length = abs(dx);
-            } else {
-                length = abs(dy);
-            }
-            lineEquations[i] = {sourceObject->renderedPoints[points[currentPoint]].x, sourceObject->renderedPoints[points[nextPoint]].x, sourceObject->renderedPoints[points[currentPoint]].y, sourceObject->renderedPoints[points[nextPoint]].y, length, dx, dy};
-        }
-        int length;
-        if (lineEquations[1].length > lineEquations[0].length) {
-            //length = int_sqrt(lineEquations[1].length);
-            length = lineEquations[1].length;
-        } else {
-            // length = int_sqrt(lineEquations[0].length);
-            length = lineEquations[0].length;
-        }
-        length++;
+        Fixed24 dx1 = renderedPoints[3].x - renderedPoints[0].x;
+        Fixed24 dy1 = renderedPoints[3].y - renderedPoints[0].y;
+        Fixed24 dx2 = renderedPoints[2].x - renderedPoints[1].x;
+        Fixed24 dy2 = renderedPoints[2].y - renderedPoints[1].y;
+        int length1 = (abs(dx1) > abs(dy1)) ? abs(dx1) : abs(dy1);
+        int length2 = (abs(dx2) > abs(dy2)) ? abs(dx2) : abs(dy2);
+        int length = (length1 > length2) ? length1 : length2;
 
         // Ratios that make the math faster (means we can multiply instead of divide)
         const Fixed24 reciprocalOfLength = (Fixed24)1/(Fixed24)length;
         
-        // Trick to use as close to (but not exactly) 16 as a Fixed24 can hold
         Fixed24 textureRatio = reciprocalOfLength;
         textureRatio.n <<=4;
         Fixed24 row = 0;
-        Fixed24 lineCX = lineEquations[1].px;
-        Fixed24 linePX = lineEquations[0].cx;
-        Fixed24 lineCY = lineEquations[1].py;
-        Fixed24 linePY = lineEquations[0].cy;
-        Fixed24 CXdiff = (-lineEquations[1].dx)*reciprocalOfLength;
-        Fixed24 PXdiff = (lineEquations[0].dx)*reciprocalOfLength;
-        Fixed24 CYdiff = (-lineEquations[1].dy)*reciprocalOfLength;
-        Fixed24 PYdiff = (lineEquations[0].dy)*reciprocalOfLength;
-        length--;
+        Fixed24 lineCX = renderedPoints[0].x;
+        Fixed24 linePX = renderedPoints[1].x;
+        Fixed24 lineCY = renderedPoints[0].y;
+        Fixed24 linePY = renderedPoints[1].y;
+        Fixed24 CXdiff = dx1*reciprocalOfLength;
+        Fixed24 CYdiff = dy1*reciprocalOfLength;
+        Fixed24 PXdiff = dx2*reciprocalOfLength;
+        Fixed24 PYdiff = dy2*reciprocalOfLength;
 
         // main body
-        for (int i = 0; i < length; i++) {
-            drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[((int)row)*16], colorOffset);
-            lineCX += CXdiff;
-            linePX += PXdiff;
-            lineCY += CYdiff;
-            linePY += PYdiff;
-            row += textureRatio;
+        if (clipLines) {
+            for (int i = 0; i < length; i++) {
+                if (row > (Fixed24)15) {
+                    row = 15;
+                    textureRatio = 0;
+                }
+                if (!((lineCX < (Fixed24)0 && linePX < (Fixed24)0) || (lineCX > (Fixed24) 319 && linePX > (Fixed24)319)) && !((lineCY < (Fixed24)0 && linePY < (Fixed24)0) || (lineCY > (Fixed24) 239 && linePY > (Fixed24)239)))
+                    drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[((int)row)*16], colorOffset, polygon.z);
+                lineCX += CXdiff;
+                linePX += PXdiff;
+                lineCY += CYdiff;
+                linePY += PYdiff;
+                row += textureRatio;
+            }
+        } else {
+            for (int i = 0; i < length; i++) {
+                if (row > (Fixed24)15) {
+                    row = 15;
+                    textureRatio = 0;
+                }
+                drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[((int)row)*16], colorOffset, polygon.z);
+                lineCX += CXdiff;
+                linePX += PXdiff;
+                lineCY += CYdiff;
+                linePY += PYdiff;
+                row += textureRatio;
+            }
         }
         // last line
-        drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset);
+        if (clipLines) {
+            drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, polygon.z);
+        } else {
+            drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, polygon.z);
+        }
     }
 }
 
@@ -539,7 +468,7 @@ object** xSearch(object* key) {
 }
 
 void xSort() {
-    qsort(objects, numberOfObjects, sizeof(object *), xCompare);
+    qsort(objects, numberOfObjects, sizeof(object*), xCompare);
     memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
     // Sort all objects front to back
     // improves polygon culling but sorting can be slow
@@ -550,100 +479,38 @@ unsigned char bit_width(unsigned x) {
     return x == 0 ? 1 : 24 - __builtin_clz(x);
 }
 
-// Thank you Jan Schultke of Stack Overflow! (seriously it's ludicrious how much faster this is)
-// https://stackoverflow.com/questions/34187171/fast-integer-square-root-approximation
-// probably could be optimized in assembly -- just a matter of how
-// I know that previously square root was one of the longest parts of the math, and I suspect it still is
-unsigned int_sqrt(unsigned n) {
-    unsigned char shift = bit_width(n);
-    shift += shift & 1; // round up to next multiple of 2
-
-    unsigned result = 0;
-
-    do {
-        // decrement shift
-        shift -= 2;
-        // shift result left 1
-        result <<= 1; // leftshift the result to make the next guess
-        // or result with 1
-        result |= 1;  // guess that the next bit is 1
-        // xor(?) result with bool (result * result) > (n >> shift)
-        result ^= result * result > (n >> shift); // revert if guess too high
-    } while (shift != 0);
-
-    return result;
+void rotateCamera(float x, float y) {
+    bool cameraRotated = false;
+    if ((x != 0.0f) && (angleX + x >= -85.0f && angleX + x <= 85.0f)) {
+        angleX += x;
+        cx = cosf(angleX*degRadRatio);
+        sx = sinf(angleX*degRadRatio);
+        cameraRotated = true;
+    }
+    if ((y != 0.0f) && (angleY + y >= -90.0f && angleY + y <= 90.0f)) {
+        angleY += y;
+        cy = cosf(angleY*degRadRatio);
+        sy = sinf(angleY*degRadRatio);
+        cameraRotated = true;
+    }
+    if (cameraRotated) {
+        for (unsigned int i = 0; i < numberOfObjects; i++) {
+            objects[i]->generatePoints();
+        }
+        drawScreen(true);
+        getBuffer();
+        drawCursor();
+    }
 }
 
-// Implemented in assembly now
-/*void drawTextureLine(Fixed24 startingX, Fixed24 startingY, Fixed24 endingX, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset) {
-    Fixed24 x1 = startingX;
-    Fixed24 y1 = startingY;
-    Fixed24 dx = (endingX) - startingX;
-    Fixed24 dy = (endingY) - startingY;
-    int textureLineLength;
-    if (abs(dx) > abs(dy)) {
-        textureLineLength = abs(dx) + (Fixed24)1;
-    } else {
-        textureLineLength = abs(dy) + (Fixed24)1;
-    }
-    Fixed24 reciprocalOfTextureLineLength = (Fixed24)1/(Fixed24)textureLineLength;
-    Fixed24 textureLineRatio;
-    textureLineRatio.n = reciprocalOfTextureLineLength.n << 4;
-    // Numbers we can recursively add instead of needing to multiply on each loop (less precise but gets the job done)
-    Fixed24 xDiff = (Fixed24)dx * reciprocalOfTextureLineLength;
-    Fixed24 yDiff = (Fixed24)dy * reciprocalOfTextureLineLength;
-    // call out to assembly
-    fillLine(x1, y1, xDiff, yDiff, textureLineLength, textureLineRatio, texture, colorOffset);
-    //drawTextureLineA(startingX, endingX, startingY, endingY, texture, colorOffset);
-}*/
-
-// code stolen from wikipedia again
-// needs to be reimplemented in assembly
-void drawTextureLineNew(Fixed24 startingX, Fixed24 endingX, Fixed24 startingY, Fixed24 endingY, const uint8_t* texture, uint8_t colorOffset) {
-    int x0 = startingX;
-    int y0 = startingY;
-    int x1 = endingX;
-    int y1 = endingY;
-    int dx = abs(x1 - x0);
-    int sx;
-    if (x0 < x1) {
-        sx = 1;
-    } else {
-        sx = -1;
-    }
-    int dy = -abs(y1 - y0);
-    int sy;
-    if (y0 < y1) {
-        sy = 1;
-    } else {
-        sy = -1;
-    }
-    int error = dx + dy;
-    Fixed24 textureRatio;
-    Fixed24 column;
-    if (dx > -dy) {
-        textureRatio = (Fixed24)15.99F/(Fixed24)dx;
-    } else {
-        textureRatio = (Fixed24)15.99F/(Fixed24)-dy;
-    }
-    while (true) {
-        uint8_t color = texture[(int)column];
-        if (color != 255) {
-            gfx_vram[(y0*320)+x0] = color + colorOffset;
-            gfx_vram[(y0*320)+x0+320] = color + colorOffset;
-        }
-        column += textureRatio;
-        if (x0 == x1 && y0 == y1) break;
-        int e2 = error*2;
-        if (e2 >= dy) {
-            if (x0 == x1) break;
-            error = error + dy;
-            x0 = x0 + sx;
-        }
-        if (e2 <= dx) {
-            if (y0 == y1) break;
-            error = error + dx;
-            y0 = y0 + sy;
-        }
-    }
+void resetCamera() {
+    angleX = 30;
+    angleY = 45;
+    cx = 0.8660254037844387f;
+    sx = 0.49999999999999994f;
+    cy = 0.7071067811865476f;
+    sy = 0.7071067811865476f;
+    cameraXYZ[0] = -100;
+    cameraXYZ[1] = 150;
+    cameraXYZ[2] = -100;
 }

@@ -13,6 +13,11 @@ extern "C" {
 
 uint8_t selectedObject = 10;
 object playerCursor(20, 20, 20, 20, selectedObject, true);
+extern gfx_sprite_t* cursorBackground;
+gfx_sprite_t* cursorBackground2 = (gfx_sprite_t*) (((uint8_t*) cursorBackground) + 7202);
+const char* saveNames[] = {"WORLD1","WORLD2","WORLD3","WORLD4","WORLD5","WORLD6","WORLD7","WORLD8","WORLD9","WORLD10","WORLD11","WORLD12","WORLD13","WORLD14","WORLD15","WORLD16","WORLD17","WORLD18","WORLD19","WORLD20","WORLD21","WORLD22","WORLD23","WORLD24","WORLD25","WORLD26","WORLD27","WORLD28","WORLD29","WORLD30","WORLD31","WORLD32","WORLD33","WORLD34","WORLD35","WORLD36","WORLD37","WORLD38","WORLD39","WORLD40","WORLD41","WORLD42","WORLD43","WORLD44","WORLD45","WORLD46","WORLD47","WORLD48","WORLD49","WORLD50","WORLD51","WORLD52","WORLD53","WORLD54","WORLD55","WORLD56","WORLD57","WORLD58","WORLD59","WORLD60","WORLD61","WORLD62","WORLD63","WORLD64","WORLD65","WORLD66","WORLD67","WORLD68","WORLD69","WORLD70","WORLD71","WORLD72","WORLD73","WORLD74","WORLD75","WORLD76","WORLD77","WORLD78","WORLD79","WORLD80","WORLD81","WORLD82","WORLD83","WORLD84","WORLD85","WORLD86","WORLD87","WORLD88","WORLD89","WORLD90","WORLD91","WORLD92","WORLD93","WORLD94","WORLD95","WORLD96","WORLD97","WORLD98","WORLD99", "WORLD100"};
+uint8_t selectedSave = 0;
+uint8_t offset = 0;
 
 void failedToSave() {
     printStringAndMoveDownCentered("Failed to save.");
@@ -27,9 +32,11 @@ void failedToLoadSave() {
 }
 
 void save(const char* name) {
+    gfx_SetTextFGColor(254);
     gfx_SetTextXY(0, 110);
     bool userSelected = false;
     bool toSaveOrNotToSave = true;
+    fillDirt();
     printStringAndMoveDownCentered("Would you like to save?");
     printStringAndMoveDownCentered("Press 1 for yes, 2 for no.");
     while (!userSelected) {
@@ -74,15 +81,19 @@ void save(const char* name) {
         saveData += sizeof(Fixed24)*3;
         memcpy(saveData, cursorPos, sizeof(Fixed24)*3);
         saveData += sizeof(Fixed24)*3;
+        memcpy(saveData, &angleX, sizeof(float));
+        saveData += sizeof(float);
+        memcpy(saveData, &angleY, sizeof(float));
+        saveData += sizeof(float);
         checksum = crc32((char*) saveDataBuffer, (int)(saveData - (uint8_t*)saveDataBuffer));
         memcpy(saveData, &checksum, sizeof(uint32_t));
         saveData += sizeof(uint32_t);
         deleteEverything();
         bool quit = false;
         while (quit == false) {
-            gfx_FillScreen(255);
+            fillDirt();
             gfx_SetTextXY(0, 105);
-            printStringAndMoveDownCentered("Would you like to archive or USB?");
+            printStringAndMoveDownCentered("Would you like to save to archive or USB?");
             printStringAndMoveDownCentered("Press 1 for archive, press 2 for USB.");
             printStringAndMoveDownCentered("Or press clear to cancel.");
             uint8_t key = os_GetCSC();
@@ -110,7 +121,7 @@ void save(const char* name) {
                     }
                     break;
                 case sk_2:
-                    gfx_FillScreen(255);
+                    fillDirt();
                     gfx_SetTextXY(0, 110);
                     printStringAndMoveDownCentered("Please plug in a USB drive now.");
                     printStringAndMoveDownCentered("Press any key to cancel");
@@ -135,7 +146,7 @@ void save(const char* name) {
                     }
                     break;
                 case sk_Clear:
-                    gfx_FillScreen(255);
+                    fillDirt();
                     gfx_SetTextXY(0, 110);
                     printStringAndMoveDownCentered("Are you sure you don't want to save?");
                     printStringAndMoveDownCentered("Press 1 for yes, 2 for no.");
@@ -156,9 +167,11 @@ void save(const char* name) {
             }
         }
     }
+    gfx_SetTextFGColor(0);
 }
 
 bool checkSave(const char* name, bool USB) {
+    gfx_SetTextFGColor(254);
     bool toSaveOrNotToSave = true;
     bool userSelected = false;
     uint8_t* saveData = (uint8_t*)saveDataBuffer;
@@ -202,7 +215,7 @@ bool checkSave(const char* name, bool USB) {
             saveGood = strcmp(signature, "BLOCKS") == 0;
             version = *((unsigned int*)saveData);
             saveData += sizeof(unsigned int);
-            saveGood = version == 1 || version == saveFileVersion;
+            saveGood = version <= saveFileVersion;
         } else if (error == false) {
             error = true;
             printStringAndMoveDownCentered("Bad read.");
@@ -227,6 +240,7 @@ bool checkSave(const char* name, bool USB) {
             toSaveOrNotToSave = false;
         }
     }
+    gfx_SetTextFGColor(0);
     return toSaveOrNotToSave;
 }
 
@@ -273,20 +287,24 @@ void load(const char* name, bool USB) {
         if (!saveGood) {
             error = true;
         }
-        if (version == 2 && saveGood) {
+        resetCamera();
+        if (version >= 2 && saveGood) {
             Fixed24 cursorPos[3];
             selectedObject = *saveData;
             saveData += 1;
             memcpy(cameraXYZ, saveData, sizeof(Fixed24)*3);
             saveData += sizeof(Fixed24)*3;
-            memcpy(cursorPos, saveData, sizeof(Fixed24)*3);
+            playerCursor.x = *((Fixed24*)saveData);
+            playerCursor.y = *(((Fixed24*)saveData) + 1);
+            playerCursor.z = *(((Fixed24*)saveData) + 2);
             saveData += sizeof(Fixed24)*3;
-            if (saveGood) {
-                playerCursor.x = cursorPos[0];
-                playerCursor.y = cursorPos[1];
-                playerCursor.z = cursorPos[2];
-            } else if (error == false) {
-                error = true;
+            if (version >= 3) {
+                angleX = *((float*)saveData);
+                angleY = *(((float*)saveData) + 1);
+                cx = cosf(angleX*degRadRatio);
+                sx = sinf(angleX*degRadRatio);
+                cy = cosf(angleY*degRadRatio);
+                sy = sinf(angleY*degRadRatio);
             }
         }
         if (!saveGood && error) {
@@ -309,15 +327,10 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
     if (nameBufferLength < 9) {
         return false;
     }
+    offset = 0;
+    selectedSave = 0;
     gfx_SetDrawBuffer();
-    const char* saveNames[] = {"WORLD1","WORLD2","WORLD3","WORLD4","WORLD5","WORLD6","WORLD7","WORLD8","WORLD9","WORLD10","WORLD11","WORLD12","WORLD13","WORLD14","WORLD15","WORLD16","WORLD17","WORLD18","WORLD19","WORLD20","WORLD21","WORLD22","WORLD23","WORLD24","WORLD25","WORLD26","WORLD27","WORLD28","WORLD29","WORLD30","WORLD31","WORLD32","WORLD33","WORLD34","WORLD35","WORLD36","WORLD37","WORLD38","WORLD39","WORLD40","WORLD41","WORLD42","WORLD43","WORLD44","WORLD45","WORLD46","WORLD47","WORLD48","WORLD49","WORLD50","WORLD51","WORLD52","WORLD53","WORLD54","WORLD55","WORLD56","WORLD57","WORLD58","WORLD59","WORLD60","WORLD61","WORLD62","WORLD63","WORLD64","WORLD65","WORLD66","WORLD67","WORLD68","WORLD69","WORLD70","WORLD71","WORLD72","WORLD73","WORLD74","WORLD75","WORLD76","WORLD77","WORLD78","WORLD79","WORLD80","WORLD81","WORLD82","WORLD83","WORLD84","WORLD85","WORLD86","WORLD87","WORLD88","WORLD89","WORLD90","WORLD91","WORLD92","WORLD93","WORLD94","WORLD95","WORLD96","WORLD97","WORLD98","WORLD99", "WORLD100"};
-    gfx_FillScreen(252);
-    uint8_t selectedSave = 0;
-    uint8_t offset = 0;
-    for (unsigned int i = 0; i < 4; i++) {
-        drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
-    }
-    gfx_BlitBuffer();
+    redrawSaveOptions();
     bool quit = false;
     while (!quit) {
         uint8_t key = os_GetCSC();
@@ -325,38 +338,30 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
             switch (key) {
                 case sk_Up:
                     if (selectedSave > 0) {
-                        drawSaveOption(selectedSave, false, saveNames[selectedSave + offset]);
+                        drawSaveOption(selectedSave, false, saveNames[selectedSave + offset], true);
                         selectedSave--;
-                        drawSaveOption(selectedSave, true, saveNames[selectedSave + offset]);
+                        drawSaveOption(selectedSave, true, saveNames[selectedSave + offset], false);
                         gfx_BlitBuffer();
                     }
                     break;
                 case sk_Down:
                     if (selectedSave < 3) {
-                        drawSaveOption(selectedSave, false, saveNames[selectedSave + offset]);
+                        drawSaveOption(selectedSave, false, saveNames[selectedSave + offset], true);
                         selectedSave++;
-                        drawSaveOption(selectedSave, true, saveNames[selectedSave + offset]);
+                        drawSaveOption(selectedSave, true, saveNames[selectedSave + offset], false);
                         gfx_BlitBuffer();
                     }
                     break;
                 case sk_Left:
                     if (offset > 3) {
                         offset -= 4;
-                        gfx_FillScreen(252);
-                        for (unsigned int i = 0; i < 4; i++) {
-                            drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
-                        }
-                        gfx_BlitBuffer();
+                        redrawSaveOptions();
                     }
                     break;
                 case sk_Right:
                     if (offset < 96) {
                         offset += 4;
-                        gfx_FillScreen(252);
-                        for (unsigned int i = 0; i < 4; i++) {
-                            drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
-                        }
-                        gfx_BlitBuffer();
+                        redrawSaveOptions();
                     }
                     break;
                 case sk_Enter:
@@ -365,15 +370,12 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                     return true;
                     break;
                 case sk_Clear:
-                    gfx_SetDrawScreen();
-                    return false;
-                    break;
                 case sk_Graph:
                     gfx_SetDrawScreen();
                     return false;
                     break;
                 case sk_Del:
-                    gfx_FillScreen(252);
+                    fillDirt();
                     char buffer[100] = "Are you sure you'd like to delete ";
                     strcat(buffer, saveNames[selectedSave + offset]);
                     strcat(buffer, "?");
@@ -384,12 +386,13 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                     while (!userSelected) {
                         uint8_t key2 = os_GetCSC();
                         if (key2) {
+                            gfx_SetTextFGColor(254);
                             switch (key2) {
                                 case sk_1:
                                     userSelected = true;
                                     quit = false;
                                     while (!quit) {
-                                        gfx_FillScreen(252);
+                                        fillDirt();
                                         printStringAndMoveDownCentered("Would you like to delete the save from USB or archive?");
                                         printStringAndMoveDownCentered("Press 1 for archive, 2 for USB.");
                                         gfx_BlitBuffer();
@@ -429,24 +432,17 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                                         }
                                     }
                                     quit = false;
-                                    gfx_FillScreen(252);
-                                    for (unsigned int i = 0; i < 4; i++) {
-                                        drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
-                                    }
-                                    gfx_BlitBuffer();
+                                    redrawSaveOptions();
                                     break;
                                 case sk_2:
                                     userSelected = true;
-                                    gfx_FillScreen(252);
-                                    for (unsigned int i = 0; i < 4; i++) {
-                                        drawSaveOption(i, (i == selectedSave), saveNames[i + offset]);
-                                    }
-                                    gfx_BlitBuffer();
+                                    redrawSaveOptions();
                                     break;
                                 default:
                                     break;
 
                             }
+                            gfx_SetTextFGColor(0);
                         }
                     }
             }
@@ -456,18 +452,48 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
     return false;
 }
 
-void drawSaveOption(unsigned int number, bool selectedSave, const char* name) {
+void drawSaveOption(unsigned int number, bool selectedSave, const char* name, bool drawBackground) {
     int y = 10 + (number*57) + (number % 2);
     if (number > 1) {
         y++;
     }
-    if (selectedSave) {
-        gfx_SetColor(254);
-    } else {
-        gfx_SetColor(252);
+    if (drawBackground) {
+        gfx_Sprite_NoClip(cursorBackground, 10, y);
+        gfx_Sprite_NoClip(cursorBackground2, 160, y);
     }
-    gfx_FillRectangle(5, y-5, 310, 57 + (number%2));
-    gfx_SetColor(253);
-    gfx_FillRectangle(10, y, 300, 47 + (number%2));
+    if (selectedSave) {
+        gfx_SetTextFGColor(254);
+        cursorBackground->width = 150;
+        cursorBackground->height = 47 + (number%2);
+        cursorBackground2->width = 150;
+        cursorBackground2->height = 47 + (number%2);
+        gfx_GetSprite(cursorBackground, 10, y);
+        gfx_GetSprite(cursorBackground2, 160, y);
+        gfx_SetColor(253);
+        //gfx_FillRectangle(10, y, 300, 47 + (number%2));
+    }
     printStringCentered(name, y + 16);
+    gfx_SetTextFGColor(0);
+}
+
+void fillDirt() {
+    cursorBackground->width = 16;
+    cursorBackground->height = 16;
+    memcpy(cursorBackground->data, dirt, 256);
+    for (unsigned int i = 0; i < 256; i++) {
+        cursorBackground->data[i] += 126;
+    }
+    for (unsigned int x = 0; x < 320; x += 16) {
+        for (uint8_t y = 0; y < 240; y += 16) {
+            gfx_Sprite_NoClip(cursorBackground, x, y);
+        }
+    }
+}
+
+void redrawSaveOptions() {
+    fillDirt();
+    for (unsigned int i = 0; i < 4; i++) {
+        drawSaveOption(i, (i == selectedSave), saveNames[i + offset], false);
+    }
+    gfx_BlitBuffer();
 }
