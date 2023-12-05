@@ -8,5 +8,6 @@ https://www.planetminecraft.com/texture-pack/shineal-s-simplistic-pack-test-post
 Created by ShinyDragon96 and ShiNeaL's Packs. 
 Copyright ShinyDragon96 and ShiNeaL's Packs. Used under CC-BY-NC 4.0
 (https://creativecommons.org/licenses/by-nc/4.0/)
+The textures from the pack that were used were extracted, had their saturation increased to improve their appearence on the... subpar screen used on the TI 84+ CE, then converted to indexed color and repacked.
 (thanks for releasing your art under CC-BY-NC, the first texture pack I looked at was not released under any license and went so far as to explicitly disallow bundling the texture pack in software.
 again, thanks for allowing people to use your texture pack)
