@@ -1,0 +1,5 @@
+Source: https://www.planetminecraft.com/texture-pack/pamplemousse---a-semi-modern-texture-pack/
+Thank you to MrFruitTree for sharing this work of art under a Creative Commons license.
+This texture pack is/was shared under the CC-BY-NC-ND license.
+The only changes that were made were slightly bumping up the saturation and the contrast to help the texture pack look right on the screen of the TI 84 Plus CE, and then repacking the texture pack into the TICraft texture pack format.
+I think that makes it not a derivitive? If it does, I'll take this pack of the GitHub immediately.

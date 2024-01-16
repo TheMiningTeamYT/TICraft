@@ -1,0 +1,4 @@
+Source: https://www.planetminecraft.com/texture-pack/plastic-craft-16x-resource-pack/
+Thank you for not demanding I take this down (yet) HormaniaGaming.
+If you're redistributing this pack yourself, be ware.
+The only changes that were made were slightly bumping up the saturation and the contrast to help the texture pack look right on the screen of the TI 84 Plus CE, and then repacking the texture pack into the TICraft texture pack format.

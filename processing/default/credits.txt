@@ -1,0 +1,4 @@
+Source: https://github.com/TheScienceElf/Blocks-TI-84
+Thank you to TheScienceElf for posting the original video on your 3D Minecraft for the TI 84 Plus CE that got the ball rolling on my project. Thank you again for posting the code for it publicly.
+The entirety of Blocks-TI-84 is shared under the incredibly expansive MIT license. In keeping with that, this texture pack, and all of the code of TICraft, are also shared under the MIT license.
+The changes I made were to boost the saturation and contrast, and then to add in textures from Minecraft 1.8 for the blocks which were not originally included in Blocks-TI-84.

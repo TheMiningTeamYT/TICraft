@@ -1,0 +1,4 @@
+Source: https://www.planetminecraft.com/texture-pack/yuushya-16/
+Thank you coco_fish82 for sharing your texture pack under a creative commons license!
+Since they shared it under the CC-BY-SA 3.0 license, this pack is shared under CC-BY-SA 4.0 (the latest version of the CC-BY-SA license at time of writing.)
+The only changes that were made were slightly bumping up the saturation and the contrast to help the texture pack look right on the screen of the TI 84 Plus CE, and then repacking the texture pack into the TICraft texture pack format.

@@ -1,0 +1,4 @@
+Source: https://www.planetminecraft.com/texture-pack/shineal-s-simplistic-pack-test-post/
+Thank you to ShinyDragon96 and the rest of the team behind this for sharing one of the best texture packs I have ever seen under CC-BY-NC 4.0.
+In keeping with that, this texture pack is shared under CC-BY-NC 4.0 as well.
+The only changes that were made were slightly bumping up the saturation and the contrast to help the texture pack look right on the screen of the TI 84 Plus CE, and then repacking the texture pack into the TICraft texture pack format.
