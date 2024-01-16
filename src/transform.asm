@@ -8,20 +8,18 @@ _transformPointNewA:
     ; but also, not sure why you'd want to rotate the camera like that
     di
     push ix
-    ; Save where to write the screenPoint
-    ld ix, 9
-    add ix, sp
+    ld iy, 9
+    add iy, sp
     exx
-        lea hl, ix-9
+        lea hl, iy-9
         ld de, (_sx)
         ld bc, 3
     exx
     ; Compute (distance from camera on) x, y, and z
     ; and compute the values that will be needed for the math later
-    ld iy, vars
 
     ; x, czx, and szx
-    ld hl, (ix + x)
+    ld hl, (iy + x)
     ld de, (_cameraXYZ + x)
     or a, a
     sbc hl, de
@@ -31,7 +29,7 @@ _transformPointNewA:
     ld (iy + x), hl
 
     ; y, czy, and szy
-    ld hl, (ix + y)
+    ld hl, (iy + y)
     ld de, (_cameraXYZ + y)
     or a, a
     sbc hl, de
@@ -46,7 +44,7 @@ _transformPointNewA:
         sbc hl, bc
     exx
 
-    ld hl, (ix + zz)
+    ld hl, (iy + zz)
     ld de, (_cameraXYZ + zz)
     or a, a
     sbc hl, de
@@ -72,7 +70,7 @@ _transformPointNewA:
         or a, a
         sbc hl, bc
     exx
-    ld ix, (ix - 3)
+    ld ix, (iy - 3)
 
     ; calculate dx
     ; save syz to the stack
@@ -256,7 +254,6 @@ _transformPointNewA:
     pop ix
     ret
 section .data
-extern vars
 extern _fp_div
 extern _fp_mul
 extern _cameraXYZ
@@ -276,26 +273,26 @@ y = 3
 private zz 
 zz  = 6
 private sum1
-sum1 = 9
+sum1 = -39
 private sum2
-sum2 = 12
+sum2 = -42
 private sum3
-sum3 = 15
+sum3 = -45
 private dx
-dx = 18
+dx = -48
 private dy
-dy = 21
+dy = -51
 private dz
-dz = 24
+dz = -54
 private czx
-czx = 27
+czx = -57
 private szx
-szx = 30
+szx = -60
 private czy
-czy = 33
+czy = -63
 private szy
-szy = 36
+szy = -66
 private cyz
-cyz = 39
+cyz = -69
 private syz
-syz = 42
+syz = -72

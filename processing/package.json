@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "jimp": "^0.22.10"
+    "jimp": "^0.22.10",
+    "smart-buffer": "^4.2.0"
   }
 }

@@ -34,7 +34,7 @@ struct Fixed24 {
   }
 
   int24_t floor() {
-    return n >> POINT;
+    return fp_to_int_floor(n);
   }
 
   Fixed24 abs() {

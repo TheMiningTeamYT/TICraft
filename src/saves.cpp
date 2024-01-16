@@ -14,7 +14,6 @@ extern "C" {
 uint8_t selectedObject = 10;
 object playerCursor(20, 20, 20, 20, selectedObject, true);
 extern gfx_sprite_t* cursorBackground;
-gfx_sprite_t* cursorBackground2 = (gfx_sprite_t*) (((uint8_t*) cursorBackground) + 7202);
 const char* saveNames[] = {"WORLD1","WORLD2","WORLD3","WORLD4","WORLD5","WORLD6","WORLD7","WORLD8","WORLD9","WORLD10","WORLD11","WORLD12","WORLD13","WORLD14","WORLD15","WORLD16","WORLD17","WORLD18","WORLD19","WORLD20","WORLD21","WORLD22","WORLD23","WORLD24","WORLD25","WORLD26","WORLD27","WORLD28","WORLD29","WORLD30","WORLD31","WORLD32","WORLD33","WORLD34","WORLD35","WORLD36","WORLD37","WORLD38","WORLD39","WORLD40","WORLD41","WORLD42","WORLD43","WORLD44","WORLD45","WORLD46","WORLD47","WORLD48","WORLD49","WORLD50","WORLD51","WORLD52","WORLD53","WORLD54","WORLD55","WORLD56","WORLD57","WORLD58","WORLD59","WORLD60","WORLD61","WORLD62","WORLD63","WORLD64","WORLD65","WORLD66","WORLD67","WORLD68","WORLD69","WORLD70","WORLD71","WORLD72","WORLD73","WORLD74","WORLD75","WORLD76","WORLD77","WORLD78","WORLD79","WORLD80","WORLD81","WORLD82","WORLD83","WORLD84","WORLD85","WORLD86","WORLD87","WORLD88","WORLD89","WORLD90","WORLD91","WORLD92","WORLD93","WORLD94","WORLD95","WORLD96","WORLD97","WORLD98","WORLD99", "WORLD100"};
 uint8_t selectedSave = 0;
 uint8_t offset = 0;
@@ -60,33 +59,29 @@ void save(const char* name) {
         uint8_t* saveData = (uint8_t*) saveDataBuffer;
         bool saveGood = true;
         bool error = false;
-        unsigned int version = saveFileVersion;
         Fixed24 cursorPos[3] = {playerCursor.x, playerCursor.y, playerCursor.z};
-        uint32_t checksum;
         // is using memcpy a bunch the best way to write this data out to memory? I DON'T KNOW!
         memcpy(saveData, "BLOCKS", 7);
         saveData += 7;
-        memcpy(saveData, &version, sizeof(unsigned int));
+        *((unsigned int*)saveData) = saveFileVersion;
         saveData += sizeof(unsigned int);
-        memcpy(saveData, &numberOfObjects, sizeof(unsigned int));
+        *((unsigned int*)saveData) = numberOfObjects;
         saveData += sizeof(unsigned int);
         for (unsigned int i = 0; i < numberOfObjects; i++) {
-            cubeSave cube = {objects[i]->x, objects[i]->y, objects[i]->z, objects[i]->size, objects[i]->texture};
-            memcpy(saveData, &cube, sizeof(cubeSave));
+            *((cubeSave*)saveData) = {objects[i]->x, objects[i]->y, objects[i]->z, objects[i]->size, objects[i]->texture};
             saveData += sizeof(cubeSave);
         }
-        memcpy(saveData, &selectedObject, 1);
+        *saveData = selectedObject;
         saveData += 1;
         memcpy(saveData, cameraXYZ, sizeof(Fixed24)*3);
         saveData += sizeof(Fixed24)*3;
         memcpy(saveData, cursorPos, sizeof(Fixed24)*3);
         saveData += sizeof(Fixed24)*3;
-        memcpy(saveData, &angleX, sizeof(float));
+        *((float*)saveData) = angleX;
         saveData += sizeof(float);
-        memcpy(saveData, &angleY, sizeof(float));
+        *((float*)saveData) = angleY;
         saveData += sizeof(float);
-        checksum = crc32((char*) saveDataBuffer, (int)(saveData - (uint8_t*)saveDataBuffer));
-        memcpy(saveData, &checksum, sizeof(uint32_t));
+        *((uint32_t*)saveData) = crc32((char*) saveDataBuffer, (int)(saveData - (uint8_t*)saveDataBuffer));
         saveData += sizeof(uint32_t);
         deleteEverything();
         bool quit = false;
@@ -123,7 +118,7 @@ void save(const char* name) {
                 case sk_2:
                     fillDirt();
                     gfx_SetTextXY(0, 110);
-                    printStringAndMoveDownCentered("Please plug in a USB drive now.");
+                    printStringAndMoveDownCentered("Please plug in a FAT32 formatted USB drive now.");
                     printStringAndMoveDownCentered("Press any key to cancel");
                     saveGood = init_USB();
                     if (saveGood) {
@@ -244,73 +239,53 @@ bool checkSave(const char* name, bool USB) {
     return toSaveOrNotToSave;
 }
 
-void load(const char* name, bool USB) {
+void load() {
     uint8_t* saveData = (uint8_t*) saveDataBuffer;
-    bool good;
-    if (USB) {
-        if (init_USB()) {
-            char nameBuffer[128];
-            strncpy(nameBuffer, name, 128);
-            nameBuffer[127] = 0;
-            strncat(nameBuffer, ".bin", 128-strlen(nameBuffer));
-            good = readFile("/saves", nameBuffer, saveBufferSize, saveData);
+    bool good = true;
+    bool saveGood = true;
+    bool error = false;
+    unsigned int version;
+    saveGood = true;
+    if (saveGood) {
+        saveData += 7;
+        version = *((unsigned int*)saveData);
+        saveData += sizeof(unsigned int);
+        numberOfObjects = *((unsigned int*)saveData);
+        saveData += sizeof(unsigned int);
+        for (unsigned int i = 0; i < numberOfObjects && i < maxNumberOfObjects; i++) {
+            cubeSave cube = *((cubeSave*)saveData);
+            saveData += sizeof(cubeSave);
+            if (i < maxNumberOfObjects) {
+                objects[i] = new object(cube.x, cube.y, cube.z, cube.size, cube.texture, false);
+            }
         }
-        close_USB();
-    } else {
-        uint8_t handle = ti_Open(name, "r");
-        if (handle) {
-            good = ti_Read(saveData, sizeof(uint8_t), ti_GetSize(handle), handle);
-            ti_Close(handle);
+    } else if (error == false) {
+        error = true;
+    }
+    if (!saveGood) {
+        error = true;
+    }
+    resetCamera();
+    if (version >= 2 && saveGood) {
+        Fixed24 cursorPos[3];
+        selectedObject = *saveData;
+        saveData += 1;
+        memcpy(cameraXYZ, saveData, sizeof(Fixed24)*3);
+        saveData += sizeof(Fixed24)*3;
+        playerCursor.x = *((Fixed24*)saveData);
+        playerCursor.y = *(((Fixed24*)saveData) + 1);
+        playerCursor.z = *(((Fixed24*)saveData) + 2);
+        saveData += sizeof(Fixed24)*3;
+        if (version >= 3) {
+            angleX = *((float*)saveData);
+            angleY = *(((float*)saveData) + 1);
+            cx = cosf(angleX*degRadRatio);
+            sx = sinf(angleX*degRadRatio);
+            cy = cosf(angleY*degRadRatio);
+            sy = sinf(angleY*degRadRatio);
         }
     }
-    if (good) {
-        bool saveGood = true;
-        bool error = false;
-        unsigned int version;
-        saveGood = true;
-        if (saveGood) {
-            saveData += 7;
-            version = *((unsigned int*)saveData);
-            saveData += sizeof(unsigned int);
-            numberOfObjects = *((unsigned int*)saveData);
-            saveData += sizeof(unsigned int);
-            for (unsigned int i = 0; i < numberOfObjects && i < maxNumberOfObjects; i++) {
-                cubeSave cube = *((cubeSave*)saveData);
-                saveData += sizeof(cubeSave);
-                if (i < maxNumberOfObjects) {
-                    objects[i] = new object(cube.x, cube.y, cube.z, cube.size, cube.texture, false);
-                }
-            }
-        } else if (error == false) {
-            error = true;
-        }
-        if (!saveGood) {
-            error = true;
-        }
-        resetCamera();
-        if (version >= 2 && saveGood) {
-            Fixed24 cursorPos[3];
-            selectedObject = *saveData;
-            saveData += 1;
-            memcpy(cameraXYZ, saveData, sizeof(Fixed24)*3);
-            saveData += sizeof(Fixed24)*3;
-            playerCursor.x = *((Fixed24*)saveData);
-            playerCursor.y = *(((Fixed24*)saveData) + 1);
-            playerCursor.z = *(((Fixed24*)saveData) + 2);
-            saveData += sizeof(Fixed24)*3;
-            if (version >= 3) {
-                angleX = *((float*)saveData);
-                angleY = *(((float*)saveData) + 1);
-                cx = cosf(angleX*degRadRatio);
-                sx = sinf(angleX*degRadRatio);
-                cy = cosf(angleY*degRadRatio);
-                sy = sinf(angleY*degRadRatio);
-            }
-        }
-        if (!saveGood && error) {
-            failedToLoadSave();
-        }
-    } else {
+    if (!saveGood && error) {
         failedToLoadSave();
     }
 }
@@ -336,34 +311,47 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
         uint8_t key = os_GetCSC();
         if (key) {
             switch (key) {
+                case sk_8:
                 case sk_Up:
+                    drawSaveOption(selectedSave, false, saveNames[selectedSave + offset], true);
                     if (selectedSave > 0) {
-                        drawSaveOption(selectedSave, false, saveNames[selectedSave + offset], true);
                         selectedSave--;
-                        drawSaveOption(selectedSave, true, saveNames[selectedSave + offset], false);
-                        gfx_BlitBuffer();
+                    } else {
+                        selectedSave += 3;
                     }
+                    drawSaveOption(selectedSave, true, saveNames[selectedSave + offset], false);
+                    gfx_BlitBuffer();
                     break;
+                case sk_2:
                 case sk_Down:
+                    drawSaveOption(selectedSave, false, saveNames[selectedSave + offset], true);
                     if (selectedSave < 3) {
-                        drawSaveOption(selectedSave, false, saveNames[selectedSave + offset], true);
                         selectedSave++;
-                        drawSaveOption(selectedSave, true, saveNames[selectedSave + offset], false);
-                        gfx_BlitBuffer();
+                    } else {
+                        selectedSave -= 3;
                     }
+                    drawSaveOption(selectedSave, true, saveNames[selectedSave + offset], false);
+                    gfx_BlitBuffer();
                     break;
+                case sk_4:
                 case sk_Left:
                     if (offset > 3) {
                         offset -= 4;
-                        redrawSaveOptions();
+                    } else {
+                        offset += 96;
                     }
+                    redrawSaveOptions();
                     break;
+                case sk_6:
                 case sk_Right:
                     if (offset < 96) {
                         offset += 4;
-                        redrawSaveOptions();
+                    } else {
+                        offset -= 96;
                     }
+                    redrawSaveOptions();
                     break;
+                case sk_5:
                 case sk_Enter:
                     strcpy(nameBuffer, saveNames[selectedSave + offset]);
                     gfx_SetDrawScreen();
@@ -458,19 +446,12 @@ void drawSaveOption(unsigned int number, bool selectedSave, const char* name, bo
         y++;
     }
     if (drawBackground) {
-        gfx_Sprite_NoClip(cursorBackground, 10, y);
-        gfx_Sprite_NoClip(cursorBackground2, 160, y);
+        gfx_Sprite_NoClip(cursorBackground, 110, y);
     }
     if (selectedSave) {
         gfx_SetTextFGColor(254);
-        cursorBackground->width = 150;
-        cursorBackground->height = 47 + (number%2);
-        cursorBackground2->width = 150;
-        cursorBackground2->height = 47 + (number%2);
-        gfx_GetSprite(cursorBackground, 10, y);
-        gfx_GetSprite(cursorBackground2, 160, y);
+        gfx_GetSprite(cursorBackground, 110, y);
         gfx_SetColor(253);
-        //gfx_FillRectangle(10, y, 300, 47 + (number%2));
     }
     printStringCentered(name, y + 16);
     gfx_SetTextFGColor(0);
@@ -479,7 +460,7 @@ void drawSaveOption(unsigned int number, bool selectedSave, const char* name, bo
 void fillDirt() {
     cursorBackground->width = 16;
     cursorBackground->height = 16;
-    memcpy(cursorBackground->data, dirt, 256);
+    memcpy(cursorBackground->data, dirt_texture[0], 256);
     for (unsigned int i = 0; i < 256; i++) {
         cursorBackground->data[i] += 126;
     }
@@ -488,6 +469,8 @@ void fillDirt() {
             gfx_Sprite_NoClip(cursorBackground, x, y);
         }
     }
+    cursorBackground->width = 96;
+    cursorBackground->height = 10;
 }
 
 void redrawSaveOptions() {

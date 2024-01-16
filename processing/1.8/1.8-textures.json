@@ -1,0 +1,10 @@
+{
+    "name": "Minecraft 1.8",
+    "version": "v1.0.0",
+    "description": "The textures from Minecraft 1.8.",
+    "copyright": "(C) 2014 Mojang.",
+    "filename": "Oneeight",
+    "image": "TextureMap (1.8).png",
+    "tolerence": 350,
+    "icon": "pack.png"
+}

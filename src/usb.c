@@ -106,10 +106,6 @@ bool readFile(const char* path, const char* name, uint24_t bufferSize, void* buf
     fat_SetFileBlockOffset(&file, 0);
     bool good = fat_ReadFile(&file, (readSize/MSD_BLOCK_SIZE)+1, buffer) == (readSize/MSD_BLOCK_SIZE)+1;
     fat_CloseFile(&file);
-    if (!good) {
-        // os_PutStrFull("Failed to read data");
-        // os_PutStrFull(str);
-    }
     return good;
 }
 
@@ -146,12 +142,7 @@ bool writeFile(const char* path, const char* name, uint24_t size, void* buffer) 
     fat_SetFileBlockOffset(&file, 0);
     bool good = fat_WriteFile(&file, (size/MSD_BLOCK_SIZE)+1, buffer) == (size/MSD_BLOCK_SIZE)+1;
     fat_CloseFile(&file);
-    if (!good) {
-        // os_PutStrFull("Failed to write data");
-        // os_PutStrFull(str);
-        return false;
-    }
-    return true;
+    return good;
 }
 
 bool createDirectory(const char* path, const char* name) {
@@ -192,18 +183,13 @@ void deleteFile(const char* path, const char* name) {
 }
 
 void close_USB() {
-    // os_PutStrFull("Closing USB...");
-    // os_PutStrFull("Closing FAT");
     if (global.fatInit == true) {
         usb_WaitForEvents();
         fat_Close(&global.fat);
     }
-    // os_PutStrFull("Closing MSD");
     if (global.storageInit == true) {
         usb_WaitForEvents();
         //msd_Close(&global.msd);
     }
-    // os_PutStrFull("Cleaning up USB");
     usb_Cleanup();
-    // os_PutStrFull("USB Closed!");
 }

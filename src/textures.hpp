@@ -1,7 +1,29 @@
 #include <cstdint>
 #include <cstring>
 #include <graphx.h>
-extern uint8_t* dirt;
+#define TICRAFTTexturePackVersion 3
+#define TICRAFTTexturePackMagic "TICRAFT_TEXTURES"
+struct texturePack {
+    char magic[17];
+    uint16_t version;
+    uint16_t palette[256];
+    uint16_t shadedSkyColor;
+    uint8_t textures[15872];
+    uint16_t icon[1024];
+    char metadata[];
+    /*
+    metadata:
+    char name[];
+    char description[];
+    char author[];
+    char version[];
+    char copyright[];
+    uint32_t crc;
+    */
+};
+
+extern char* texturePackName;
+extern uint16_t* texPalette;
 extern uint8_t* bedrock_texture[];
 extern uint8_t* bookshelf_texture[];
 extern uint8_t* bricks_texture[];
@@ -49,7 +71,6 @@ extern uint8_t* light_grey_wool_texture[];
 extern uint8_t* white_wool_texture[];
 extern uint8_t* quartz_texture[];
 
-// order is likely to change in the future
 extern uint8_t** textures[];
 
 void initPalette();

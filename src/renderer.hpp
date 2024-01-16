@@ -111,7 +111,7 @@ class object {
     void moveTo(Fixed24 newX, Fixed24 newY, Fixed24 newZ);
 
     // Prepare the cube's polygons for rendering
-    void generatePolygons(bool clip);
+    void generatePolygons();
 
     void generatePoints();
     
@@ -207,10 +207,10 @@ void drawScreen(bool fullRedraw);
 
 // Render a single transformed polygon
 void renderPolygon(transformedPolygon polygon);
-object** xSearch(object* key);
 
 // An array of all the objects in the world
 extern object** objects;
+extern object** zSortedObjects;
 
 // An array of all the polygons that are ready to be rendered
 extern transformedPolygon* preparedPolygons;
@@ -239,13 +239,14 @@ extern float degRadRatio;
 void drawCursor();
 void getBuffer();
 
-void xSort();
-
-unsigned int_sqrt(const unsigned n);
+#define xSort() qsort(objects, numberOfObjects, sizeof(object*), xCompare); qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
 
 void rotateCamera(float x, float y);
 
 void resetCamera();
+
+void drawImage(int x, int y, int width, int height, uint16_t* dataPointer);
+void drawRectangle(int x, int y, int width, int height, uint16_t color);
 
 extern "C" {
     // Convert a point from 3D space to screen space
@@ -253,4 +254,5 @@ extern "C" {
     void drawTextureLineNewA(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t z);
     void drawTextureLineNewA_NoClip(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t z);
     uint16_t approx_sqrt_a(unsigned int n);
+    void shadeScreen();
 }

@@ -12,7 +12,12 @@ void failedToSave();
 void failedToLoadSave();
 void save(const char* name);
 bool checkSave(const char* name, bool USB);
-void load(const char* name, bool USB);
+/*
+LOADS WHATEVER IS IN THE SAVE BUFFER
+Which should be the save file assuming you ran checkSave first
+SO RUN checkSave FIRST AND DO NOT OVERWRITE THE SAVE BUFFER!!!
+*/
+void load();
 bool mainMenu(char* nameBuffer, unsigned int nameBufferLength);
 void drawSaveOption(unsigned int number, bool selectedSave, const char* name, bool drawBackground);
 void redrawSaveOptions();

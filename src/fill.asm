@@ -16,18 +16,15 @@ public _drawTextureLineNewA_NoClip
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
 _drawTextureLineNewA_NoClip:
     di
+    ld iy, 0
+    add iy, sp
     push ix
-    ; Copy the arguments from the stack to the variable space
-    ld iy, vars
-    ld hl, 6
-    add hl, sp
-    lea de, iy
-    ld bc, 19
-    ldir
     ; BC will be sx
-    inc bc
+    ld bc, 1
     ; Compute dx
     ld hl, (iy + x1)
+    dec hl
+    ld (iy + x1), hl
     ld de, (iy + x0)
     or a, a
     sbc hl, de
@@ -83,25 +80,10 @@ _drawTextureLineNewA_NoClip:
         add hl, de
     textureRatio_cont:
     ; At this point dx or dy (whichever has a bigger absolute value) is in hl
-    ; Shift hl left 12
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    ; Take the reciprocal of hl
-    push hl
-    ; 1
-    ld hl, $001000
-    push hl
-    ; But first, some other stuff
+    push hl ; 4
+    ; zero out hl
+    or a, a ; 1
+    sbc hl, hl ; 2
     ; offset ix (screen pointer) by gfx_vram
     ld ix, (iy + x0)
     ld de, $D40000
@@ -121,32 +103,36 @@ _drawTextureLineNewA_NoClip:
     ld (iy + y1), hl
     ; Init column & texture ratio & draw first pixel
     exx
-        ; Divide
-        call _fp_div
-        ; Restore stack pointer
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        ex de, hl
-        dec de
-        ld b, e
-        ld e, d
+        pop de
+        xor a, a
+        srl d
+        rr e
+        rra
+        srl e
+        rra
+        srl e
+        rra
+        srl e
+        rra
+        ld d, a
+        ld b, a
+        or a, e
+        jr nz, not_zero
+            inc e
+        not_zero:
         ld c, (iy + colorOffset)
         inc c
         ld hl, (iy + texture)
         ex af, af'
-            xor a, a
-            ld d, a
+            ld a, e
         ex af, af'
     exx
     ; At this point, all our registers/variables should be initialized
     ; hl': texture
     ; c': colorOffset
-    ; b': (textureRatio << 12) & 0xF00000 (textureRatio % 1) (Fractional component of textureRatio)
-    ; de': floor(textureRatio)
+    ; b': running error
+    ; e': whole number component of length / 16
+    ; d': fractional component of length / 16
     ; a': Running total of the fractional component of column
     ; 75-208 cycles per pixel
     new_fillLoop:
@@ -156,9 +142,19 @@ _drawTextureLineNewA_NoClip:
             ld a, (hl) ; 2
             add a, c ; 1
             ex af, af' ; 1
-                add a, b ; 1
-                adc hl, de ; 2
-            ex af, af' ; 1
+                or a, a ;1
+                jr nz, decrement_texture_error ; 2/3
+                    move_pointer:
+                    ld a, b ; 1
+                    add a, d ; 1
+                    ld b, a ; 1
+                    ld a, e ; 1
+                    inc hl ; 1
+                    adc a, 0 ; 2
+                    jr z, move_pointer ; 2/3
+                decrement_texture_error:
+                dec a ; 1
+            ex af, af'
         exx ; 1
         ; If the texel is 255 (the transparency color), skip drawing the pixel
         jr c, fill_cont ; 2/3
@@ -173,20 +169,17 @@ _drawTextureLineNewA_NoClip:
                 ld (hl), a ; 2
                 ld (ix), c ; 4
             fill_upper_cont:
-            ld de, 320 ; 4
-            add hl, de ; 1
+            inc hl ; 1
             cp a, (hl) ; 2
             jr nc, fill_lower_cont ; 2/3
                 ld (hl), a ; 2
-                lea hl, ix ; 3
-                add hl, de ; 1
-                ld (hl), c ; 4
-            fill_lower_cont:
+                ld (ix + 1), c ; 4
         fill_cont:
+        or a, a ; 1
+        fill_lower_cont:
         ; Test if x0 == x1
         ld hl, (iy + x1) ; 5
         ld bc, (iy + x0) ; 6
-        or a, a ; 1
         sbc hl, bc ; 2
         ; If x0 != x1, move on
         jr nz, end_cont ; 2/3
@@ -415,37 +408,67 @@ approx_sqrt_a:
     ; add the guess and the divided square together
     add hl, de
     ret
+section .text
+public _shadeScreen
+_shadeScreen:
+    ld hl, gfx_vram
+    ld de, gfx_vram + 76800
+    ld bc, 76800
+    ldir
+    ld c, 126
+    shadeLoop:
+        ld a, (hl) ; 2
+        cp a, c ; 1
+        jr nc, shadeCont ; 2/3
+            add a, c ; 1
+            ld (hl), a ; 2
+        shadeCont:
+        inc hl ; 1
+        sbc hl, de ; 2
+        add hl, de ; 1
+        jr nz, shadeLoop ; 2/3
+    ; right now hl & de point to the end of the back buffer
+    dec hl
+    ld de, gfx_vram + 76799
+    ld bc, 76800
+    lddr
+    ld hl, (_texPalette)
+    ld bc, 512
+    add hl, bc
+    ld bc, (hl)
+    ld hl, $E303FE
+    ld (hl), c
+    inc hl
+    ld (hl), b
+    ret
 section .data
 private gfx_vram
 gfx_vram = $D40000
-public vars
-vars: db 45 dup 00h
-private startingSP
-startingSP: db 3 dup 00h
 extern _fp_div
 extern _fp_mul
 extern __idvrmu
 private x0
-x0 = 0
+x0 = 3
 private x1
-x1 = 3
+x1 = 6
 private y0
-y0 = 6
+y0 = 9
 private y1
-y1 = 9
+y1 = 12
 private texture
-texture = 12
+texture = 15
 private colorOffset
-colorOffset = 15
+colorOffset = 18
 private polygonZ
-polygonZ = 18
+polygonZ = 21
 private dx
-dx = 19
+dx = -24
 private sx
-sx = 23
+sx = -27
 private dy
-dy = 26
+dy = -30
 private sy
-sy = 29
+sy = -33
 private error
-error = 32
+error = -36
+extern _texPalette

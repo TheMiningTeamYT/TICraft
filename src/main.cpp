@@ -9,6 +9,11 @@
 #include "printString.hpp"
 #include "saves.hpp"
 #include "crc32.h"
+#define freeMem 0xD02587
+extern "C" {
+    void ti_CleanAll();
+    int ti_MemChk();
+}
 
 /*
 Implement chunking
@@ -21,7 +26,12 @@ Allows many more blocks at theoretically no additional RAM cost
 Cons:
 Doing a re-render will be INSANELY expensive
 */
-gfx_sprite_t* cursorBackground = (gfx_sprite_t*) 0xD2E1FD;
+struct packEntry {
+    texturePack* pack;
+    unsigned int size;
+};
+
+gfx_sprite_t* cursorBackground;
 
 int playerCursorX = 0;
 int playerCursorY = 0;
@@ -33,9 +43,32 @@ void moveCursor(uint8_t direction);
 void selectBlock();
 void drawSelection(int offset);
 void redrawScreen();
+void texturePackError(const char* message);
+void texturePackMenu();
+void drawTexturePackSelection(texturePack* pack, int row, bool selected);
+bool verifyTexturePack(packEntry pack);
+void exitOverlay(int code) {memset((void*) 0xD031F6, 0, 69090); exit(code);};
 
 int main() {
-    boot_Set48MHzMode();
+    os_ClrHomeFull();
+    ti_SetGCBehavior(gfx_End, texturePackMenu);
+    // what exactly do you do?
+    ti_CleanAll();
+    // sizeof(object*)*2000 + (255*255) + 2 = 71025B (69.36 KiB)
+    if (ti_MemChk() < sizeof(object*)*2000 + (255*255) + 2) {
+        os_PutStrFull("WARNING!! Not enough free user mem to run TICRAFT! Continuing may result in corruption or your calculator crashing and resetting. Try deleting or archiving some programs or AppVars. Press \"Enter\" to continue or press any other key to exit.");
+        uint8_t key;
+        while (!(key = os_GetCSC()));
+        if (key != sk_Enter) {
+            return 1;
+        }
+        os_ClrHomeFull();
+    }
+    objects = *((object***) freeMem);
+    zSortedObjects = objects + maxNumberOfObjects;
+    cursorBackground = (gfx_sprite_t*)(zSortedObjects + maxNumberOfObjects);
+    // texture pack selection menu goes here
+    texturePackMenu();
     ti_SetGCBehavior(gfx_End, gfxStart);
     bool userSelected = false;
     bool toSaveOrNotToSave = true;
@@ -48,7 +81,7 @@ int main() {
     load_save:
     while (!emergencyExit && mainMenu(nameBuffer, 10)) {
         bool quit = false;
-        while (quit == false) {
+        while (!quit) {
             fillDirt();
             gfx_SetTextXY(0, 105);
             gfx_SetTextFGColor(254);
@@ -65,11 +98,9 @@ int main() {
                     quit = true;
                     break;
                 case sk_2:
-                    printStringAndMoveDownCentered("Please plug in a USB drive now.");
-                    printStringAndMoveDownCentered("Then press a key to continue.");
-                    printStringAndMoveDownCentered("Please do not unplug the drive until");
+                    printStringAndMoveDownCentered("Please plug in a FAT32 formatted USB drive now.");
+                    printStringAndMoveDownCentered("Do not unplug the drive until");
                     printStringAndMoveDownCentered("the save is loaded.");
-                    while (!os_GetCSC());
                     printStringAndMoveDownCentered("Press any key to cancel loading from USB");
                     printStringAndMoveDownCentered("(Doing so will result in the genration of");
                     printStringAndMoveDownCentered("a new world)");
@@ -84,14 +115,21 @@ int main() {
             }
         }
         toSaveOrNotToSave = checkSave(nameBuffer, usb);
-        gfx_SetTextFGColor(0);
-        gfx_FillScreen(255);
+        fillDirt();
+        gfx_sprite_t* background2 = (gfx_sprite_t*)(((uint8_t*) cursorBackground) + 6402);
+        cursorBackground->width = 160;
+        background2->width = 160;
+        cursorBackground->height = 40;
+        background2->height = 40;
+        gfx_GetSprite(cursorBackground, 0, 0);
+        gfx_GetSprite(background2, 160, 0);
+        gfx_SetTextFGColor(254);
         gfx_SetTextScale(4, 4);
         gfx_SetTextXY(0, 0);
         printStringCentered("Loading...", 5);
         gfx_SetTextXY(0, 40);
         gfx_SetTextScale(1,1);
-        printStringAndMoveDownCentered("While you wait:");
+        printStringAndMoveDownCentered("Welcome to TICraft v1.0.0! While you wait:");
         printStringAndMoveDownCentered("Controls:");
         printStringAndMoveDownCentered("Graph: Exit, Clear: Emergency Exit");
         printStringAndMoveDownCentered("5: Place/Delete a block");
@@ -112,6 +150,7 @@ int main() {
         if (!toSaveOrNotToSave) {
             playerCursor.moveTo(20, 20, 20);
             resetCamera();
+            selectedObject = 10;
             for (int i = 0; i < 400; i++) {
                 if (numberOfObjects < maxNumberOfObjects) {
                     // workaround for compiler bug
@@ -121,17 +160,18 @@ int main() {
                 }
             }
         } else {
-            load(nameBuffer, usb);
+            load();
         }
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             objects[i]->generatePoints();
         }
+        memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
         xSort();
+        gfx_Sprite_NoClip(cursorBackground, 0, 0);
+        gfx_Sprite_NoClip(background2, 160, 0);
         cursorBackground->height = 1;
         cursorBackground->width = 1;
         printStringAndMoveDownCentered("Press any key to begin.");
-        gfx_SetColor(255);
-        gfx_FillRectangle_NoClip(0, 0, 320, 40);
         gfx_SetTextScale(4,4);
         printStringCentered("Loaded!", 5);
         gfx_SetTextScale(1,1);
@@ -146,58 +186,90 @@ int main() {
                 switch (key) {
                     // forward
                     case sk_9:
-                        if (angleY <= -67.5f) {
+                        if (angleY < -67.5f) {
                             moveCursor(6);
-                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                        } else if (angleY < -22.5f) {
                             moveCursor(2);
-                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                        } else if (angleY < 22.5f) {
                             moveCursor(8);
-                        } else if (angleY >= 67.5f) {
-                            moveCursor(7);
-                        } else {
+                        } else if (angleY < 67.5f) {
                             moveCursor(4);
+                        } else if (angleY < 112.5f) {
+                            moveCursor(7);
+                        } else if (angleY < 157.5f) {
+                            moveCursor(3);
+                        } else if (angleY < 202.5f) {
+                            moveCursor(9);
+                        } else if (angleY < 247.5f) {
+                            moveCursor(5);
+                        } else {
+                            moveCursor(6);
                         }
                         break;
                     // backward
                     case sk_1:
-                        if (angleY <= -67.5f) {
+                        if (angleY < -67.5f) {
                             moveCursor(7);
-                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                        } else if (angleY < -22.5f) {
                             moveCursor(3);
-                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                        } else if (angleY < 22.5f) {
                             moveCursor(9);
-                        } else if (angleY >= 67.5f) {
-                            moveCursor(6);
-                        } else {
+                        } else if (angleY < 67.5f) {
                             moveCursor(5);
+                        } else if (angleY < 112.5f) {
+                            moveCursor(6);
+                        } else if (angleY < 157.5f) {
+                            moveCursor(2);
+                        } else if (angleY < 202.5f) {
+                            moveCursor(8);
+                        } else if (angleY < 247.5f) {
+                            moveCursor(4);
+                        } else {
+                            moveCursor(7);
                         }
                         break;
                     // left
                     case sk_7:
-                        if (angleY <= -67.5f) {
+                        if (angleY < -67.5f) {
                             moveCursor(9);
-                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                        } else if (angleY < -22.5f) {
                             moveCursor(5);
-                        } else if (angleY <= 22.5f && angleY >= -67.5f) {
+                        } else if (angleY < 22.5f) {
                             moveCursor(6);
-                        } else if (angleY >= 67.5f) {
-                            moveCursor(8);
-                        } else {
+                        } else if (angleY < 67.5f) {
                             moveCursor(2);
+                        } else if (angleY < 112.5f) {
+                            moveCursor(8);
+                        } else if (angleY < 157.5f) {
+                            moveCursor(4);
+                        } else if (angleY < 202.5f) {
+                            moveCursor(7);
+                        } else if (angleY < 247.5f) {
+                            moveCursor(3);
+                        } else {
+                            moveCursor(9);
                         }
                         break;
                     // right
                     case sk_3:
-                        if (angleY <= -67.5f) {
+                        if (angleY < -67.5f) {
                             moveCursor(8);
-                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                        } else if (angleY < -22.5f) {
                             moveCursor(4);
-                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                        } else if (angleY < 22.5f) {
                             moveCursor(7);
-                        } else if (angleY >= 67.5f) {
-                            moveCursor(9);
-                        } else {
+                        } else if (angleY < 67.5f) {
                             moveCursor(3);
+                        } else if (angleY < 112.5f) {
+                            moveCursor(9);
+                        } else if (angleY < 157.5f) {
+                            moveCursor(5);
+                        } else if (angleY < 202.5f) {
+                            moveCursor(6);
+                        } else if (angleY < 247.5f) {
+                            moveCursor(2);
+                        } else {
+                            moveCursor(8);
                         }
                         break;
                     // up
@@ -208,98 +280,154 @@ int main() {
                         moveCursor(1);
                         break;
                     case sk_8:
-                        if (angleY <= -67.5f) {
+                        if (angleY < -67.5f) {
                             moveCursor(5);
-                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                        } else if (angleY < -22.5f) {
                             moveCursor(6);
-                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                        } else if (angleY < 22.5f) {
                             moveCursor(2);
-                        } else if (angleY >= 67.5f) {
-                            moveCursor(4);
-                        } else {
+                        } else if (angleY < 67.5f) {
                             moveCursor(8);
+                        } else if (angleY < 112.5f) {
+                            moveCursor(4);
+                        } else if (angleY < 157.5f) {
+                            moveCursor(7);
+                        } else if (angleY < 202.5f) {
+                            moveCursor(3);
+                        } else if (angleY < 247.5f) {
+                            moveCursor(9);
+                        } else {
+                            moveCursor(5);
                         }
                         break;
                     case sk_2:
-                        if (angleY <= -67.5f) {
+                        if (angleY < -67.5f) {
                             moveCursor(4);
-                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                        } else if (angleY < -22.5f) {
                             moveCursor(7);
-                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                        } else if (angleY < 22.5f) {
                             moveCursor(3);
-                        } else if (angleY >= 67.5f) {
-                            moveCursor(5);
-                        } else {
+                        } else if (angleY < 67.5f) {
                             moveCursor(9);
+                        } else if (angleY < 112.5f) {
+                            moveCursor(5);
+                        } else if (angleY < 157.5f) {
+                            moveCursor(6);
+                        } else if (angleY < 202.5f) {
+                            moveCursor(2);
+                        } else if (angleY < 247.5f) {
+                            moveCursor(8);
+                        } else {
+                            moveCursor(4);
                         }
                         break;
                     case sk_4:
-                        if (angleY <= -67.5f) {
+                        if (angleY < -67.5f) {
                             moveCursor(3);
-                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                        } else if (angleY < -22.5f) {
                             moveCursor(9);
-                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                        } else if (angleY < 22.5f) {
                             moveCursor(5);
-                        } else if (angleY >= 67.5f) {
-                            moveCursor(2);
-                        } else {
+                        } else if (angleY < 67.5f) {
                             moveCursor(6);
+                        } else if (angleY < 112.5f) {
+                            moveCursor(2);
+                        } else if (angleY < 157.5f) {
+                            moveCursor(8);
+                        } else if (angleY < 202.5f) {
+                            moveCursor(4);
+                        } else if (angleY < 247.5f) {
+                            moveCursor(7);
+                        } else {
+                            moveCursor(3);
                         }
                         break;
                     case sk_6:
-                        if (angleY <= -67.5f) {
+                        if (angleY < -67.5f) {
                             moveCursor(2);
-                        } else if (angleY <= -22.5f && angleY >= -67.5f) {
+                        } else if (angleY < -22.5f) {
                             moveCursor(8);
-                        } else if (angleY <= 22.5f && angleY >= -22.5f) {
+                        } else if (angleY < 22.5f) {
                             moveCursor(4);
-                        } else if (angleY >= 67.5f) {
-                            moveCursor(3);
-                        } else {
+                        } else if (angleY < 67.5f) {
                             moveCursor(7);
+                        } else if (angleY < 112.5f) {
+                            moveCursor(3);
+                        } else if (angleY < 157.5f) {
+                            moveCursor(9);
+                        } else if (angleY < 202.5f) {
+                            moveCursor(5);
+                        } else if (angleY < 247.5f) {
+                            moveCursor(6);
+                        } else {
+                            moveCursor(2);
                         }
                         break;
                     case sk_5: {
                         object* annoyingPointer = &playerCursor;
-                        object** matchingObject = (object**) bsearch((void*) &annoyingPointer, objects, numberOfObjects, sizeof(object *), xCompare);
+                        object** matchingObject = (object**) bsearch(&annoyingPointer, objects, numberOfObjects, sizeof(object*), xCompare);
                         bool deletedObject = false;
                         drawBuffer();
                         if (matchingObject != nullptr) {
-                            while (matchingObject > &objects[0]) {
-                                if ((*matchingObject)->x < playerCursor.x) {
-                                    break;
-                                }
+                            while (matchingObject > &objects[0] && (*(matchingObject-1))->x == playerCursor.x) {
                                 matchingObject--;
                             }
-                            while (matchingObject <= &objects[numberOfObjects - 1]) {
-                                if ((*matchingObject)->x > playerCursor.x) {
-                                    break;
-                                }
+                            while (matchingObject < &objects[numberOfObjects] && (*matchingObject)->x == playerCursor.x) {
                                 if ((*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
-                                    object* matchingObjectReference = *matchingObject;
-                                    memmove(matchingObject, matchingObject + 1, sizeof(object*) * (&objects[numberOfObjects - 1] - matchingObject));
-                                    numberOfObjects--;
-                                    matchingObjectReference->deleteObject();
-                                    delete matchingObjectReference;
-                                    xSort();
-                                    drawScreen(false);
-                                    getBuffer();
                                     deletedObject = true;
                                     break;
                                 }
                                 matchingObject++;
                             }
                         }
-                        if (!deletedObject) {
+                        if (deletedObject) {
+                            deletedObject = false;
+                            object** zSortedPointer = (object**) bsearch(matchingObject, zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
+                            while (zSortedPointer > &zSortedObjects[0] && distanceCompare(zSortedPointer - 1, matchingObject) == 0) {
+                                zSortedPointer--;
+                            }
+                            while (zSortedPointer < &zSortedObjects[numberOfObjects] && distanceCompare(zSortedPointer, matchingObject) == 0) {
+                                if ((*zSortedPointer)->x == playerCursor.x && (*zSortedPointer)->y == playerCursor.y && (*zSortedPointer)->z == playerCursor.z) {
+                                    deletedObject = true;
+                                    memmove(zSortedPointer, zSortedPointer + 1, sizeof(object*) * (&zSortedObjects[numberOfObjects - 1] - zSortedPointer));
+                                    break;
+                                }
+                                zSortedPointer++;
+                            }
+                            // just incase something goes wrong in the search
+                            if (!deletedObject) {
+                                gfx_End();
+                                exitOverlay(1);
+                            }
+                            object* matchingObjectReference = *matchingObject;
+                            memmove(matchingObject, matchingObject + 1, sizeof(object*) * (&objects[numberOfObjects - 1] - matchingObject));
+                            numberOfObjects--;
+                            matchingObjectReference->deleteObject();
+                            getBuffer();
+                        } else {
                             if (numberOfObjects < maxNumberOfObjects) {
                                 object* newObject = new object(playerCursor.x, playerCursor.y, playerCursor.z, 20, selectedObject, false);
                                 newObject->generatePoints();
-                                objects[numberOfObjects] = newObject;
+                                matchingObject = &objects[0];
+                                while (matchingObject < &objects[numberOfObjects]) {
+                                    if ((*matchingObject)->x >= playerCursor.x) {
+                                        memmove(matchingObject + 1, matchingObject, sizeof(object*) * (&objects[numberOfObjects] - matchingObject));
+                                        break;
+                                    }
+                                    matchingObject++;
+                                }
+                                *matchingObject = newObject;
+                                matchingObject = &zSortedObjects[0];
+                                while (matchingObject < &zSortedObjects[numberOfObjects]) {
+                                    if (distanceCompare(matchingObject, &newObject) >= 0) {
+                                        memmove(matchingObject + 1, matchingObject, sizeof(object*) * (&zSortedObjects[numberOfObjects] - matchingObject));
+                                        break;
+                                    }
+                                    matchingObject++;
+                                }
+                                *matchingObject = newObject;
                                 numberOfObjects++;
-                                xSort();
-                                gfx_SetDrawBuffer();
-                                newObject->generatePolygons(true);
-                                gfx_SetDrawScreen();
+                                newObject->generatePolygons();
                                 getBuffer();
                             }
                         }
@@ -325,43 +453,53 @@ int main() {
                         selectBlock();
                         break;
                     case sk_Up:
-                        cameraXYZ[0] += (Fixed24)56.56854251f*sy;
-                        cameraXYZ[2] += (Fixed24)56.56854251f*cy;
+                        cameraXYZ[0] += (Fixed24)40*sy;
+                        cameraXYZ[2] += (Fixed24)40*cy;
+                        drawBuffer();
                         redrawScreen();
                         break;
                     case sk_Down:
-                        cameraXYZ[0] -= (Fixed24)56.56854251f*sy;
-                        cameraXYZ[2] -= (Fixed24)56.56854251f*cy;
+                        cameraXYZ[0] -= (Fixed24)40*sy;
+                        cameraXYZ[2] -= (Fixed24)40*cy;
+                        drawBuffer();
                         redrawScreen();
                         break;
                     case sk_Left:
-                        cameraXYZ[0] -= (Fixed24)56.56854251f*cy;
-                        cameraXYZ[2] += (Fixed24)56.56854251f*sy;
+                        cameraXYZ[0] -= (Fixed24)40*cy;
+                        cameraXYZ[2] += (Fixed24)40*sy;
+                        drawBuffer();
                         redrawScreen();
                         break;
                     case sk_Right:
-                        cameraXYZ[0] += (Fixed24)56.56854251f*cy;
-                        cameraXYZ[2] -= (Fixed24)56.56854251f*sy;
+                        cameraXYZ[0] += (Fixed24)40*cy;
+                        cameraXYZ[2] -= (Fixed24)40*sy;
+                        drawBuffer();
                         redrawScreen();
                         break;
                     case sk_Del:
                         cameraXYZ[1] += 20;
+                        drawBuffer();
                         redrawScreen();
                         break;
                     case sk_Stat:
                         cameraXYZ[1] -= 20;
+                        drawBuffer();
                         redrawScreen();
                         break;
                     case sk_Prgm:
+                        drawBuffer();
                         rotateCamera(-5, 0);
                         break;
                     case sk_Cos:
+                        drawBuffer();
                         rotateCamera(5, 0);
                         break;
                     case sk_Sin:
+                        drawBuffer();
                         rotateCamera(0, -5);
                         break;
                     case sk_Tan:
+                        drawBuffer();
                         rotateCamera(0, 5);
                         break;
                     case sk_Alpha:
@@ -381,16 +519,15 @@ int main() {
     gfx_FillScreen(254);
     gfx_End();
     // clear out pixel shadow
-    memset((void*) 0xD031F6, 0, 8400);
-    // clear out graph
-    memset((void*) 0xD09466, 0, 43890);
+    memset((void*) 0xD031F6, 0, 69090);
+    os_ClrHomeFull();
     return 0;
 }
 
 // still has problems
 void drawCursor() {
-    drawBuffer();
     playerCursor.generatePoints();
+    drawBuffer();
     if (playerCursor.visible) {
         int minX = playerCursor.renderedPoints[0].x;
         int minY = playerCursor.renderedPoints[0].y;
@@ -419,7 +556,7 @@ void drawCursor() {
             playerCursorY = minY;
             getBuffer();
         }
-        playerCursor.generatePolygons(false);
+        playerCursor.generatePolygons();
     }
 }
 /*
@@ -493,6 +630,7 @@ void drawBuffer() {
 
 void selectBlock() {
     drawBuffer();
+    shadeScreen();
     cursorBackground->width = 16;
     cursorBackground->height = 16;
     gfx_SetColor(253);
@@ -551,12 +689,8 @@ void selectBlock() {
             }
         }
     }
-    gfx_SetDrawBuffer();
-    gfx_SetColor(255);
-    gfx_FillRectangle(72, 42, 176, 156);
-    gfx_SetDrawScreen();
-    gfx_FillRectangle(72, 42, 176, 156);
-    drawScreen(false);
+    gfx_palette[255] = texPalette[255];
+    drawScreen(true);
     getBuffer();
     drawCursor();
 }
@@ -577,8 +711,173 @@ void redrawScreen() {
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         objects[i]->generatePoints();
     }
-    xSort();
+    qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
     drawScreen(true);
     getBuffer();
     drawCursor();
+}
+
+void texturePackError(const char* message) {
+    gfx_End();
+    os_ClrHomeFull();
+    os_PutStrFull("Texture pack is invalid (");
+    os_PutStrFull(message);
+    os_PutStrFull("). Please select another texture pack or load on the texture pack again. Press any key to continue.");
+    while (!os_GetCSC());
+}
+
+void fontPrintString(const char* string, uint16_t row) {
+    os_FontDrawText(string, (LCD_WIDTH - os_FontGetWidth(string))>>1, row);
+}
+
+void texturePackMenu() {
+    char* name;
+    void* vat_ptr = nullptr;
+    char** texturePackNames = new char*[0];
+    unsigned int numberOfTexturePacks = 0;
+    while ((name = ti_Detect(&vat_ptr, TICRAFTTexturePackMagic))) {
+        uint8_t texturePackHandle = ti_Open(name, "r");
+        ti_SetArchiveStatus(true, texturePackHandle);
+        texturePack* pack = (texturePack*) ti_GetDataPtr(texturePackHandle);
+        ti_Close(texturePackHandle);
+        if (pack->version == TICRAFTTexturePackVersion) {
+            char** oldPointer = texturePackNames;
+            texturePackNames = new char*[numberOfTexturePacks + 1];
+            memcpy(texturePackNames, oldPointer, sizeof(char*)*numberOfTexturePacks);
+            delete[] oldPointer;
+            // just remember to delete all of these strings when we're done
+            texturePackNames[numberOfTexturePacks] = new char[strlen(name) + 1];
+            strcpy(texturePackNames[numberOfTexturePacks], name);
+            numberOfTexturePacks++;
+        }
+    }
+    if (numberOfTexturePacks == 0) {
+        texturePackError("none were found");
+        exitOverlay(1);
+    }
+    packEntry* packs = new packEntry[numberOfTexturePacks];
+    for (unsigned int i = 0; i < numberOfTexturePacks; i++) {
+        uint8_t texturePackHandle = ti_Open(texturePackNames[i], "r");
+        packs[i].pack = (texturePack*)ti_GetDataPtr(texturePackHandle);
+        packs[i].size = ti_GetSize(texturePackHandle);
+        ti_Close(texturePackHandle);
+    }
+    unsigned int offset = 0;
+    unsigned int selectedPack = 0;
+    bool quit = false;
+    if (numberOfTexturePacks == 1) {
+        if (verifyTexturePack(packs[0])) {
+            goto texturePackEnd;
+        }
+        exitOverlay(1);
+    }
+    // here we make the actual menu
+    os_FontSelect(os_LargeFont);
+    while (!quit) {
+        memset(gfx_vram, 0, 320*240*sizeof(uint16_t));
+        os_SetDrawFGColor(65535);
+        os_SetDrawBGColor(0);
+        fontPrintString("Please select a", 4);
+        fontPrintString("texture pack.", 23);
+        for (unsigned int i = 0; i + offset < numberOfTexturePacks && i < 5; i++) {
+            drawTexturePackSelection(packs[i + offset].pack, i, i == selectedPack);
+        }
+        uint8_t key;
+        bool quit2 = false;
+        while (!quit2) {
+            while (!(key = os_GetCSC()));
+            switch (key) {
+                case sk_5:
+                case sk_Enter:
+                    quit2 = true;
+                    if (verifyTexturePack(packs[selectedPack + offset])) {
+                        quit = true;
+                    }
+                    break;
+                case sk_Up:
+                case sk_8:
+                    if (selectedPack > 0) {
+                        drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, false);
+                        selectedPack--;
+                        drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, true);
+                    }
+                    break;
+                case sk_Down:
+                case sk_2:
+                    if (selectedPack + offset + 1 < numberOfTexturePacks && selectedPack < 4) {
+                        drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, false);
+                        selectedPack++;
+                        drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, true);
+                    }
+                    break;
+                case sk_Left:
+                case sk_4:
+                    if (offset > 4) {
+                        offset -= 5;
+                        quit2 = true;
+                    }
+                    break;
+                case sk_Right:
+                case sk_6:
+                    if (numberOfTexturePacks > offset + 5) {
+                        offset += 5;
+                        if (selectedPack + offset >= numberOfTexturePacks) {
+                            selectedPack = numberOfTexturePacks - offset - 1;
+                        }
+                        quit2 = true;
+                    }
+                    break;
+                case sk_Graph:
+                case sk_Clear:
+                    exitOverlay(0);
+                default:
+                    break;
+            }
+        }
+    }
+    texturePackEnd:
+    texturePackName = new char[strlen(texturePackNames[selectedPack + offset]) + 1];
+    strcpy(texturePackName, texturePackNames[selectedPack + offset]);
+    for (unsigned int i = 0; i < numberOfTexturePacks; i++) {
+        delete[] texturePackNames[i];
+    }
+    delete[] texturePackNames;
+    return;
+}
+
+void drawTexturePackSelection(texturePack* pack, int row, bool selected) {
+    if (selected) {
+        drawRectangle(0, (40*row)+40, 320, 40, 65535);
+        os_SetDrawFGColor(0);
+        os_SetDrawBGColor(65535);
+    } else {
+        drawRectangle(0, (40*row)+40, 320, 40, 0);
+        os_SetDrawFGColor(65535);
+        os_SetDrawBGColor(0);
+    }
+    drawImage(4, (40*row)+44, 32, 32, pack->icon);
+    char nameString[32];
+    strncpy(nameString, pack->metadata, 32);
+    nameString[31] = 0;
+    os_FontDrawText(nameString, 40, (40*row)+44);
+}
+
+bool verifyTexturePack(packEntry pack) {
+    os_ClrHomeFull();
+    os_PutStrFull("Verifying texture pack, please wait...");
+    if (strcmp(pack.pack->magic, TICRAFTTexturePackMagic) != 0) {
+        texturePackError("bad magic bytes");
+        return false;
+    }
+    if (pack.pack->version != TICRAFTTexturePackVersion) {
+        texturePackError("for the wrong version of TICRAFT");
+        return false;
+    }
+    #define texturePackCRC *((uint32_t*)(((char*)pack.pack) + pack.size - sizeof(uint32_t)))
+    #define trueCRC crc32((const char*)pack.pack, pack.size - sizeof(uint32_t))
+    if (texturePackCRC != trueCRC) {
+        texturePackError("bad checksum");
+        return false;
+    }
+    return true;
 }

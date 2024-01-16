@@ -1,0 +1,8 @@
+{
+    "variants": {
+        "": [
+		{ "model": "block/mud", "y": 270 },
+		{ "model": "block/mud", "y": 180 }
+		]
+    }
+}

@@ -9,13 +9,20 @@
 #include "textures.hpp"
 #include "saves.hpp"
 /*
+optimization ideas:
+I suspect the qsort when generating polygons is taking a while, or at least is taking a not insignificant amount of time.
+What I could do is go back to having a list of every polygon to render, but instead of culling the polygons *before* adding them to the list, do so after.
+That way we can just do 1 qsort on a larger list
+but actually it seems that'd be slower
+Get rid of the x sorted objects and replace it with z sorted objects
+*/
+/*
 feature add ideas:
 Lighting:
 still thinking about how to do it
 */
-
-object** objects = (object**) 0xD3E000;
-object** zSortedObjects = objects + maxNumberOfObjects;
+object** objects;
+object** zSortedObjects;
 
 // Buffer for creating diagnostic strings
 char buffer[200];
@@ -65,12 +72,11 @@ clip = 0 // not affected by clipping
 clip = 1 // affected by clipping, no z buffer
 clip = 2 // affected by clipping, write to z buffer
 */
-void object::generatePolygons(bool clip) {
-    // A local copy of the polygons of a cube (Not sure this is necessary)
-    polygon polygons[6];
-
+void object::generatePolygons() {
     // Rendering the object (Preparing polygons for rendering)
     if (visible) {
+        // A local copy of the polygons of a cube (Not sure this is necessary)
+        polygon polygons[6];
         // Init local copy of polygons
         memcpy(polygons, cubePolygons, sizeof(polygon)*6);
         for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
@@ -92,10 +98,11 @@ void object::generatePolygons(bool clip) {
             polygon->z = z;
         }
         // Sort the polygons by distance from the camera, front to back
-        qsort((void *) polygons, 6, sizeof(polygon), zCompare);
+        qsort(polygons, 6, sizeof(polygon), zCompare);
 
         // Prepare the polygons for rendering
         for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
+            gfx_SetDrawBuffer();
             // The polygon we are rendering
             polygon polygon = polygons[polygonNum];
 
@@ -103,26 +110,34 @@ void object::generatePolygons(bool clip) {
             bool render = true;
             
             // Normalized z (0-255)
-            uint16_t normalizedZ = (polygon.z / 8);
+            unsigned int normalizedZ = (polygon.z >> 3);
             if (polygon.z < 12) {
                 render = false;
             } else {
                 // If there are any other polygons this one could be overlapping with, check the z buffer
                 // The z culling still has problems
-                if (clip == true) {
+                if (!outline) {
                     // Get the average x & y of the polygon
                     int x = polygon.x;
                     int y = polygon.y;
 
                     uint8_t obscuredPoints = 0;
+                    if (x < 0 || x > GFX_LCD_WIDTH - 1 || y < 0 || y > GFX_LCD_HEIGHT - 1) {
+                        obscuredPoints++;
+                    } else {
+                        uint8_t bufferZ = gfx_GetPixel(x, y);
+                        if (normalizedZ >= bufferZ) {
+                            obscuredPoints++;
+                        }
+                    }
                     for (uint8_t i = 0; i < 4; i++) {
                         screenPoint* point = &renderedPoints[polygon.points[i]];
-                        if (point->x < 0 || point->x > 319 || point->y < 0 || point->y > 239) {
+                        if (point->x < 0 || point->x > GFX_LCD_WIDTH - 1 || point->y < 0 || point->y > GFX_LCD_HEIGHT - 1) {
                             obscuredPoints++;
                         } else {
-                            int pointX = (point->x + x)>>1;
-                            int pointY = (point->y + y)>>1;
-                            if (!(pointX < 0 || pointX > 319 || pointY < 0 || pointY > 239)) {
+                            int pointX = (point->x + point->x + point->x + x)>>2;
+                            int pointY = (point->y + point->y + point->y + y)>>2;
+                            if (!(pointX < 0 || pointX > GFX_LCD_WIDTH - 1 || pointY < 0 || pointY > GFX_LCD_HEIGHT - 1)) {
                                 uint8_t bufferZ = gfx_GetPixel(pointX, pointY);
                                 if (normalizedZ >= bufferZ) {
                                     obscuredPoints++;
@@ -130,7 +145,7 @@ void object::generatePolygons(bool clip) {
                             }
                         }
                     }
-                    if (obscuredPoints == 4) {
+                    if (obscuredPoints == 5) {
                         render = false;
                         #if diagnostics == true
                         obscuredPolygons++;
@@ -148,56 +163,69 @@ void object::generatePolygons(bool clip) {
                 // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
 
                 // Create a new transformed (prepared) polygon and set initialize it;
-                transformedPolygon preparedPolygon = {this, normalizedZ, polygon.polygonNum};
+                gfx_SetDrawScreen();
+                transformedPolygon preparedPolygon = {this, (uint16_t)normalizedZ, polygon.polygonNum};
                 renderPolygon(preparedPolygon);
             }
         }
+        gfx_SetDrawScreen();
     }
 }
 
 void object::deleteObject() {
     if (visible) {
-        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
-            gfx_SetDrawBuffer();
-            gfx_SetColor(255);
-            /*int x1 = renderedPoints[cubePolygons[polygonNum].points[0]].x;
-            int x2 = renderedPoints[cubePolygons[polygonNum].points[1]].x;
-            int x3 = renderedPoints[cubePolygons[polygonNum].points[2]].x;
-            int x4 = renderedPoints[cubePolygons[polygonNum].points[3]].x;
-            int y1 = renderedPoints[cubePolygons[polygonNum].points[0]].y;
-            int y2 = renderedPoints[cubePolygons[polygonNum].points[1]].y;
-            int y3 = renderedPoints[cubePolygons[polygonNum].points[2]].y;
-            int y4 = renderedPoints[cubePolygons[polygonNum].points[3]].y;
-            gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-            gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-            gfx_SetDrawScreen();
-            gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-            gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-            gfx_SetDrawBuffer();*/
-            int16_t minX = renderedPoints[cubePolygons[polygonNum].points[0]].x;
-            int16_t minY = renderedPoints[cubePolygons[polygonNum].points[0]].y;
-            int16_t maxX = renderedPoints[cubePolygons[polygonNum].points[0]].x;
-            int16_t maxY = renderedPoints[cubePolygons[polygonNum].points[0]].y;
-            for (uint8_t i = 1; i < 4; i++) {
-                if (renderedPoints[cubePolygons[polygonNum].points[i]].x < minX) {
-                    minX = renderedPoints[cubePolygons[polygonNum].points[i]].x;
-                } else if (renderedPoints[cubePolygons[polygonNum].points[i]].x > maxX) {
-                    maxX = renderedPoints[cubePolygons[polygonNum].points[i]].x;
-                }
-                if (renderedPoints[cubePolygons[polygonNum].points[i]].y < minY) {
-                    minY = renderedPoints[cubePolygons[polygonNum].points[i]].y;
-                } else if (renderedPoints[cubePolygons[polygonNum].points[i]].y > maxY) {
-                    maxY = renderedPoints[cubePolygons[polygonNum].points[i]].y;
+        gfx_SetColor(255);
+        /*int x1 = renderedPoints[cubePolygons[polygonNum].points[0]].x;
+        int x2 = renderedPoints[cubePolygons[polygonNum].points[1]].x;
+        int x3 = renderedPoints[cubePolygons[polygonNum].points[2]].x;
+        int x4 = renderedPoints[cubePolygons[polygonNum].points[3]].x;
+        int y1 = renderedPoints[cubePolygons[polygonNum].points[0]].y;
+        int y2 = renderedPoints[cubePolygons[polygonNum].points[1]].y;
+        int y3 = renderedPoints[cubePolygons[polygonNum].points[2]].y;
+        int y4 = renderedPoints[cubePolygons[polygonNum].points[3]].y;
+        gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+        gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+        gfx_SetDrawScreen();
+        gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
+        gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
+        gfx_SetDrawBuffer();*/
+        int minX = renderedPoints[0].x;
+        int minY = renderedPoints[0].y;
+        int maxX = renderedPoints[0].x;
+        int maxY = renderedPoints[0].y;
+        for (uint8_t i = 1; i < 8; i++) {
+            if (renderedPoints[i].x < minX) {
+                minX = renderedPoints[i].x;
+            } else if (renderedPoints[i].x > maxX) {
+                maxX = renderedPoints[i].x;
+            }
+            if (renderedPoints[i].y < minY) {
+                minY = renderedPoints[i].y;
+            } else if (renderedPoints[i].y > maxY) {
+                maxY = renderedPoints[i].y;
+            }
+        }
+        minX -= 1;
+        maxX += 1;
+        minY -= 1;
+        maxY += 1;
+        gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
+        gfx_SetDrawBuffer();
+        gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
+        for (unsigned int i = 0; i < numberOfObjects; i++) {
+            object* otherObject = zSortedObjects[i];
+            if (otherObject != this) {
+                for (uint8_t pointNum = 0; pointNum < 8; pointNum++) {
+                    screenPoint point = otherObject->renderedPoints[pointNum];
+                    if (point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY) {
+                        otherObject->generatePolygons();
+                        break;
+                    }
                 }
             }
-            minX -= 1;
-            maxX += 1;
-            minY -= 1;
-            maxY += 1;
-            gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
-            gfx_SetDrawScreen();
-            gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
         }
+        gfx_SetDrawScreen();
+        delete this;
     }
 }
 
@@ -207,36 +235,65 @@ void object::generatePoints() {
     // The verticies of the cube
     point points[] = {{x, y, z}, {x+size, y, z}, {x+size, y-size, z}, {x, y-size, z}, {x, y, z+size}, {x+size, y, z+size}, {x+size, y-size, z+size}, {x, y-size, z+size}};;
     for (unsigned int i = 0; i < 8; i++) {
-        Fixed24 offset = 0;
-        if (cameraXYZ[1] < (Fixed24)40) {
-            offset = (Fixed24)20;
-        }
-        if ((angleY >= -22.5 && angleY <= 22.5)) {
-            if (z + offset < cameraXYZ[2]) {
-                visible = false;
-                renderedPoints[0].z = getPointDistance(points[0]);
-                break;
+        if (angleX <= 45) {
+            Fixed24 offset = angleX;
+            if (angleY < -67.5) {
+                if (x > cameraXYZ[0] + offset) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
+            } else if (angleY < -22.5) {
+                if ((x - z) > (cameraXYZ[0] - cameraXYZ[2]) + offset) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
+            } else if (angleY < 22.5) {
+                if (z + offset < cameraXYZ[2]) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
+            } else if (angleY < 67.5) {
+                if ((x + z) + offset < (cameraXYZ[0] + cameraXYZ[2])) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
+            } else if (angleY < 112.5) {
+                if (x + offset < cameraXYZ[0]) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
+            } else if (angleY < 157.5) {
+                if ((x - z) + offset < (cameraXYZ[0] - cameraXYZ[2])) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
+            } else if (angleY < 202.5) {
+                if (z > cameraXYZ[2] + offset) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
+            } else if (angleY < 247.5) {
+                if ((x + z) > (cameraXYZ[0] + cameraXYZ[2]) + offset) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
+            } else {
+                if (x > cameraXYZ[0] + offset) {
+                    visible = false;
+                    renderedPoints[0].z = getPointDistance(points[0]);
+                    break;
+                }
             }
-        } else if (angleY >= 67.5) {
-            if (x + offset < cameraXYZ[0]) {
-                visible = false;
-                renderedPoints[0].z = getPointDistance(points[0]);
-                break;
-            }
-        } else if (angleY > 22.5 && angleY < 67.5) {
-            if ((x + z) + offset < (cameraXYZ[0] + cameraXYZ[2])) {
-                visible = false;
-                renderedPoints[0].z = getPointDistance(points[0]);
-                break;
-            }
-        } else if (angleY <= -67.5) {
-            if (x > cameraXYZ[0] + offset) {
-                visible = false;
-                renderedPoints[0].z = getPointDistance(points[0]);
-                break;
-            }
-        } else if (angleY < -22.5 && angleY > -67.5) {
-            if ((x - z) > (cameraXYZ[0] - cameraXYZ[2]) + offset) {
+        } else {
+            if (y > cameraXYZ[1]) {
                 visible = false;
                 renderedPoints[0].z = getPointDistance(points[0]);
                 break;
@@ -251,7 +308,7 @@ void object::generatePoints() {
                 visible = false;
                 break;
             }
-            if (renderedPoints[i].x < 0 || renderedPoints[i].x > 319 || renderedPoints[i].y < 0 || renderedPoints[i].y > 239) {
+            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 1 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 1) {
                 nonVisiblePoints++;
             }
         }
@@ -290,6 +347,14 @@ int zCompare(const void *arg1, const void *arg2) {
 int distanceCompare(const void *arg1, const void *arg2) {
     object* object1 = *((object**) arg1);
     object* object2 = *((object**) arg2);
+    bool object1Transparent = (object1->texture == 15 || object1->texture == 23);
+    bool object2Transparent = (object2->texture == 15 || object2->texture == 23);
+    if (object1Transparent && !object2Transparent) {
+        return 1;
+    }
+    if (object2Transparent && !object1Transparent) {
+        return -1;
+    }
     return object1->getDistance() - object2->getDistance();
 }
 
@@ -302,7 +367,6 @@ int xCompare(const void *arg1, const void *arg2) {
 }
 
 void deleteEverything() {
-    // deletePolygons();
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         if (objects[i]) {
             delete objects[i];
@@ -313,29 +377,21 @@ void deleteEverything() {
 
 void drawScreen(bool fullRedraw) {
     if (fullRedraw) {
-        gfx_FillScreen(255);
-    }
-    gfx_SetDrawBuffer();
-    if (fullRedraw) {
+        gfx_SetDrawBuffer();
         gfx_SetTextXY(0, 0);
+        // Clear the zBuffer
+        gfx_FillScreen(255);
+        gfx_SetDrawScreen();
         // Clear the screen
         gfx_FillScreen(255);
     }
-    # if diagnostics == true
+    #if diagnostics == true
     outOfBoundsPolygons = 0;
     obscuredPolygons = 0;
     #endif
     for (unsigned int i = 0; i < numberOfObjects; i++) {
-        if (zSortedObjects[i]->texture != 15 && zSortedObjects[i]->texture != 23) {
-            zSortedObjects[i]->generatePolygons(true);
-        }
+        zSortedObjects[i]->generatePolygons();
     }
-    for (unsigned int i = 0; i < numberOfObjects; i++) {
-        if (zSortedObjects[i]->texture == 15 || zSortedObjects[i]->texture == 23) {
-            zSortedObjects[i]->generatePolygons(true);
-        }
-    }
-    gfx_SetDrawScreen();
 
     // Print some diagnostic information
     #if diagnostics == true
@@ -362,6 +418,7 @@ void drawScreen(bool fullRedraw) {
 // implementation of affine texture mapping (i think thats what you'd call this anyway)
 // as noted in The Science Elf's original video, affine texture mapping can look very weird on triangles
 // but on quads, it looks pretty good at a fraction of the cost
+// idea: integrate this into generatePolygons instead of having it as a seperate function
 void renderPolygon(transformedPolygon polygon) {
     // Quick shorthand
     uint8_t* points = cubePolygons[polygon.polygonNum].points;
@@ -385,7 +442,7 @@ void renderPolygon(transformedPolygon polygon) {
     } else {
         bool clipLines = false;
         for (unsigned int i = 0; i < 4; i++) {
-            if (renderedPoints[i].x < 1 || renderedPoints[i].x > 318 || renderedPoints[i].y < 1 || renderedPoints[i].y > 238) {
+            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 3 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 2) {
                 clipLines = true;
                 break;
             }
@@ -402,12 +459,14 @@ void renderPolygon(transformedPolygon polygon) {
         int length1 = (abs(dx1) > abs(dy1)) ? abs(dx1) : abs(dy1);
         int length2 = (abs(dx2) > abs(dy2)) ? abs(dx2) : abs(dy2);
         int length = (length1 > length2) ? length1 : length2;
+        length++;
 
         // Ratios that make the math faster (means we can multiply instead of divide)
         const Fixed24 reciprocalOfLength = (Fixed24)1/(Fixed24)length;
         
         Fixed24 textureRatio = reciprocalOfLength;
         textureRatio.n <<=4;
+        textureRatio.n--;
         Fixed24 row = 0;
         Fixed24 lineCX = renderedPoints[0].x;
         Fixed24 linePX = renderedPoints[1].x;
@@ -421,12 +480,8 @@ void renderPolygon(transformedPolygon polygon) {
         // main body
         if (clipLines) {
             for (int i = 0; i < length; i++) {
-                if (row > (Fixed24)15) {
-                    row = 15;
-                    textureRatio = 0;
-                }
-                if (!((lineCX < (Fixed24)0 && linePX < (Fixed24)0) || (lineCX > (Fixed24) 319 && linePX > (Fixed24)319)) && !((lineCY < (Fixed24)0 && linePY < (Fixed24)0) || (lineCY > (Fixed24) 239 && linePY > (Fixed24)239)))
-                    drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[((int)row)*16], colorOffset, polygon.z);
+                if (!((lineCX < (Fixed24)0 && linePX < (Fixed24)0) || (lineCX > (Fixed24)(GFX_LCD_WIDTH - 1) && linePX > (Fixed24)(GFX_LCD_WIDTH - 1))) && !((lineCY < (Fixed24)0 && linePY < (Fixed24)0) || (lineCY > (Fixed24)(GFX_LCD_HEIGHT - 1) && linePY > (Fixed24)(GFX_LCD_HEIGHT - 1))))
+                    drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[(row.floor())*16], colorOffset, polygon.z);
                 lineCX += CXdiff;
                 linePX += PXdiff;
                 lineCY += CYdiff;
@@ -435,11 +490,7 @@ void renderPolygon(transformedPolygon polygon) {
             }
         } else {
             for (int i = 0; i < length; i++) {
-                if (row > (Fixed24)15) {
-                    row = 15;
-                    textureRatio = 0;
-                }
-                drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[((int)row)*16], colorOffset, polygon.z);
+                drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[(row.floor())*16], colorOffset, polygon.z);
                 lineCX += CXdiff;
                 linePX += PXdiff;
                 lineCY += CYdiff;
@@ -447,7 +498,6 @@ void renderPolygon(transformedPolygon polygon) {
                 row += textureRatio;
             }
         }
-        // last line
         if (clipLines) {
             drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, polygon.z);
         } else {
@@ -463,32 +513,22 @@ int getPointDistance(point point) {
     return approx_sqrt_a((x*x)+(y*y)+(z*z));
 }
 
-object** xSearch(object* key) {
-    return (object**) bsearch((void*) key, objects, numberOfObjects, sizeof(object *), xCompare);
-}
-
-void xSort() {
-    qsort(objects, numberOfObjects, sizeof(object*), xCompare);
-    memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
-    // Sort all objects front to back
-    // improves polygon culling but sorting can be slow
-    qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
-}
-
-unsigned char bit_width(unsigned x) {
-    return x == 0 ? 1 : 24 - __builtin_clz(x);
-}
-
 void rotateCamera(float x, float y) {
     bool cameraRotated = false;
-    if ((x != 0.0f) && (angleX + x >= -85.0f && angleX + x <= 85.0f)) {
+    if ((x != 0) && (angleX + x >= -90 && angleX + x <= 90)) {
         angleX += x;
         cx = cosf(angleX*degRadRatio);
         sx = sinf(angleX*degRadRatio);
         cameraRotated = true;
     }
-    if ((y != 0.0f) && (angleY + y >= -90.0f && angleY + y <= 90.0f)) {
+    if (y != 0) {
         angleY += y;
+        while (angleY > 270) {
+            angleY -= 360;
+        }
+        while (angleY < -90) {
+            angleY += 360;
+        }
         cy = cosf(angleY*degRadRatio);
         sy = sinf(angleY*degRadRatio);
         cameraRotated = true;
@@ -513,4 +553,87 @@ void resetCamera() {
     cameraXYZ[0] = -100;
     cameraXYZ[1] = 150;
     cameraXYZ[2] = -100;
+}
+
+void drawImage(int x, int y, int width, int height, uint16_t* dataPointer) {
+    if (x > GFX_LCD_WIDTH - 1 || y > GFX_LCD_HEIGHT- 1) {
+        return;
+    }
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    if (x + width < 0 || y + height < 0) {
+        return;
+    }
+    int rowSize = width;
+    int numberOfRows = height;
+    if (x < 0) {
+        rowSize += x;
+        dataPointer -= x;
+        x = 0;
+    }
+    if (x + rowSize > GFX_LCD_WIDTH - 1) {
+        rowSize = GFX_LCD_WIDTH - x;
+    }
+    if (y < 0) {
+        numberOfRows += y;
+        dataPointer -= (y*width);
+        y = 0;
+    }
+    if (y + numberOfRows > GFX_LCD_HEIGHT- 1) {
+        numberOfRows = 240 - y;
+    }
+    if (rowSize < 0 || numberOfRows < 0) {
+        return;
+    }
+    rowSize *= sizeof(uint16_t);
+    uint16_t* screenPointer = ((uint16_t*)0xD40000) + x + y*GFX_LCD_WIDTH;
+    uint8_t numberOfTrueRows = numberOfRows;
+    for (uint8_t i = 0; i < numberOfTrueRows && i < 240; i++) {
+        memcpy(screenPointer, dataPointer, rowSize);
+        screenPointer += GFX_LCD_WIDTH;
+        dataPointer += width;
+    }
+}
+
+void drawRectangle(int x, int y, int width, int height, uint16_t color) {
+    if (x > GFX_LCD_WIDTH - 1 || y > GFX_LCD_HEIGHT- 1) {
+        return;
+    }
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    if (x + width < 0 || y + height < 0) {
+        return;
+    }
+    int rowSize = width;
+    int numberOfRows = height;
+    if (x < 0) {
+        rowSize += x;
+        x = 0;
+    }
+    if (x + rowSize > GFX_LCD_WIDTH - 1) {
+        rowSize = GFX_LCD_WIDTH - x;
+    }
+    if (y < 0) {
+        numberOfRows += y;
+        y = 0;
+    }
+    if (y + numberOfRows > GFX_LCD_HEIGHT- 1) {
+        numberOfRows = 240 - y;
+    }
+    if (rowSize < 0 || numberOfRows < 0) {
+        return;
+    }
+    uint16_t* screenPointer = ((uint16_t*)0xD40000) + x + y*GFX_LCD_WIDTH;
+    uint8_t numberOfTrueRows = numberOfRows - 1;
+    for (unsigned int i = 0; i < rowSize; i++) {
+        *(screenPointer + i) = color;
+    }
+    rowSize *= sizeof(uint16_t);
+    screenPointer += GFX_LCD_WIDTH;
+    for (uint8_t i = 0; i < numberOfTrueRows && i < 240; i++) {
+        memcpy(screenPointer, screenPointer - GFX_LCD_WIDTH, rowSize);
+        screenPointer += GFX_LCD_WIDTH;
+    }
 }

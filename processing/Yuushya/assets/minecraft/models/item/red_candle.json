@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/item_candle",
+  "textures": {
+    "layer0": "minecraft:item/red_candle"
+  }
+}

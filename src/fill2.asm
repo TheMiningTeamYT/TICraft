@@ -3,17 +3,12 @@ public _drawTextureLineNewA
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
 _drawTextureLineNewA:
     di
+    ld iy, 0
+    add iy, sp
     push ix
-    ; Copy the arguments from the stack to the variable space
-    ld iy, vars
-    ld hl, 6
-    add hl, sp
-    lea de, iy
-    ld bc, 19
-    ldir
-
     ; BC will be sx
-    inc bc
+    ld bc, 1
+
     ; Compute dx
     ld hl, (iy + x1)
     ld de, (iy + x0)
@@ -35,6 +30,8 @@ _drawTextureLineNewA:
     ld bc, 320
     ; Compute dy
     ld hl, (iy + y1)
+    dec hl
+    ld (iy + y1), hl
     ld de, (iy + y0)
     or a, a
     sbc hl, de
@@ -71,24 +68,10 @@ _drawTextureLineNewA:
         add hl, de
     textureRatio_cont:
     ; At this point dx or dy (whichever has a bigger absolute value) is in hl
-    ; Shift hl left 12
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    ; Take the reciprocal of hl
+    ; push hl to the stack
     push hl
-    ; 1
-    ld hl, $001000
-    push hl
+    or a, a
+    sbc hl, hl
     ; But first, some other stuff
     ; offset x0 & x1 by gfx_vram
     ld hl, (iy + x0)
@@ -111,25 +94,28 @@ _drawTextureLineNewA:
     ld (iy + y1), hl
     ; Init column & texture ratio & draw first pixel
     exx
-        ; Divide
-        call _fp_div
-        ; Restore stack pointer
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        inc sp
-        ex de, hl
-        dec de
-        ld b, e
-        ld e, d
+        pop de
+        xor a, a
+        srl d
+        rr e
+        rra
+        srl e
+        rra
+        srl e
+        rra
+        srl e
+        rra
+        ld d, a
+        ld b, a
+        or a, e
+        jr nz, not_zero
+            inc e
+        not_zero:
         ld c, (iy + colorOffset)
         inc c
         ld hl, (iy + texture)
         ex af, af'
-            xor a, a
-            ld d, a
+            ld a, e
         ex af, af'
     exx
     ; At this point, all our registers/variables should be initialized
@@ -173,7 +159,7 @@ _drawTextureLineNewA:
     dec hl ; 1
     ld de, (iy + y1) ; 5
     sbc hl, de ; 2
-    jr c, line_ends_off_screen ; 2/3
+    jp c, line_ends_off_screen ; 2/3
 
     ld de, (iy + x1) ; 5
     ld hl, $D3FFFF ; 4
@@ -189,9 +175,19 @@ _drawTextureLineNewA:
     update_x_y:
     exx ; 1
         ex af, af' ; 1
-            add a, b ; 1
-            adc hl, de ; 2
-        ex af, af' ; 1
+            or a, a ;1
+            jr nz, decrement_texture_error ; 2/3
+                move_pointer:
+                ld a, b ; 1
+                add a, d ; 1
+                ld b, a ; 1
+                ld a, e ; 1
+                inc hl ; 1
+                adc a, 0 ; 2
+                jr z, move_pointer ; 2/3
+            decrement_texture_error:
+            dec a ; 1
+        ex af, af'
     exx ; 1
     ; Test if x0 == x1
     ld hl, (iy + x1) ; 5
@@ -271,146 +267,149 @@ _drawTextureLineNewA:
     ret
 line_ends_off_screen:
     ; Load the texel value and advance column
-        exx ; 1
-            ; Add the color offset to the pixel
-            ld a, (hl) ; 2
-            add a, c ; 1
+    exx ; 1
+        ; Add the color offset to the pixel
+        ld a, (hl) ; 2
+        add a, c ; 1
+        ex af, af' ; 1
+            or a, a ;1
+            jr nz, decrement_texture_error_off ; 2/3
+                move_pointer_off:
+                ld a, b ; 1
+                add a, d ; 1
+                ld b, a ; 1
+                ld a, e ; 1
+                inc hl ; 1
+                adc a, 0 ; 2
+                jr z, move_pointer_off ; 2/3
+            decrement_texture_error_off:
             dec a ; 1
-            ex af, af' ; 1
-                add a, b ; 1
-                adc hl, de ; 2
-            ex af, af' ; 1
-        exx ; 1
-        ld bc, (iy + x0) ; 6
-        ; If the texel is 255 (the transparency color), skip drawing the pixel
-        jr c, fill_cont_off ; 2/3
-            ; check to make sure that y isn't off the screen to the top or bottom
-            ; if it is, don't draw the pixel
-            ; also used to make sure we don't draw off the screen
-            ld de, (iy + y0) ; 5
-            ld hl, 76480 ; 4
-            sbc hl, de ; 2
-            jr c, real_end ; 2/3
-                ex af, af' ; 1
-                    ld hl, 76800 ; 4
-                    add hl, de ; 1
-                    add hl, bc ; 1
-                    ld d, a ; 1
-                    ld a, (iy + polygonZ) ; 4
-                    cp a, (hl) ; 2
-                    jr nc, fill_upper_cont_off ; 2/3
-                        ld (hl), a ; 2
-                        ex af, af' ; 1
-                        ld (ix), a ; 4
-                        ex af, af' ; 1
-                    fill_upper_cont_off:
-                    ld a, d ; 1
-                ex af, af' ; 1
-                jr z, fill_cont_off ; 2/3
-                ld de, 320 ; 4
+        ex af, af'
+    exx ; 1
+    ld bc, (iy + x0) ; 6
+    ; If the texel is 255 (the transparency color), skip drawing the pixel
+    jr c, fill_cont_off ; 2/3
+        ; check to make sure that y isn't off the screen to the top or bottom
+        ; if it is, don't draw the pixel
+        ; also used to make sure we don't draw off the screen
+        dec a ; 1
+        ld de, (iy + y0) ; 5
+        ld hl, 76480 ; 4
+        sbc hl, de ; 2
+        jr c, real_end ; 2/3
+            lea de, ix ; 3
+            ld c, a ; 1
+            ld a, (iy + polygonZ) ; 4
+            jr z, fill_lower_cont_off ; 2/3
+                ld hl, 77120 ; 4
                 add hl, de ; 1
-                ld e, a ; 1
-                ld a, (iy + polygonZ) ; 4
                 cp a, (hl) ; 2
                 jr nc, fill_lower_cont_off ; 2/3
                     ld (hl), a ; 2
-                    ld a, e ; 1
-                    ld e, d ; 1
-                    lea hl, ix + 63 ; 3
+                    ld hl, 320 ; 4
                     add hl, de ; 1
-                    ld (hl), a ; 2
-                fill_lower_cont_off:
-        fill_cont_off:
-        ; Test if x0 == x1
+                    ld (hl), c ; 2
+            fill_lower_cont_off:
+            ld hl, 76800 ; 4
+            add hl, de ; 1
+            cp a, (hl) ; 2
+            jr nc, fill_upper_cont_off ; 2/3
+                ld (hl), a ; 2
+                ex de, hl ; 1
+                ld (hl), c ; 2
+            fill_upper_cont_off:
+            ld c, (iy + x0) ; 4
+    fill_cont_off:
+    ; Test if x0 == x1
+    ld hl, (iy + x1) ; 5
+    or a, a ; 1
+    sbc hl, bc ; 2
+    ; If x0 != x1, move on
+    jr nz, end_cont_off ; 2/3
+        ; Else, test if y0 == y1
+        ld hl, (iy + y0) ; 5
+        ld de, (iy + y1) ; 5
+        sbc hl, de ; 2
+        ; If y0 == y1 as well, jump out of the loop
+        jr z, real_end ; 2/3
+    end_cont_off:
+    ; Grab e2 from the stack
+    pop hl ; 4
+    dec sp ; 1
+    dec sp ; 1
+    dec sp ; 1
+    ; Compare e2 to dy
+    ld de, (iy + dy) ; 5
+    or a, a ; 1
+    sbc hl, de ; 2
+    ; If dy > e2, move on
+    jp m, dy_cont_off ; 4/5
+        ; Check if x0 == x1
         ld hl, (iy + x1) ; 5
         or a, a ; 1
         sbc hl, bc ; 2
-        ; If x0 != x1, move on
-        jr nz, end_cont_off ; 2/3
-            ; Else, test if y0 == y1
-            ld hl, (iy + y0) ; 5
-            ld de, (iy + y1) ; 5
-            sbc hl, de ; 2
-            ; If y0 == y1 as well, jump out of the loop
-            jr z, real_end ; 2/3
-        end_cont_off:
-        ; Grab e2 from the stack
+        ; If x0 == x1, jump out of the loop
+        jr z, real_end_off ; 2/3
+        ; Else, add dy to error
         pop hl ; 4
-        dec sp ; 1
-        dec sp ; 1
-        dec sp ; 1
-        ; Compare e2 to dy
-        ld de, (iy + dy) ; 5
+        add hl, de ; 1
+        add hl, de ; 1
+        push hl ; 4
+        ; Add sx to x0
+        ld de, (iy + sx) ; 5
+        add ix, de ; 2
+        ex de, hl ; 1
+        add hl, bc ; 1
+        ex de, hl ; 1
+
+        ; check to make sure that x isn't off the screen to the right
+        ; if it is, jump out of the loop
+        ld hl, $D4013F ; 4
         or a, a ; 1
         sbc hl, de ; 2
-        ; If dy > e2, move on
-        jp m, dy_cont_off ; 4/5
-            ; Check if x0 == x1
-            ld hl, (iy + x1) ; 5
-            or a, a ; 1
-            sbc hl, bc ; 2
-            ; If x0 == x1, jump out of the loop
-            jr z, real_end_off ; 2/3
-            ; Else, add dy to error
-            pop hl ; 4
-            add hl, de ; 1
-            add hl, de ; 1
-            push hl ; 4
-            ; Add sx to x0
-            ld de, (iy + sx) ; 5
-            add ix, de ; 2
-            ex de, hl ; 1
-            add hl, bc ; 1
-            ex de, hl ; 1
+        jr c, real_end_off ; 2/3
 
-            ; check to make sure that x isn't off the screen to the right
-            ; if it is, jump out of the loop
-            ld hl, $D4013F ; 4
-            or a, a ; 1
-            sbc hl, de ; 2
-            jr c, real_end_off ; 2/3
-
-            ; check to make sure that x isn't off the screen to the left
-            ; if it is, jump out of the loop
-            ld hl, $D3FFFF ; 4
-            sbc hl, de ; 2
-            jr nc, real_end_off ; 2/3
-            
-            ld (iy + x0), de ; 6
-        dy_cont_off:
-        ; Grab e2 from the stack
-        pop hl ; 4
-        dec sp ; 1
-        dec sp ; 1
-        dec sp ; 1
-        dec hl ; 1
-        ; Compare e2 to dx
-        ld de, (iy + dx) ; 5
-        or a, a ; 1
+        ; check to make sure that x isn't off the screen to the left
+        ; if it is, jump out of the loop
+        ld hl, $D3FFFF ; 4
         sbc hl, de ; 2
-        ; If e2 > dx, move on
-        jp p, dx_cont_off ; 4/5
-            ; Check if y0 == y1
-            ld hl, (iy + y1) ; 5
-            ld bc, (iy + y0) ; 6
-            or a, a ; 1
-            sbc hl, bc ; 2
-            ; If y0 == y1, jump out of the loop
-            jr z, real_end_off ; 2/3
-            ; Else, add dx to error
-            pop hl ; 4
-            add hl, de ; 1
-            add hl, de ; 1
-            push hl ; 4
-            ; Add sy to y0
-            ld de, (iy + sy) ; 5
-            add ix, de ; 2
-            ex de, hl ; 1
-            add hl, bc ; 1
-            ld (iy + y0), hl ; 6
-        dx_cont_off:
-        ; Jump to the beginning of the loop
-        jp line_ends_off_screen ; 5
+        jr nc, real_end_off ; 2/3
+        
+        ld (iy + x0), de ; 6
+    dy_cont_off:
+    ; Grab e2 from the stack
+    pop hl ; 4
+    dec sp ; 1
+    dec sp ; 1
+    dec sp ; 1
+    dec hl ; 1
+    ; Compare e2 to dx
+    ld de, (iy + dx) ; 5
+    or a, a ; 1
+    sbc hl, de ; 2
+    ; If e2 > dx, move on
+    jp p, dx_cont_off ; 4/5
+        ; Check if y0 == y1
+        ld hl, (iy + y1) ; 5
+        ld bc, (iy + y0) ; 6
+        or a, a ; 1
+        sbc hl, bc ; 2
+        ; If y0 == y1, jump out of the loop
+        jr z, real_end_off ; 2/3
+        ; Else, add dx to error
+        pop hl ; 4
+        add hl, de ; 1
+        add hl, de ; 1
+        push hl ; 4
+        ; Add sy to y0
+        ld de, (iy + sy) ; 5
+        add ix, de ; 2
+        ex de, hl ; 1
+        add hl, bc ; 1
+        ld (iy + y0), hl ; 6
+    dx_cont_off:
+    ; Jump to the beginning of the loop
+    jp line_ends_off_screen ; 5
     real_end_off:
     jp real_end ; 5
 line_ends_on_screen:
@@ -420,9 +419,19 @@ line_ends_on_screen:
         ld a, (hl) ; 2
         add a, c ; 1
         ex af, af' ; 1
-            add a, b ; 1
-            adc hl, de ; 2
-        ex af, af' ; 1
+            or a, a ;1
+            jr nz, decrement_texture_error_on ; 2/3
+                move_pointer_on:
+                ld a, b ; 1
+                add a, d ; 1
+                ld b, a ; 1
+                ld a, e ; 1
+                inc hl ; 1
+                adc a, 0 ; 2
+                jr z, move_pointer_on ; 2/3
+            decrement_texture_error_on:
+            dec a ; 1
+        ex af, af'
     exx ; 1
     ; If the texel is 255 (the transparency color), skip drawing the pixel
     jr c, fill_cont_on ; 2/3
@@ -445,12 +454,12 @@ line_ends_on_screen:
             lea hl, ix ; 3
             add hl, de ; 1
             ld (hl), c ; 4
-        fill_lower_cont_on:
     fill_cont_on:
+    or a, a ; 1
+    fill_lower_cont_on:
     ; Test if x0 == x1
     ld hl, (iy + x1) ; 5
     ld bc, (iy + x0) ; 6
-    or a, a ; 1
     sbc hl, bc ; 2
     ; If x0 != x1, move on
     jr nz, end_cont_on ; 2/3
@@ -528,33 +537,32 @@ line_ends_on_screen:
 section .data
 private gfx_vram
 gfx_vram = $D40000
-extern vars
 extern abs
 extern _fp_div
 extern _fp_mul
 extern __idvrmu
 extern __imuls_fast
 private x0
-x0 = 0
+x0 = 3
 private x1
-x1 = 3
+x1 = 6
 private y0
-y0 = 6
+y0 = 9
 private y1
-y1 = 9
+y1 = 12
 private texture
-texture = 12
+texture = 15
 private colorOffset
-colorOffset = 15
+colorOffset = 18
 private polygonZ
-polygonZ = 18
+polygonZ = 21
 private dx
-dx = 19
+dx = -24
 private sx
-sx = 23
+sx = -27
 private dy
-dy = 26
+dy = -30
 private sy
-sy = 29
+sy = -33
 private error
-error = 32
+error = -36
