@@ -105,15 +105,16 @@ void object::generatePolygons() {
             gfx_SetDrawBuffer();
             // The polygon we are rendering
             polygon polygon = polygons[polygonNum];
-
-            // Are we going to render the polygon?
-            bool render = true;
-            
             // Normalized z (0-255)
             unsigned int normalizedZ = (polygon.z >> 3);
-            if (polygon.z < 12) {
-                render = false;
-            } else {
+
+            // Are we going to render the polygon?
+            bool render = false;
+            if (outline) {
+                render = true;
+                goto renderThePolygon;
+            }
+            if (polygon.z >= 12) {
                 // If there are any other polygons this one could be overlapping with, check the z buffer
                 // The z culling still has problems
                 if (!outline) {
@@ -121,39 +122,26 @@ void object::generatePolygons() {
                     int x = polygon.x;
                     int y = polygon.y;
 
-                    uint8_t obscuredPoints = 0;
-                    if (x < 0 || x > GFX_LCD_WIDTH - 1 || y < 0 || y > GFX_LCD_HEIGHT - 1) {
-                        obscuredPoints++;
-                    } else {
-                        uint8_t bufferZ = gfx_GetPixel(x, y);
-                        if (normalizedZ >= bufferZ) {
-                            obscuredPoints++;
+                    if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
+                        if (normalizedZ < gfx_GetPixel(x, y)) {
+                            render = true;
+                            goto renderThePolygon;
                         }
                     }
                     for (uint8_t i = 0; i < 4; i++) {
                         screenPoint* point = &renderedPoints[polygon.points[i]];
-                        if (point->x < 0 || point->x > GFX_LCD_WIDTH - 1 || point->y < 0 || point->y > GFX_LCD_HEIGHT - 1) {
-                            obscuredPoints++;
-                        } else {
-                            int pointX = (point->x + point->x + point->x + x)>>2;
-                            int pointY = (point->y + point->y + point->y + y)>>2;
-                            if (!(pointX < 0 || pointX > GFX_LCD_WIDTH - 1 || pointY < 0 || pointY > GFX_LCD_HEIGHT - 1)) {
-                                uint8_t bufferZ = gfx_GetPixel(pointX, pointY);
-                                if (normalizedZ >= bufferZ) {
-                                    obscuredPoints++;
-                                }
+                        int pointX = (point->x + point->x + point->x + x)>>2;
+                        int pointY = (point->y + point->y + point->y + y)>>2;
+                        if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
+                            if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
+                                render = true;
+                                break;
                             }
                         }
                     }
-                    if (obscuredPoints == 5) {
-                        render = false;
-                        #if diagnostics == true
-                        obscuredPolygons++;
-                        #endif
-                    }
                 }
             }
-
+            renderThePolygon:
             // Prepare this polygon for rendering
             if (render) {
                 // Draw the polygon to the z buffer (just the screen)
@@ -163,10 +151,14 @@ void object::generatePolygons() {
                 // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
 
                 // Create a new transformed (prepared) polygon and set initialize it;
-                gfx_SetDrawScreen();
                 transformedPolygon preparedPolygon = {this, (uint16_t)normalizedZ, polygon.polygonNum};
                 renderPolygon(preparedPolygon);
             }
+            #if diagnostics == true
+            else {
+                obscuredPolygons++;
+            }
+            #endif
         }
         gfx_SetDrawScreen();
     }
@@ -419,7 +411,7 @@ void drawScreen(bool fullRedraw) {
 // as noted in The Science Elf's original video, affine texture mapping can look very weird on triangles
 // but on quads, it looks pretty good at a fraction of the cost
 // idea: integrate this into generatePolygons instead of having it as a seperate function
-void renderPolygon(transformedPolygon polygon) {
+/*void renderPolygon(transformedPolygon polygon) {
     // Quick shorthand
     uint8_t* points = cubePolygons[polygon.polygonNum].points;
     // Another useful shortand
@@ -502,6 +494,126 @@ void renderPolygon(transformedPolygon polygon) {
             drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, polygon.z);
         } else {
             drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, polygon.z);
+        }
+    }
+}*/
+
+void renderPolygon(transformedPolygon polygon) {
+    // Quick shorthand
+    uint8_t* points = cubePolygons[polygon.polygonNum].points;
+    // Another useful shortand
+    object* sourceObject = polygon.object;
+    // Another useful shorthand
+    screenPoint renderedPoints[] = {sourceObject->renderedPoints[points[0]], sourceObject->renderedPoints[points[1]], sourceObject->renderedPoints[points[2]], sourceObject->renderedPoints[points[3]]};
+    // result of memory optimization
+    const uint8_t* texture = textures[sourceObject->texture][polygon.polygonNum];
+
+    // uint8_t* points = polygon.points;
+    if (sourceObject->outline) {
+        gfx_SetDrawScreen();
+        gfx_SetColor(outlineColor);
+        for (uint8_t i = 0; i < 4; i++) {
+            uint8_t nextPoint = i + 1;
+            if (nextPoint > 3) {
+                nextPoint = 0;
+            }
+            gfx_Line(renderedPoints[i].x, renderedPoints[i].y, renderedPoints[nextPoint].x, renderedPoints[nextPoint].y);
+        }
+    } else {
+        bool clipLines = false;
+        for (unsigned int i = 0; i < 4; i++) {
+            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 3 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 2) {
+                clipLines = true;
+                break;
+            }
+        }
+        uint8_t colorOffset = 0;
+        if (polygon.polygonNum == 2 || polygon.polygonNum == 5) {
+            colorOffset = 126;
+        }
+        // Generate the lines from the points of the polygon
+        int x0 = renderedPoints[0].x;
+        int y0 = renderedPoints[0].y;
+        int x1 = renderedPoints[1].x;
+        int y1 = renderedPoints[1].y;
+        int dx0 = renderedPoints[3].x - x0;
+        int dy0 = renderedPoints[3].y - y0;
+        int dx1 = renderedPoints[2].x - x1;
+        int dy1 = renderedPoints[2].y - y1;
+        int sx0 = 1;
+        int sy0 = 1;
+        int sx1 = 1;
+        int sy1 = 1;
+        if (dx0 < 0) {
+            sx0 = -1;
+        }
+        if (dy0 < 0) {
+            sy0 = -1;
+        }
+        if (dx1 < 0) {
+            sx1 = -1;
+        }
+        if (dy1 < 0) {
+            sy1 = -1;
+        }
+        dx0 = -abs(dx0);
+        dy0 = -abs(dy0);
+        dx1 = -abs(dx1);
+        dy1 = -abs(dy1);
+        int length0 = (dx0 < dy0) ? -dx0 : -dy0;
+        int length1 = (dx1 < dy1) ? -dx1 : -dy1;
+        int length = (length0 > length1) ? length0 : length1;
+        int tError = length >> 1;
+        int errorX1 = 0;
+        if (dx1 == 0) {
+            errorX1 = 1;
+        }
+        int errorY1 = 0;
+        if (dy1 == 0) {
+            errorY1 = 1;
+        }
+        int errorX0 = 0;
+        if (dx0 == 0) {
+            errorX0 = 1;
+        }
+        int errorY0 = 0;
+        if (dy0 == 0) {
+            errorY0 = 1;
+        }
+        int tIndex = 0;
+        // main body
+        for (int i = -1; i < length; i++) {
+            if (clipLines) {
+                if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT - 1) && y1 > (GFX_LCD_HEIGHT - 1))))
+                    drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, polygon.z);
+            } else {
+                drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, polygon.z);
+            }
+            while (errorX0 <= 0) {
+                errorX0 += length;
+                x0 += sx0;
+            }
+            errorX0 += dx0;
+            while (errorY0 <= 0) {
+                errorY0 += length;
+                y0 += sy0;
+            }
+            errorY0 += dy0;
+            while (errorX1 <= 0) {
+                errorX1 += length;
+                x1 += sx1;
+            }
+            errorX1 += dx1;
+            while (errorY1 <= 0) {
+                errorY1 += length;
+                y1 += sy1;
+            }
+            errorY1 += dy1;
+            while (tError <= 0 && tIndex < 240) {
+                tError += length;
+                tIndex += 16;
+            }
+            tError += -16;
         }
     }
 }

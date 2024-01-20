@@ -131,19 +131,20 @@ int main() {
         gfx_SetTextScale(1,1);
         printStringAndMoveDownCentered("Welcome to TICraft v1.0.0! While you wait:");
         printStringAndMoveDownCentered("Controls:");
-        printStringAndMoveDownCentered("Graph: Exit, Clear: Emergency Exit");
-        printStringAndMoveDownCentered("5: Place/Delete a block");
-        printStringAndMoveDownCentered("8: Forwards");
-        printStringAndMoveDownCentered("2: Backwards");
-        printStringAndMoveDownCentered("4: Left");
-        printStringAndMoveDownCentered("6: Right");
-        printStringAndMoveDownCentered("Multiply/Subtract: Up/Down");
-        printStringAndMoveDownCentered("9: Diagonally Forward");
-        printStringAndMoveDownCentered("1: Diagonally Backward");
-        printStringAndMoveDownCentered("7: Diagonally Left");
-        printStringAndMoveDownCentered("3: Diagonally Right");
-        printStringAndMoveDownCentered("Enter: Block selection menu");
-        printStringAndMoveDownCentered("Alpha: Move the camera to show the cursor");
+        printStringAndMoveDownCentered("Graph/Clear: Exit/Emergency Exit");
+        printStringAndMoveDownCentered("Cursor controls:");
+        printStringAndMoveDownCentered("5: Place/Remove a block");
+        printStringAndMoveDownCentered("8/2/4/6: Move forwards/backwards/left/right");
+        printStringAndMoveDownCentered("Multiply/Subtract: Move up/down");
+        printStringAndMoveDownCentered("9/1: Move diagonally forward/backward");
+        printStringAndMoveDownCentered("7/3: Move diagonally left/right");
+        printStringAndMoveDownCentered("Camera controls:");
+        printStringAndMoveDownCentered("Up/Down: Move forwards/backwards");
+        printStringAndMoveDownCentered("Left/Right: Move left/right");
+        printStringAndMoveDownCentered("Del/Stat: Move up/down");
+        printStringAndMoveDownCentered("Prgm/Cos/Sin/Tan: Rotate up/down/left/right");
+        printStringAndMoveDownCentered("Alpha: Move to show the cursor");
+        printStringAndMoveDownCentered("Enter: Show the block selection menu");
         printStringAndMoveDownCentered("Mode: Perform a full re-render of the screen");
         printStringAndMoveDownCentered("Made by Logan C.");
         // implement more controls in the near future
@@ -383,13 +384,13 @@ int main() {
                         if (deletedObject) {
                             deletedObject = false;
                             object** zSortedPointer = (object**) bsearch(matchingObject, zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
-                            while (zSortedPointer > &zSortedObjects[0] && distanceCompare(zSortedPointer - 1, matchingObject) == 0) {
+                            while (zSortedPointer > zSortedObjects && distanceCompare(zSortedPointer - 1, matchingObject) == 0) {
                                 zSortedPointer--;
                             }
-                            while (zSortedPointer < &zSortedObjects[numberOfObjects] && distanceCompare(zSortedPointer, matchingObject) == 0) {
+                            while (zSortedPointer < zSortedObjects + numberOfObjects && distanceCompare(zSortedPointer, matchingObject) == 0) {
                                 if ((*zSortedPointer)->x == playerCursor.x && (*zSortedPointer)->y == playerCursor.y && (*zSortedPointer)->z == playerCursor.z) {
                                     deletedObject = true;
-                                    memmove(zSortedPointer, zSortedPointer + 1, sizeof(object*) * (&zSortedObjects[numberOfObjects - 1] - zSortedPointer));
+                                    memmove(zSortedPointer, zSortedPointer + 1, sizeof(object*) * (size_t)(zSortedObjects + numberOfObjects - zSortedPointer - 1));
                                     break;
                                 }
                                 zSortedPointer++;
@@ -400,7 +401,7 @@ int main() {
                                 exitOverlay(1);
                             }
                             object* matchingObjectReference = *matchingObject;
-                            memmove(matchingObject, matchingObject + 1, sizeof(object*) * (&objects[numberOfObjects - 1] - matchingObject));
+                            memmove(matchingObject, matchingObject + 1, sizeof(object*) * (size_t)(objects + numberOfObjects - matchingObject - 1));
                             numberOfObjects--;
                             matchingObjectReference->deleteObject();
                             getBuffer();
@@ -408,19 +409,19 @@ int main() {
                             if (numberOfObjects < maxNumberOfObjects) {
                                 object* newObject = new object(playerCursor.x, playerCursor.y, playerCursor.z, 20, selectedObject, false);
                                 newObject->generatePoints();
-                                matchingObject = &objects[0];
-                                while (matchingObject < &objects[numberOfObjects]) {
+                                matchingObject = objects;
+                                while (matchingObject < objects + numberOfObjects) {
                                     if ((*matchingObject)->x >= playerCursor.x) {
-                                        memmove(matchingObject + 1, matchingObject, sizeof(object*) * (&objects[numberOfObjects] - matchingObject));
+                                        memmove(matchingObject + 1, matchingObject, sizeof(object*) * (size_t)(objects + numberOfObjects - matchingObject));
                                         break;
                                     }
                                     matchingObject++;
                                 }
                                 *matchingObject = newObject;
-                                matchingObject = &zSortedObjects[0];
-                                while (matchingObject < &zSortedObjects[numberOfObjects]) {
+                                matchingObject = zSortedObjects;
+                                while (matchingObject < zSortedObjects + numberOfObjects) {
                                     if (distanceCompare(matchingObject, &newObject) >= 0) {
-                                        memmove(matchingObject + 1, matchingObject, sizeof(object*) * (&zSortedObjects[numberOfObjects] - matchingObject));
+                                        memmove(matchingObject + 1, matchingObject, sizeof(object*) * (size_t)(zSortedObjects + numberOfObjects - matchingObject));
                                         break;
                                     }
                                     matchingObject++;
@@ -506,6 +507,7 @@ int main() {
                         cameraXYZ[0] = playerCursor.x - (((Fixed24)84.85281375f)*sy);
                         cameraXYZ[1] = playerCursor.y + (Fixed24)75;
                         cameraXYZ[2] = playerCursor.z - (((Fixed24)84.85281375f)*cy);
+                        drawBuffer();
                         redrawScreen();
                         break;
                     default:

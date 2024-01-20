@@ -81,26 +81,25 @@ _drawTextureLineNewA_NoClip:
     textureRatio_cont:
     ; At this point dx or dy (whichever has a bigger absolute value) is in hl
     push hl ; 4
-    ; zero out hl
-    or a, a ; 1
-    sbc hl, hl ; 2
+    ; 52 cycles
     ; offset ix (screen pointer) by gfx_vram
-    ld ix, (iy + x0)
-    ld de, $D40000
-    add ix, de
+    ld ix, (iy + x0) ; 6
+    ld de, $D40000 ; 4
+    add ix, de ; 2
     ; Pre-multiply y0 & y1
-    ld de, 160
-    ld h, (iy + y0)
-    ld l, e
-    mlt hl
-    add hl, hl
-    ld (iy + y0), hl
-    ex de, hl
-    add ix, de
-    ld h, (iy + y1)
-    mlt hl
-    add hl, hl
-    ld (iy + y1), hl
+    ld e, 160 ; 2
+    ld h, (iy + y0) ; 4
+    ld l, e ; 1
+    mlt hl ; 6
+    add hl, hl ; 1
+    ld (iy + y0), hl; 6
+    ex de, hl ; 1
+    add ix, de ; 2
+    ld h, (iy + y1) ; 4
+    mlt hl ; 6
+    add hl, hl ; 1
+    ld (iy + y1), hl ; 6
+
     ; Init column & texture ratio & draw first pixel
     exx
         pop de

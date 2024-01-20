@@ -363,6 +363,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                     return false;
                     break;
                 case sk_Del:
+                    gfx_SetTextFGColor(254);
                     fillDirt();
                     char buffer[100] = "Are you sure you'd like to delete ";
                     strcat(buffer, saveNames[selectedSave + offset]);
@@ -374,15 +375,15 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                     while (!userSelected) {
                         uint8_t key2 = os_GetCSC();
                         if (key2) {
-                            gfx_SetTextFGColor(254);
                             switch (key2) {
                                 case sk_1:
                                     userSelected = true;
                                     quit = false;
                                     while (!quit) {
                                         fillDirt();
-                                        printStringAndMoveDownCentered("Would you like to delete the save from USB or archive?");
-                                        printStringAndMoveDownCentered("Press 1 for archive, 2 for USB.");
+                                        printStringCentered("Would you like to delete the save from", 105);
+                                        printStringCentered("USB or archive?", 115);
+                                        printStringCentered("Press 1 for archive, 2 for USB.", 125);
                                         gfx_BlitBuffer();
                                         uint8_t key = os_GetCSC();
                                         while (!key) {
@@ -452,9 +453,10 @@ void drawSaveOption(unsigned int number, bool selectedSave, const char* name, bo
         gfx_SetTextFGColor(254);
         gfx_GetSprite(cursorBackground, 110, y);
         gfx_SetColor(253);
+    } else {
+        gfx_SetTextFGColor(0);
     }
     printStringCentered(name, y + 16);
-    gfx_SetTextFGColor(0);
 }
 
 void fillDirt() {
