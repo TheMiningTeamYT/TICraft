@@ -133,6 +133,12 @@ struct Fixed24 {
   bool operator==(Fixed24 x) const {
     return n == x.n;
   }
+  operator int16_t() const {
+    return fp_to_int(n);
+  }
+  operator uint16_t() const {
+    return fp_to_int(n);
+  }
   operator int() const {
     return fp_to_int(n);
   }

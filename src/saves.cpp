@@ -12,7 +12,7 @@ extern "C" {
 // I want to include save file compression... just thinking about how, especially without breaking backwards compatibility.
 
 uint8_t selectedObject = 10;
-object playerCursor(20, 20, 20, 20, selectedObject, true);
+object playerCursor(20, 20, 20, selectedObject, true);
 extern gfx_sprite_t* cursorBackground;
 const char* saveNames[] = {"WORLD1","WORLD2","WORLD3","WORLD4","WORLD5","WORLD6","WORLD7","WORLD8","WORLD9","WORLD10","WORLD11","WORLD12","WORLD13","WORLD14","WORLD15","WORLD16","WORLD17","WORLD18","WORLD19","WORLD20","WORLD21","WORLD22","WORLD23","WORLD24","WORLD25","WORLD26","WORLD27","WORLD28","WORLD29","WORLD30","WORLD31","WORLD32","WORLD33","WORLD34","WORLD35","WORLD36","WORLD37","WORLD38","WORLD39","WORLD40","WORLD41","WORLD42","WORLD43","WORLD44","WORLD45","WORLD46","WORLD47","WORLD48","WORLD49","WORLD50","WORLD51","WORLD52","WORLD53","WORLD54","WORLD55","WORLD56","WORLD57","WORLD58","WORLD59","WORLD60","WORLD61","WORLD62","WORLD63","WORLD64","WORLD65","WORLD66","WORLD67","WORLD68","WORLD69","WORLD70","WORLD71","WORLD72","WORLD73","WORLD74","WORLD75","WORLD76","WORLD77","WORLD78","WORLD79","WORLD80","WORLD81","WORLD82","WORLD83","WORLD84","WORLD85","WORLD86","WORLD87","WORLD88","WORLD89","WORLD90","WORLD91","WORLD92","WORLD93","WORLD94","WORLD95","WORLD96","WORLD97","WORLD98","WORLD99", "WORLD100"};
 uint8_t selectedSave = 0;
@@ -68,7 +68,7 @@ void save(const char* name) {
         *((unsigned int*)saveData) = numberOfObjects;
         saveData += sizeof(unsigned int);
         for (unsigned int i = 0; i < numberOfObjects; i++) {
-            *((cubeSave*)saveData) = {objects[i]->x, objects[i]->y, objects[i]->z, objects[i]->size, objects[i]->texture};
+            *((cubeSave*)saveData) = {objects[i]->x, objects[i]->y, objects[i]->z, cubeSize, objects[i]->texture};
             saveData += sizeof(cubeSave);
         }
         *saveData = selectedObject;
@@ -256,7 +256,7 @@ void load() {
             cubeSave cube = *((cubeSave*)saveData);
             saveData += sizeof(cubeSave);
             if (i < maxNumberOfObjects) {
-                objects[i] = new object(cube.x, cube.y, cube.z, cube.size, cube.texture, false);
+                objects[i] = new object(cube.x, cube.y, cube.z, cube.texture, false);
             }
         }
     } else if (error == false) {

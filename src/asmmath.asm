@@ -378,4 +378,10 @@ _fp_to_int_floor:
   rra ; 1
   ld h, b ; 1
   ld l, a ; 1
-  ret nc ; 2/7 (34)
+  ; fixed a potential arbritrary code execution exploit XD
+  ; previously this said ret nc
+  ; meaning that if you fed a number that should have rounded
+  ; it wouldn't return
+  ; and would instead start executing whatever happened to come after this code
+  ; whoops
+  ret ; 6 (34)

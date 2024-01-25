@@ -222,92 +222,145 @@ void object::deleteObject() {
 }
 
 void object::generatePoints() {
-    visible = true;
-    uint8_t nonVisiblePoints = 0;
-    // The verticies of the cube
-    point points[] = {{x, y, z}, {x+size, y, z}, {x+size, y-size, z}, {x, y-size, z}, {x, y, z+size}, {x+size, y, z+size}, {x+size, y-size, z+size}, {x, y-size, z+size}};;
-    for (unsigned int i = 0; i < 8; i++) {
-        if (angleX <= 45) {
-            Fixed24 offset = angleX;
-            if (angleY < -67.5) {
-                if (x > cameraXYZ[0] + offset) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            } else if (angleY < -22.5) {
-                if ((x - z) > (cameraXYZ[0] - cameraXYZ[2]) + offset) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            } else if (angleY < 22.5) {
-                if (z + offset < cameraXYZ[2]) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            } else if (angleY < 67.5) {
-                if ((x + z) + offset < (cameraXYZ[0] + cameraXYZ[2])) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            } else if (angleY < 112.5) {
-                if (x + offset < cameraXYZ[0]) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            } else if (angleY < 157.5) {
-                if ((x - z) + offset < (cameraXYZ[0] - cameraXYZ[2])) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            } else if (angleY < 202.5) {
-                if (z > cameraXYZ[2] + offset) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            } else if (angleY < 247.5) {
-                if ((x + z) > (cameraXYZ[0] + cameraXYZ[2]) + offset) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            } else {
-                if (x > cameraXYZ[0] + offset) {
-                    visible = false;
-                    renderedPoints[0].z = getPointDistance(points[0]);
-                    break;
-                }
-            }
-        } else {
-            if (y > cameraXYZ[1]) {
-                visible = false;
-                renderedPoints[0].z = getPointDistance(points[0]);
-                break;
-            }
-        }
+    visible = false;
+
+    const Fixed24 x1 = x - cameraXYZ[0];
+    const Fixed24 x2 = x1 + (Fixed24)cubeSize;
+    const Fixed24 y1 = y - cameraXYZ[1];
+    const Fixed24 y2 =  y1 - (Fixed24)cubeSize;
+    const Fixed24 z1 = z - cameraXYZ[2];
+    const Fixed24 z2 = z1 + (Fixed24)cubeSize;
+
+    if (angleX >= 45 && y1 > (Fixed24)0) {
+        return;
     }
 
-    if (visible) {
-        for (uint8_t i = 0; i < 8; i++) {
-            renderedPoints[i] = transformPointNewA(points[i]);
-            if (renderedPoints[i].z > zCullingDistance || renderedPoints[i].x < -200 || renderedPoints[i].x > 519 || renderedPoints[i].y < -200 || renderedPoints[i].y > 439) {
-                visible = false;
-                break;
-            }
-            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 1 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 1) {
-                nonVisiblePoints++;
-            }
-        }
-        if (nonVisiblePoints == 8) {
-            visible = false;
+    const int x1squared = (int)x1*(int)x1;
+    const int y1squared = (int)y1*(int)y1;
+    const int z1squared = (int)z1*(int)z1;
+    uint16_t bz = approx_sqrt_a(x1squared + y1squared + z1squared);
+    if (bz > zCullingDistance) {
+        renderedPoints[0].z = bz;
+        return;
+    }
+
+    const Fixed24 cyz1 = cy*z1;
+    const Fixed24 syx1 = sy*x1;
+    Fixed24 sum1 = cyz1 + syx1;
+    const Fixed24 nsxy1 = -sx*y1;
+    Fixed24 dz = (cx*sum1) + nsxy1;
+    if (dz <= (Fixed24)-20) {
+        return;
+    }
+
+    const Fixed24 cyx1 = cy*x1;
+    const Fixed24 syz1 = sy*z1;
+    Fixed24 dx = cyx1 - syz1;
+    if (dz + (Fixed24)20 < (dx).abs()) {
+        return;
+    }
+
+    const int x2squared = (int)x2*(int)x2;
+    const int y2squared = (int)y2*(int)y2;
+    const int z2squared = (int)z2*(int)z2;
+
+    const Fixed24 cyx2 = cy*x2;
+    const Fixed24 syx2 = sy*x2;
+    const Fixed24 cxy1 = cx*y1;
+    const Fixed24 cxy2 = cx*y2;
+    const Fixed24 nsxy2 = -sx*y2;
+    const Fixed24 cyz2 = cy*z2;
+    const Fixed24 syz2 = sy*z2;
+
+    Fixed24 dy = (sx*sum1) + cxy1;
+    if (dz > (Fixed24)0 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        visible = true;
+    }
+    Fixed24 sum2 = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[0] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+
+    dy = (sx*sum1) + cxy2;
+    dz = (cx*sum1) + nsxy2;
+    if (!visible) {
+        if (dz > (Fixed24)0 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+            visible = true;
         }
     }
+    sum2 = ((Fixed24)171.3777608f)/dz;
+    bz = approx_sqrt_a(x1squared + y2squared + z1squared);
+    renderedPoints[3] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+
+    dx = cyx2 - syz1;
+    sum1 = cyz1 + syx2;
+    dy = (sx*sum1) + cxy1;
+    dz = (cx*sum1) + nsxy1;
+    if (!visible) {
+        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+            visible = true;
+        }
+    }
+    sum2 = ((Fixed24)171.3777608f)/dz;
+    bz = approx_sqrt_a(x2squared + y1squared + z1squared);
+    renderedPoints[1] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+
+    dy = (sx*sum1) + cxy2;
+    dz = (cx*sum1) + nsxy2;
+    if (!visible) {
+        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+            visible = true;
+        }
+    }
+    sum2 = ((Fixed24)171.3777608f)/dz;
+    bz = approx_sqrt_a(x2squared + y2squared + z1squared);
+    renderedPoints[2] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    
+    dx = cyx1 - syz2;
+    sum1 = cyz2 + syx1;
+    dy = (sx*sum1) + cxy1;
+    dz = (cx*sum1) + nsxy1;
+    if (!visible) {
+        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+            visible = true;
+        }
+    }
+    sum2 = ((Fixed24)171.3777608f)/dz;
+    bz = approx_sqrt_a(x1squared + y1squared + z2squared);
+    renderedPoints[4] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+
+    dy = (sx*sum1) + cxy2;
+    dz = (cx*sum1) + nsxy2;
+    if (!visible) {
+        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+            visible = true;
+        }
+    }
+    sum2 = ((Fixed24)171.3777608f)/dz;
+    bz = approx_sqrt_a(x1squared + y2squared + z2squared);
+    renderedPoints[7] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+
+    dx = cyx2 - syz2;
+    sum1 = cyz2 + syx2;
+    dy = (sx*sum1) + cxy1;
+    dz = (cx*sum1) + nsxy1;
+    if (!visible) {
+        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+            visible = true;
+        }
+    }
+    sum2 = ((Fixed24)171.3777608f)/dz;
+    bz = approx_sqrt_a(x2squared + y1squared + z2squared);
+    renderedPoints[5] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+
+    dy = (sx*sum1) + cxy2;
+    dz = (cx*sum1) + nsxy2;
+    if (!visible) {
+        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+            visible = true;
+        }
+    }
+    sum2 = ((Fixed24)171.3777608f)/dz;
+    bz = approx_sqrt_a(x2squared + y2squared + z2squared);
+    renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
 }
 
 void object::moveBy(Fixed24 newX, Fixed24 newY, Fixed24 newZ) {
@@ -411,7 +464,7 @@ void drawScreen(bool fullRedraw) {
 // as noted in The Science Elf's original video, affine texture mapping can look very weird on triangles
 // but on quads, it looks pretty good at a fraction of the cost
 // idea: integrate this into generatePolygons instead of having it as a seperate function
-/*void renderPolygon(transformedPolygon polygon) {
+void renderPolygon(transformedPolygon polygon) {
     // Quick shorthand
     uint8_t* points = cubePolygons[polygon.polygonNum].points;
     // Another useful shortand
@@ -423,6 +476,7 @@ void drawScreen(bool fullRedraw) {
 
     // uint8_t* points = polygon.points;
     if (sourceObject->outline) {
+        gfx_SetDrawScreen();
         gfx_SetColor(outlineColor);
         for (uint8_t i = 0; i < 4; i++) {
             uint8_t nextPoint = i + 1;
@@ -496,9 +550,9 @@ void drawScreen(bool fullRedraw) {
             drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, polygon.z);
         }
     }
-}*/
+}
 
-void renderPolygon(transformedPolygon polygon) {
+/*void renderPolygon(transformedPolygon polygon) {
     // Quick shorthand
     uint8_t* points = cubePolygons[polygon.polygonNum].points;
     // Another useful shortand
@@ -616,7 +670,7 @@ void renderPolygon(transformedPolygon polygon) {
             tError += -16;
         }
     }
-}
+}*/
 
 int getPointDistance(point point) {
     int x = point.x - cameraXYZ[0];

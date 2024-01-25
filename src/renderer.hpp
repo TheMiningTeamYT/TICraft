@@ -10,6 +10,7 @@
 #define showDraw false
 #define outlineColor 0
 #define diagnostics false
+#define cubeSize 20
 
 /*
 A point in 3d space
@@ -90,11 +91,10 @@ class object {
     // initZ: starting Z position for the cube
     // initSize: starting size for the cube
     // initTexture: pointer to an array of uint8_t arrays each representing a 16x16 texture for one face of the polygon
-    object(Fixed24 initX, Fixed24 initY, Fixed24 initZ, Fixed24 initSize, uint8_t initTexture, bool initOutline) {
+    object(Fixed24 initX, Fixed24 initY, Fixed24 initZ, uint8_t initTexture, bool initOutline) {
         x = initX;
         y = initY;
         z = initZ;
-        size = initSize;
         texture = initTexture;
         outline = initOutline;
         visible = true;
@@ -133,11 +133,7 @@ class object {
     // Z position of the cube
     Fixed24 z;
 
-    // Size of the cube
-    Fixed24 size;
-
     // Whether the cube is currently visible
-    // Unused right now; might get used in the future
     bool visible;
 
     // draw as outline or texture
@@ -169,7 +165,7 @@ struct cubeSave {
     Fixed24 z;
 
     // Size of the cube
-    Fixed24 size;
+    Fixed24 legacy_size;
 
     // An index into an array of pointers representing the texture of the cube
     uint8_t texture;

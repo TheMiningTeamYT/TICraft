@@ -156,7 +156,7 @@ int main() {
                 if (numberOfObjects < maxNumberOfObjects) {
                     // workaround for compiler bug
                     div_t xy = div(i, 20);
-                    objects[numberOfObjects] = new object((xy.rem)*20, 0, (xy.quot)*20, 20, 10, false);
+                    objects[numberOfObjects] = new object((xy.rem)*20, 0, (xy.quot)*20, 10, false);
                     numberOfObjects++;
                 }
             }
@@ -407,7 +407,7 @@ int main() {
                             getBuffer();
                         } else {
                             if (numberOfObjects < maxNumberOfObjects) {
-                                object* newObject = new object(playerCursor.x, playerCursor.y, playerCursor.z, 20, selectedObject, false);
+                                object* newObject = new object(playerCursor.x, playerCursor.y, playerCursor.z, selectedObject, false);
                                 newObject->generatePoints();
                                 matchingObject = objects;
                                 while (matchingObject < objects + numberOfObjects) {
