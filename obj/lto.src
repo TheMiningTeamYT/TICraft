@@ -2706,10 +2706,10 @@ BB17_18:
 	ld	(iy + 49), de
 	ld	de, 0
 	ld	(iy + 52), de
+	ld	(iy + 58), b
 	ld	(iy + 55), hl
 	ld	(iy + 48), 10
 	ld	(iy + 59), b
-	ld	(iy + 58), 1
 	ld	de, (_objects)
 	ld	iy, (_numberOfObjects)
 	lea	hl, iy
@@ -3512,10 +3512,10 @@ BB17_117:
 	pop	de
 	pop	hl
 	ld	hl, (_playerCursor+49)
-	ld	(ix - 22), hl
-	ld	hl, (_playerCursor+52)
 	ld	(ix - 29), hl
-	ld	bc, (_playerCursor+55)
+	ld	bc, (_playerCursor+52)
+	ld	hl, (_playerCursor+55)
+	ld	(ix - 22), hl
 	ld	a, (_selectedObject)
 	push	de
 	pop	iy
@@ -3536,14 +3536,14 @@ BB17_117:
 	ld	(iy + 41), h
 	ld	(iy + 46), l
 	ld	(iy + 47), h
-	ld	hl, (ix - 22)
-	ld	(iy + 49), hl
 	ld	hl, (ix - 29)
-	ld	(iy + 52), hl
-	ld	(iy + 55), bc
+	ld	(iy + 49), hl
+	ld	(iy + 52), bc
+	ld	(iy + 58), 0
+	ld	hl, (ix - 22)
+	ld	(iy + 55), hl
 	ld	(iy + 48), a
 	ld	(iy + 59), 0
-	ld	(iy + 58), 1
 	ld	(ix - 19), de
 	ld	(ix - 29), de
 	push	de
@@ -18058,11 +18058,11 @@ BB55_2:
 BB55_4:
 	ld	(ix - 12), de
 	ld	hl, (iy)
-	ld	(ix - 15), hl
-	ld	hl, (iy + 3)
 	ld	(ix - 18), hl
-	ld	hl, (iy + 6)
+	ld	hl, (iy + 3)
 	ld	(ix - 21), hl
+	ld	hl, (iy + 6)
+	ld	(ix - 15), hl
 	lea	hl, iy + 13
 	ld	(ix - 3), hl
 	ld	a, (iy + 12)
@@ -18090,16 +18090,16 @@ BB55_4:
 	ld	(iy + 41), h
 	ld	(iy + 46), l
 	ld	(iy + 47), h
-	ld	hl, (ix - 15)
-	ld	(iy + 49), hl
 	ld	hl, (ix - 18)
-	ld	(iy + 52), hl
+	ld	(iy + 49), hl
 	ld	hl, (ix - 21)
+	ld	(iy + 52), hl
+	ld	(iy + 58), 0
+	ld	hl, (ix - 15)
 	ld	(iy + 55), hl
 	ld	a, (ix - 24)
 	ld	(iy + 48), a
 	ld	(iy + 59), 0
-	ld	(iy + 58), 1
 	ld	hl, (_objects)
 	ld	bc, (ix - 12)
 	push	bc
@@ -18195,11 +18195,11 @@ BB55_7:
 	ld	(iy + 49), bc
 	ld	de, (ix - 24)
 	ld	(iy + 52), de
+	ld	(iy + 58), 0
 	ld	(iy + 55), hl
 	ld	a, (ix - 15)
 	ld	(iy + 48), a
 	ld	(iy + 59), 0
-	ld	(iy + 58), 1
 	ld	hl, (_objects)
 	ld	bc, (ix - 9)
 	push	bc
@@ -21046,7 +21046,7 @@ _playerCursor:
 	dl	81920
 	dl	81920
 	dl	81920
-	db	1
+	db	0
 	db	1
 
 	section	.rodata,"a",@progbits

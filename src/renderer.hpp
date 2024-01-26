@@ -97,7 +97,6 @@ class object {
         z = initZ;
         texture = initTexture;
         outline = initOutline;
-        visible = true;
     };
 
     object() {};
@@ -134,7 +133,7 @@ class object {
     Fixed24 z;
 
     // Whether the cube is currently visible
-    bool visible;
+    bool visible = false;
 
     // draw as outline or texture
     bool outline;
