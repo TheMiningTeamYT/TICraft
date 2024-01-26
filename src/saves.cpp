@@ -68,8 +68,8 @@ void save(const char* name) {
         *((unsigned int*)saveData) = numberOfObjects;
         saveData += sizeof(unsigned int);
         for (unsigned int i = 0; i < numberOfObjects; i++) {
-            *((cubeSave*)saveData) = {objects[i]->x, objects[i]->y, objects[i]->z, cubeSize, objects[i]->texture};
-            saveData += sizeof(cubeSave);
+            *((cubeSave_v2*)saveData) = {objects[i]->x, objects[i]->y, objects[i]->z, objects[i]->texture};
+            saveData += sizeof(cubeSave_v2);
         }
         *saveData = selectedObject;
         saveData += 1;
@@ -253,10 +253,18 @@ void load() {
         numberOfObjects = *((unsigned int*)saveData);
         saveData += sizeof(unsigned int);
         for (unsigned int i = 0; i < numberOfObjects && i < maxNumberOfObjects; i++) {
-            cubeSave cube = *((cubeSave*)saveData);
-            saveData += sizeof(cubeSave);
-            if (i < maxNumberOfObjects) {
-                objects[i] = new object(cube.x, cube.y, cube.z, cube.texture, false);
+            if (version < 4) {
+                cubeSave cube = *((cubeSave*)saveData);
+                saveData += sizeof(cubeSave);
+                if (i < maxNumberOfObjects) {
+                    objects[i] = new object(cube.x, cube.y, cube.z, cube.texture, false);
+                }
+            } else {
+                cubeSave_v2 cube = *((cubeSave_v2*)saveData);
+                saveData += sizeof(cubeSave_v2);
+                if (i < maxNumberOfObjects) {
+                    objects[i] = new object(cube.x, cube.y, cube.z, cube.texture, false);
+                }
             }
         }
     } else if (error == false) {

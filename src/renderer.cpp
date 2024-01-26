@@ -35,24 +35,24 @@ unsigned int obscuredPolygons = 0;
 
 // Faces of a cube
 uint8_t face5points[] = {7, 6, 2, 3};
-const polygon face5 = {face5points, 5};
+polygon face5 = {face5points, 5};
 uint8_t face4points[] = {5, 4, 7, 6};
-const polygon face4 = {face4points, 4};
+polygon face4 = {face4points, 4};
 uint8_t face3points[] = {1, 5, 6, 2};
-const polygon face3 = {face3points, 3};
+polygon face3 = {face3points, 3};
 uint8_t face2Points[] = {0, 1, 2, 3};
-const polygon face2 = {face2Points, 2};
+polygon face2 = {face2Points, 2};
 uint8_t face1Points[] = {4, 0, 3, 7};
-const polygon face1 = {face1Points, 1};
+polygon face1 = {face1Points, 1};
 uint8_t face0Points[] = {4, 5, 1, 0};
-const polygon face0 = {face0Points, 0};
+polygon face0 = {face0Points, 0};
 
 /*
 Array of the polygons that make up a cube
 Unwrapping order:
 top, front, left, right, back, bottom
 */ 
-const polygon cubePolygons[] = {face0, face1, face2, face3, face4, face5};
+polygon cubePolygons[] = {face0, face1, face2, face3, face4, face5};
 
 // Position of the camera
 Fixed24 cameraXYZ[3] = {-100, 150, -100};
@@ -75,13 +75,9 @@ clip = 2 // affected by clipping, write to z buffer
 void object::generatePolygons() {
     // Rendering the object (Preparing polygons for rendering)
     if (visible) {
-        // A local copy of the polygons of a cube (Not sure this is necessary)
-        polygon polygons[6];
-        // Init local copy of polygons
-        memcpy(polygons, cubePolygons, sizeof(polygon)*6);
         for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
             // Set the polygon's distance from the camera
-            polygon* polygon = &polygons[polygonNum];
+            polygon* polygon = &cubePolygons[polygonNum];
             int z = 0;
             int totalX = 0;
             int totalY = 0;
@@ -98,13 +94,13 @@ void object::generatePolygons() {
             polygon->z = z;
         }
         // Sort the polygons by distance from the camera, front to back
-        qsort(polygons, 6, sizeof(polygon), zCompare);
+        qsort(cubePolygons, 6, sizeof(polygon), zCompare);
 
         // Prepare the polygons for rendering
         for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
             gfx_SetDrawBuffer();
             // The polygon we are rendering
-            polygon polygon = polygons[polygonNum];
+            polygon polygon = cubePolygons[polygonNum];
             // Normalized z (0-255)
             unsigned int normalizedZ = (polygon.z >> 3);
 
@@ -114,7 +110,7 @@ void object::generatePolygons() {
                 render = true;
                 goto renderThePolygon;
             }
-            if (polygon.z >= 12) {
+            if (polygon.z >= 20) {
                 // If there are any other polygons this one could be overlapping with, check the z buffer
                 // The z culling still has problems
                 if (!outline) {
@@ -150,9 +146,7 @@ void object::generatePolygons() {
                 // This is to avoid situations where either the glass doesn't draw to the zBuffer in a partial redraw, breaking the partial redraw engine,
                 // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
 
-                // Create a new transformed (prepared) polygon and set initialize it;
-                transformedPolygon preparedPolygon = {this, (uint16_t)normalizedZ, polygon.polygonNum};
-                renderPolygon(preparedPolygon);
+                renderPolygon(this, &cubePolygons[polygonNum], normalizedZ);
             }
             #if diagnostics == true
             else {
@@ -221,6 +215,10 @@ void object::deleteObject() {
     }
 }
 
+// bugs with inconsistent behavior be here.
+// how... I'm not sure
+// sometimes it works fine, sometimes it fails spectacularly.
+// and I will never know why.
 void object::generatePoints() {
     visible = false;
 
@@ -464,15 +462,14 @@ void drawScreen(bool fullRedraw) {
 // as noted in The Science Elf's original video, affine texture mapping can look very weird on triangles
 // but on quads, it looks pretty good at a fraction of the cost
 // idea: integrate this into generatePolygons instead of having it as a seperate function
-void renderPolygon(transformedPolygon polygon) {
+/*
+void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int normalizedZ) {
     // Quick shorthand
-    uint8_t* points = cubePolygons[polygon.polygonNum].points;
-    // Another useful shortand
-    object* sourceObject = polygon.object;
+    #define points preparedPolygon->points
     // Another useful shorthand
     screenPoint renderedPoints[] = {sourceObject->renderedPoints[points[0]], sourceObject->renderedPoints[points[1]], sourceObject->renderedPoints[points[2]], sourceObject->renderedPoints[points[3]]};
     // result of memory optimization
-    const uint8_t* texture = textures[sourceObject->texture][polygon.polygonNum];
+    const uint8_t* texture = textures[sourceObject->texture][preparedPolygon->polygonNum];
 
     // uint8_t* points = polygon.points;
     if (sourceObject->outline) {
@@ -488,13 +485,13 @@ void renderPolygon(transformedPolygon polygon) {
     } else {
         bool clipLines = false;
         for (unsigned int i = 0; i < 4; i++) {
-            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 3 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 2) {
+            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 2 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 1) {
                 clipLines = true;
                 break;
             }
         }
         uint8_t colorOffset = 0;
-        if (polygon.polygonNum == 2 || polygon.polygonNum == 5) {
+        if (preparedPolygon->polygonNum == 2 || preparedPolygon->polygonNum == 5) {
             colorOffset = 126;
         }
         // Generate the lines from the points of the polygon
@@ -527,7 +524,7 @@ void renderPolygon(transformedPolygon polygon) {
         if (clipLines) {
             for (int i = 0; i < length; i++) {
                 if (!((lineCX < (Fixed24)0 && linePX < (Fixed24)0) || (lineCX > (Fixed24)(GFX_LCD_WIDTH - 1) && linePX > (Fixed24)(GFX_LCD_WIDTH - 1))) && !((lineCY < (Fixed24)0 && linePY < (Fixed24)0) || (lineCY > (Fixed24)(GFX_LCD_HEIGHT - 1) && linePY > (Fixed24)(GFX_LCD_HEIGHT - 1))))
-                    drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[(row.floor())*16], colorOffset, polygon.z);
+                    drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[(row.floor())*16], colorOffset, normalizedZ);
                 lineCX += CXdiff;
                 linePX += PXdiff;
                 lineCY += CYdiff;
@@ -536,7 +533,7 @@ void renderPolygon(transformedPolygon polygon) {
             }
         } else {
             for (int i = 0; i < length; i++) {
-                drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[(row.floor())*16], colorOffset, polygon.z);
+                drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[(row.floor())*16], colorOffset, normalizedZ);
                 lineCX += CXdiff;
                 linePX += PXdiff;
                 lineCY += CYdiff;
@@ -545,22 +542,21 @@ void renderPolygon(transformedPolygon polygon) {
             }
         }
         if (clipLines) {
-            drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, polygon.z);
+            drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, normalizedZ);
         } else {
-            drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, polygon.z);
+            drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, normalizedZ);
         }
     }
 }
+*/
 
-/*void renderPolygon(transformedPolygon polygon) {
+void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int normalizedZ) {
     // Quick shorthand
-    uint8_t* points = cubePolygons[polygon.polygonNum].points;
-    // Another useful shortand
-    object* sourceObject = polygon.object;
+    #define points preparedPolygon->points
     // Another useful shorthand
     screenPoint renderedPoints[] = {sourceObject->renderedPoints[points[0]], sourceObject->renderedPoints[points[1]], sourceObject->renderedPoints[points[2]], sourceObject->renderedPoints[points[3]]};
     // result of memory optimization
-    const uint8_t* texture = textures[sourceObject->texture][polygon.polygonNum];
+    const uint8_t* texture = textures[sourceObject->texture][preparedPolygon->polygonNum];
 
     // uint8_t* points = polygon.points;
     if (sourceObject->outline) {
@@ -582,7 +578,7 @@ void renderPolygon(transformedPolygon polygon) {
             }
         }
         uint8_t colorOffset = 0;
-        if (polygon.polygonNum == 2 || polygon.polygonNum == 5) {
+        if (preparedPolygon->polygonNum == 2 || preparedPolygon->polygonNum == 5) {
             colorOffset = 126;
         }
         // Generate the lines from the points of the polygon
@@ -617,7 +613,7 @@ void renderPolygon(transformedPolygon polygon) {
         int length0 = (dx0 < dy0) ? -dx0 : -dy0;
         int length1 = (dx1 < dy1) ? -dx1 : -dy1;
         int length = (length0 > length1) ? length0 : length1;
-        int tError = length >> 1;
+        int tError = length;
         int errorX1 = 0;
         if (dx1 == 0) {
             errorX1 = 1;
@@ -639,9 +635,9 @@ void renderPolygon(transformedPolygon polygon) {
         for (int i = -1; i < length; i++) {
             if (clipLines) {
                 if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT - 1) && y1 > (GFX_LCD_HEIGHT - 1))))
-                    drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, polygon.z);
+                    drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
             } else {
-                drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, polygon.z);
+                drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
             }
             while (errorX0 <= 0) {
                 errorX0 += length;
@@ -670,7 +666,7 @@ void renderPolygon(transformedPolygon polygon) {
             tError += -16;
         }
     }
-}*/
+}
 
 int getPointDistance(point point) {
     int x = point.x - cameraXYZ[0];

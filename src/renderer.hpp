@@ -154,6 +154,7 @@ struct transformedPolygon {
     uint8_t polygonNum;
 };
 
+// this can (and should) be replaced by a more efficient cubeSave
 struct cubeSave {
     // X position of the cube
     Fixed24 x;
@@ -166,6 +167,20 @@ struct cubeSave {
 
     // Size of the cube
     Fixed24 legacy_size;
+
+    // An index into an array of pointers representing the texture of the cube
+    uint8_t texture;
+};
+
+struct cubeSave_v2 {
+    // X position of the cube
+    int16_t x;
+
+    // Y position of the cube
+    int16_t y;
+
+    // Z position of the cube
+    int16_t z;
 
     // An index into an array of pointers representing the texture of the cube
     uint8_t texture;
@@ -202,7 +217,7 @@ void deleteEverything();
 void drawScreen(bool fullRedraw);
 
 // Render a single transformed polygon
-void renderPolygon(transformedPolygon polygon);
+void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int normalizedZ);
 
 // An array of all the objects in the world
 extern object** objects;

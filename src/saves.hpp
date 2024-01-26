@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "renderer.hpp"
 
-#define saveFileVersion 3
+#define saveFileVersion 4
 // hey we can just use the back buffer
 #define saveDataBuffer 0xD52C00
 #define saveBufferSize 76800
