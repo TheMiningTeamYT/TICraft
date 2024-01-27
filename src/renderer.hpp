@@ -257,6 +257,7 @@ void resetCamera();
 
 void drawImage(int x, int y, int width, int height, uint16_t* dataPointer);
 void drawRectangle(int x, int y, int width, int height, uint16_t color);
+void redrawScreen();
 
 extern "C" {
     void drawTextureLineNewA(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t z);

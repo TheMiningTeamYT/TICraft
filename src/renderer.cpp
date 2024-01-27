@@ -108,44 +108,32 @@ void object::generatePolygons() {
             bool render = false;
             if (outline) {
                 render = true;
-                goto renderThePolygon;
-            }
-            if (polygon->z >= 20) {
-                // If there are any other polygons this one could be overlapping with, check the z buffer
-                // The z culling still has problems
-                if (!outline) {
-                    // Get the average x & y of the polygon
-                    int x = polygon->x;
-                    int y = polygon->y;
+            } else {
+                // Get the average x & y of the polygon
+                int x = polygon->x;
+                int y = polygon->y;
 
-                    if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
-                        if (normalizedZ < gfx_GetPixel(x, y)) {
-                            render = true;
-                            goto renderThePolygon;
-                        }
+                if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
+                    if (normalizedZ < gfx_GetPixel(x, y)) {
+                        render = true;
+                        goto renderThePolygon;
                     }
-                    for (uint8_t i = 0; i < 4; i++) {
-                        screenPoint* point = &renderedPoints[polygon->points[i]];
-                        int pointX = (point->x + point->x + point->x + point->x + point->x + point->x + point->x + x)>>3;
-                        int pointY = (point->y + point->y + point->y + point->y + point->y + point->y + point->y + y)>>3;
-                        if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
-                            if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
-                                render = true;
-                                break;
-                            }
+                }
+                for (uint8_t i = 0; i < 4; i++) {
+                    screenPoint* point = &renderedPoints[polygon->points[i]];
+                    int pointX = (point->x + point->x + point->x + point->x + point->x + point->x + point->x + x)>>3;
+                    int pointY = (point->y + point->y + point->y + point->y + point->y + point->y + point->y + y)>>3;
+                    if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
+                        if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
+                            render = true;
+                            break;
                         }
                     }
                 }
             }
-            renderThePolygon:
             // Prepare this polygon for rendering
+            renderThePolygon:
             if (render) {
-                // Draw the polygon to the z buffer (just the screen)
-                // For the transparent textures (glass & leaves), if the zBuffer has been cleared out (set to 255) around the glass, DON't draw to the zBuffer.
-                // Otherwise, do
-                // This is to avoid situations where either the glass doesn't draw to the zBuffer in a partial redraw, breaking the partial redraw engine,
-                // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
-
                 renderPolygon(this, polygon, normalizedZ);
             }
             #if diagnostics == true
@@ -678,15 +666,20 @@ void rotateCamera(float x, float y) {
         cameraRotated = true;
     }
     if (cameraRotated) {
-        __asm__ ("di");
-        for (unsigned int i = 0; i < numberOfObjects; i++) {
-            objects[i]->generatePoints();
-        }
-        __asm__ ("ei");
-        drawScreen(true);
-        getBuffer();
-        drawCursor();
+        redrawScreen();
     }
+}
+
+void redrawScreen() {
+    __asm__ ("di");
+    for (unsigned int i = 0; i < numberOfObjects; i++) {
+        objects[i]->generatePoints();
+    }
+    __asm__ ("ei");
+    qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
+    drawScreen(true);
+    getBuffer();
+    drawCursor();
 }
 
 void resetCamera() {

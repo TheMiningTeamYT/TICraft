@@ -43,12 +43,12 @@ void drawBuffer();
 void moveCursor(uint8_t direction);
 void selectBlock();
 void drawSelection(int offset);
-void redrawScreen();
 void texturePackError(const char* message);
 void texturePackMenu();
 void drawTexturePackSelection(texturePack* pack, int row, bool selected);
 bool verifyTexturePack(packEntry pack);
 void exitOverlay(int code) {memset((void*) 0xD031F6, 0, 69090); exit(code);};
+
 int main() {
     os_ClrHomeFull();
     ti_SetGCBehavior(gfx_End, texturePackMenu);
@@ -713,18 +713,6 @@ void drawSelection(int offset) {
     gfx_FillRectangle(80 + (20*(selectedObject%8)), 50 + (24*(selectedObject/8)), 20, 20);
     memcpy(cursorBackground->data, textures[selectedObject][1], 256);
     gfx_Sprite_NoClip(cursorBackground, 82 + (20*(selectedObject%8)), 52 + (24*(selectedObject/8)));
-}
-
-void redrawScreen() {
-    __asm__ ("di");
-    for (unsigned int i = 0; i < numberOfObjects; i++) {
-        objects[i]->generatePoints();
-    }
-    __asm__ ("ei");
-    qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
-    drawScreen(true);
-    getBuffer();
-    drawCursor();
 }
 
 void texturePackError(const char* message) {
