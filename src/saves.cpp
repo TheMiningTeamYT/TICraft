@@ -252,19 +252,19 @@ void load() {
         saveData += sizeof(unsigned int);
         numberOfObjects = *((unsigned int*)saveData);
         saveData += sizeof(unsigned int);
+        // uhh... why... why is it written like this
         for (unsigned int i = 0; i < numberOfObjects && i < maxNumberOfObjects; i++) {
             if (version < 4) {
-                cubeSave cube = *((cubeSave*)saveData);
-                saveData += sizeof(cubeSave);
                 if (i < maxNumberOfObjects) {
-                    objects[i] = new object(cube.x, cube.y, cube.z, cube.texture, false);
+                    objects[i] = new object(((cubeSave*)saveData)->x, ((cubeSave*)saveData)->y, ((cubeSave*)saveData)->z, ((cubeSave*)saveData)->texture, false);
                 }
+                saveData += sizeof(cubeSave);
             } else {
                 cubeSave_v2 cube = *((cubeSave_v2*)saveData);
-                saveData += sizeof(cubeSave_v2);
                 if (i < maxNumberOfObjects) {
-                    objects[i] = new object(cube.x, cube.y, cube.z, cube.texture, false);
+                    objects[i] = new object(((cubeSave_v2*)saveData)->x, ((cubeSave_v2*)saveData)->y, ((cubeSave_v2*)saveData)->z, ((cubeSave_v2*)saveData)->texture, false);
                 }
+                saveData += sizeof(cubeSave_v2);
             }
         }
     } else if (error == false) {

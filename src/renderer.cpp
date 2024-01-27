@@ -100,9 +100,9 @@ void object::generatePolygons() {
         for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
             gfx_SetDrawBuffer();
             // The polygon we are rendering
-            polygon polygon = cubePolygons[polygonNum];
+            polygon* polygon = &cubePolygons[polygonNum];
             // Normalized z (0-255)
-            unsigned int normalizedZ = (polygon.z >> 3);
+            unsigned int normalizedZ = (polygon->z >> 3);
 
             // Are we going to render the polygon?
             bool render = false;
@@ -110,13 +110,13 @@ void object::generatePolygons() {
                 render = true;
                 goto renderThePolygon;
             }
-            if (polygon.z >= 20) {
+            if (polygon->z >= 20) {
                 // If there are any other polygons this one could be overlapping with, check the z buffer
                 // The z culling still has problems
                 if (!outline) {
                     // Get the average x & y of the polygon
-                    int x = polygon.x;
-                    int y = polygon.y;
+                    int x = polygon->x;
+                    int y = polygon->y;
 
                     if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
                         if (normalizedZ < gfx_GetPixel(x, y)) {
@@ -125,9 +125,9 @@ void object::generatePolygons() {
                         }
                     }
                     for (uint8_t i = 0; i < 4; i++) {
-                        screenPoint* point = &renderedPoints[polygon.points[i]];
-                        int pointX = (point->x + point->x + point->x + x)>>2;
-                        int pointY = (point->y + point->y + point->y + y)>>2;
+                        screenPoint* point = &renderedPoints[polygon->points[i]];
+                        int pointX = (point->x + point->x + point->x + point->x + point->x + point->x + point->x + x)>>3;
+                        int pointY = (point->y + point->y + point->y + point->y + point->y + point->y + point->y + y)>>3;
                         if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
                             if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
                                 render = true;
@@ -146,7 +146,7 @@ void object::generatePolygons() {
                 // This is to avoid situations where either the glass doesn't draw to the zBuffer in a partial redraw, breaking the partial redraw engine,
                 // or cases where it draws to the zBuffer in a partial redraw with it shouldn't, resulting in blank space behind the glass.
 
-                renderPolygon(this, &cubePolygons[polygonNum], normalizedZ);
+                renderPolygon(this, polygon, normalizedZ);
             }
             #if diagnostics == true
             else {
@@ -220,6 +220,8 @@ void object::deleteObject() {
 // sometimes it works fine, sometimes it fails spectacularly.
 // and I will never know why.
 void object::generatePoints() {
+    // i want to rewrite this in assembly
+    // i have... hmm... zero faith in the compiler
     visible = false;
 
     const Fixed24 x1 = x - cameraXYZ[0];
@@ -236,9 +238,8 @@ void object::generatePoints() {
     const int x1squared = (int)x1*(int)x1;
     const int y1squared = (int)y1*(int)y1;
     const int z1squared = (int)z1*(int)z1;
-    uint16_t bz = approx_sqrt_a(x1squared + y1squared + z1squared);
-    if (bz > zCullingDistance) {
-        renderedPoints[0].z = bz;
+    renderedPoints[0].z = approx_sqrt_a(x1squared + y1squared + z1squared);
+    if (renderedPoints[0].z > zCullingDistance) {
         return;
     }
 
@@ -247,7 +248,7 @@ void object::generatePoints() {
     Fixed24 sum1 = cyz1 + syx1;
     const Fixed24 nsxy1 = -sx*y1;
     Fixed24 dz = (cx*sum1) + nsxy1;
-    if (dz <= (Fixed24)-20) {
+    if (dz <= (Fixed24)20) {
         return;
     }
 
@@ -271,94 +272,87 @@ void object::generatePoints() {
     const Fixed24 syz2 = sy*z2;
 
     Fixed24 dy = (sx*sum1) + cxy1;
-    if (dz > (Fixed24)0 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+    if (dz > (Fixed24)40 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
         visible = true;
     }
     Fixed24 sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[0] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    renderedPoints[0] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy))};
 
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
     if (!visible) {
-        if (dz > (Fixed24)0 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)40 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
     sum2 = ((Fixed24)171.3777608f)/dz;
-    bz = approx_sqrt_a(x1squared + y2squared + z1squared);
-    renderedPoints[3] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    renderedPoints[3] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x1squared + y2squared + z1squared)};
 
     dx = cyx2 - syz1;
     sum1 = cyz1 + syx2;
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
     if (!visible) {
-        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
     sum2 = ((Fixed24)171.3777608f)/dz;
-    bz = approx_sqrt_a(x2squared + y1squared + z1squared);
-    renderedPoints[1] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    renderedPoints[1] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y1squared + z1squared)};
 
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
     if (!visible) {
-        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
     sum2 = ((Fixed24)171.3777608f)/dz;
-    bz = approx_sqrt_a(x2squared + y2squared + z1squared);
-    renderedPoints[2] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    renderedPoints[2] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z1squared)};
     
     dx = cyx1 - syz2;
     sum1 = cyz2 + syx1;
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
     if (!visible) {
-        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
     sum2 = ((Fixed24)171.3777608f)/dz;
-    bz = approx_sqrt_a(x1squared + y1squared + z2squared);
-    renderedPoints[4] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    renderedPoints[4] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x1squared + y1squared + z2squared)};
 
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
     if (!visible) {
-        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
     sum2 = ((Fixed24)171.3777608f)/dz;
-    bz = approx_sqrt_a(x1squared + y2squared + z2squared);
-    renderedPoints[7] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    renderedPoints[7] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x1squared + y2squared + z2squared)};
 
     dx = cyx2 - syz2;
     sum1 = cyz2 + syx2;
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
     if (!visible) {
-        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
     sum2 = ((Fixed24)171.3777608f)/dz;
-    bz = approx_sqrt_a(x2squared + y1squared + z2squared);
-    renderedPoints[5] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    renderedPoints[5] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y1squared + z2squared)};
 
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
     if (!visible) {
-        if (dz > (Fixed24)0 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
     sum2 = ((Fixed24)171.3777608f)/dz;
-    bz = approx_sqrt_a(x2squared + y2squared + z2squared);
-    renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), bz};
+    renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z2squared)};
 }
 
 void object::moveBy(Fixed24 newX, Fixed24 newY, Fixed24 newZ) {
@@ -614,31 +608,13 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int 
         int length1 = (dx1 < dy1) ? -dx1 : -dy1;
         int length = (length0 > length1) ? length0 : length1;
         int tError = length;
-        int errorX1 = 0;
-        if (dx1 == 0) {
-            errorX1 = 1;
-        }
-        int errorY1 = 0;
-        if (dy1 == 0) {
-            errorY1 = 1;
-        }
-        int errorX0 = 0;
-        if (dx0 == 0) {
-            errorX0 = 1;
-        }
-        int errorY0 = 0;
-        if (dy0 == 0) {
-            errorY0 = 1;
-        }
+        int errorX1 = length;
+        int errorY1 = length;
+        int errorX0 = length;
+        int errorY0 = length;
         int tIndex = 0;
         // main body
         for (int i = -1; i < length; i++) {
-            if (clipLines) {
-                if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT - 1) && y1 > (GFX_LCD_HEIGHT - 1))))
-                    drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
-            } else {
-                drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
-            }
             while (errorX0 <= 0) {
                 errorX0 += length;
                 x0 += sx0;
@@ -659,6 +635,12 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int 
                 y1 += sy1;
             }
             errorY1 += dy1;
+            if (clipLines) {
+                if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT - 1) && y1 > (GFX_LCD_HEIGHT - 1))))
+                    drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
+            } else {
+                drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
+            }
             while (tError <= 0 && tIndex < 240) {
                 tError += length;
                 tIndex += 16;
@@ -696,9 +678,11 @@ void rotateCamera(float x, float y) {
         cameraRotated = true;
     }
     if (cameraRotated) {
+        __asm__ ("di");
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             objects[i]->generatePoints();
         }
+        __asm__ ("ei");
         drawScreen(true);
         getBuffer();
         drawCursor();

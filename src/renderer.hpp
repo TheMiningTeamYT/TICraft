@@ -259,8 +259,6 @@ void drawImage(int x, int y, int width, int height, uint16_t* dataPointer);
 void drawRectangle(int x, int y, int width, int height, uint16_t color);
 
 extern "C" {
-    // Convert a point from 3D space to screen space
-    screenPoint transformPointNewA(point x);
     void drawTextureLineNewA(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t z);
     void drawTextureLineNewA_NoClip(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t z);
     uint16_t approx_sqrt_a(unsigned int n);

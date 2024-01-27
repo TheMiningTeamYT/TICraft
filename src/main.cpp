@@ -13,6 +13,7 @@
 extern "C" {
     void ti_CleanAll();
     int ti_MemChk();
+    void exploitTest();
 }
 
 /*
@@ -48,14 +49,13 @@ void texturePackMenu();
 void drawTexturePackSelection(texturePack* pack, int row, bool selected);
 bool verifyTexturePack(packEntry pack);
 void exitOverlay(int code) {memset((void*) 0xD031F6, 0, 69090); exit(code);};
-
 int main() {
     os_ClrHomeFull();
     ti_SetGCBehavior(gfx_End, texturePackMenu);
     // what exactly do you do?
     ti_CleanAll();
     // sizeof(object*)*2000 + (255*255) + 2 = 71025B (69.36 KiB)
-    if (ti_MemChk() < sizeof(object*)*2000 + (255*255) + 2) {
+    if (ti_MemChk() < sizeof(object*)*maxNumberOfObjects*2 + (255*255) + 2) {
         os_PutStrFull("WARNING!! Not enough free user mem to run TICRAFT! Continuing may result in corruption or your calculator crashing and resetting. Try deleting or archiving some programs or AppVars. Press \"Enter\" to continue or press any other key to exit.");
         uint8_t key;
         while (!(key = os_GetCSC()));
@@ -163,9 +163,11 @@ int main() {
         } else {
             load();
         }
+        __asm__ ("di");
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             objects[i]->generatePoints();
         }
+        __asm__ ("ei");
         memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
         xSort();
         gfx_Sprite_NoClip(cursorBackground, 0, 0);
@@ -408,7 +410,9 @@ int main() {
                         } else {
                             if (numberOfObjects < maxNumberOfObjects) {
                                 object* newObject = new object(playerCursor.x, playerCursor.y, playerCursor.z, selectedObject, false);
+                                __asm__ ("di");
                                 newObject->generatePoints();
+                                __asm__ ("ei");
                                 matchingObject = objects;
                                 while (matchingObject < objects + numberOfObjects) {
                                     if ((*matchingObject)->x >= playerCursor.x) {
@@ -528,7 +532,9 @@ int main() {
 
 // still has problems
 void drawCursor() {
+    __asm__ ("di");
     playerCursor.generatePoints();
+    __asm__ ("ei");
     drawBuffer();
     if (playerCursor.visible) {
         int minX = playerCursor.renderedPoints[0].x;
@@ -710,9 +716,11 @@ void drawSelection(int offset) {
 }
 
 void redrawScreen() {
+    __asm__ ("di");
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         objects[i]->generatePoints();
     }
+    __asm__ ("ei");
     qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
     drawScreen(true);
     getBuffer();
