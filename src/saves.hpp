@@ -21,6 +21,5 @@ void load();
 bool mainMenu(char* nameBuffer, unsigned int nameBufferLength);
 void drawSaveOption(unsigned int number, bool selectedSave, const char* name, bool drawBackground);
 void redrawSaveOptions();
-extern uint8_t selectedObject;
-extern object playerCursor;
 void fillDirt();
+void takeScreenshot();

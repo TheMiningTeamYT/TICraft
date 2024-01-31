@@ -1,4 +1,4 @@
-obj/src/printString.cpp.bc: src/printString.cpp \
+obj/src/printString.c.bc: src/printString.c \
   /home/loganius/Downloads/CEdev/include/graphx.h \
   /home/loganius/Downloads/CEdev/include/stdint.h \
   /home/loganius/Downloads/CEdev/include/cdefs.h \

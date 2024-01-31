@@ -91,7 +91,7 @@ class object {
     // initZ: starting Z position for the cube
     // initSize: starting size for the cube
     // initTexture: pointer to an array of uint8_t arrays each representing a 16x16 texture for one face of the polygon
-    object(Fixed24 initX, Fixed24 initY, Fixed24 initZ, uint8_t initTexture, bool initOutline) {
+    object(int initX, int initY, int initZ, uint8_t initTexture, bool initOutline) {
         x = initX;
         y = initY;
         z = initZ;
@@ -104,10 +104,10 @@ class object {
     void deleteObject();
 
     // Offset the cube
-    void moveBy(Fixed24 newX, Fixed24 newY, Fixed24 newZ);
+    void moveBy(int newX, int newY, int newZ);
 
     // Move the cube
-    void moveTo(Fixed24 newX, Fixed24 newY, Fixed24 newZ);
+    void moveTo(int newX, int newY, int newZ);
 
     // Prepare the cube's polygons for rendering
     void generatePolygons();
@@ -116,7 +116,7 @@ class object {
     
     // Get the distance from the cube to the camera
     int getDistance();
-
+    
     // The position of each of the cubes points (verticies) in screen space, once rendered
     screenPoint renderedPoints[8];
 
@@ -124,13 +124,13 @@ class object {
     uint8_t texture;
 
     // X position of the cube
-    Fixed24 x;
+    int16_t x;
 
     // Y position of the cube
-    Fixed24 y;
+    int16_t y;
 
     // Z position of the cube
-    Fixed24 z;
+    int16_t z;
 
     // Whether the cube is currently visible
     bool visible = false;
@@ -219,8 +219,8 @@ void drawScreen(bool fullRedraw);
 void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int normalizedZ);
 
 // An array of all the objects in the world
-extern object** objects;
-extern object** zSortedObjects;
+extern object* objects[maxNumberOfObjects];
+extern object* zSortedObjects[maxNumberOfObjects];
 
 // An array of all the polygons that are ready to be rendered
 extern transformedPolygon* preparedPolygons;

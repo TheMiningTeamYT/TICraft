@@ -37,4 +37,4 @@ obj/src/renderer.cpp.bc: src/renderer.cpp \
   /home/loganius/Downloads/CEdev/include/ti/ui.h \
   /home/loganius/Downloads/CEdev/include/ti/tokens.h \
   /home/loganius/Downloads/CEdev/include/ti/vars.h src/asmmath.h \
-  src/textures.hpp src/saves.hpp
+  src/textures.hpp src/saves.hpp src/cursor.hpp

@@ -17,10 +17,12 @@ struct global {
 };
 
 usb_error_t handleUsbEvent(usb_event_t event, void *event_data, usb_callback_data_t *global);
-bool readFile(const char* path, const char* name, uint24_t bufferSize, void* buffer);
-bool writeFile(const char* path, const char* name, uint24_t size, void* buffer);
+bool readFile(fat_file_t* file, uint24_t bufferSize, void* buffer);
+bool writeFile(fat_file_t* file, uint24_t size, void* buffer);
 bool createDirectory(const char* path, const char* name);
-int24_t getSizeOf(const char* path, const char* name);
+fat_file_t* openFile(const char* path, const char* name);
+void closeFile(fat_file_t* file);
+int24_t getSizeOf(fat_file_t* file);
 void deleteFile(const char* path, const char* name);
 bool init_USB();
 void close_USB();

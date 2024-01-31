@@ -8,15 +8,15 @@ Licensed under the LGPLv3 https://github.com/CE-Programming/toolchain/blob/maste
 #include <string.h>
 #include <ti/getcsc.h>
 #include <ti/screen.h>
+#include <stdlib.h>
 #include "usb.h"
+#include "printString.h"
+#include <math.h>
+#include <graphx.h>
 
 static msd_partition_t partitions[MAX_PARTITIONS];
-static global_t global;
-uint8_t num_partitions;
-msd_info_t msdinfo;
-usb_error_t usberr;
-msd_error_t msderr;
-fat_error_t faterr;
+extern gfx_sprite_t* cursorBackground;
+static global_t* global;
 
 usb_error_t handleUsbEvent(usb_event_t event, void *event_data, usb_callback_data_t *global) {
     switch (event) {
@@ -41,12 +41,18 @@ usb_error_t handleUsbEvent(usb_event_t event, void *event_data, usb_callback_dat
 }
 
 bool init_USB() {
-    memset(&global, 0, sizeof(global_t));
+    global = ((global_t*)cursorBackground);
+    usb_error_t usberr;
+    msd_error_t msderr;
+    fat_error_t faterr;
+    msd_info_t msdinfo;
+    uint8_t num_partitions;
+    memset(global, 0, sizeof(global_t));
     uint8_t key;
-    global.usb = NULL;
-    usberr = usb_Init((usb_event_callback_t) handleUsbEvent, &global, NULL, USB_DEFAULT_INIT_FLAGS);
+    global->usb = NULL;
+    usberr = usb_Init((usb_event_callback_t) handleUsbEvent, global, NULL, USB_DEFAULT_INIT_FLAGS);
     while (usberr == USB_SUCCESS) {
-        if (global.usb != NULL) break;
+        if (global->usb != NULL) break;
         key = os_GetCSC();
         if (key != 0) {
             return false;
@@ -56,117 +62,110 @@ bool init_USB() {
     if (usberr != USB_SUCCESS) {
         return false;
     }
-    msderr = msd_Open(&global.msd, global.usb);
+    msderr = msd_Open(&global->msd, global->usb);
     if (msderr != MSD_SUCCESS) {
         return false;
     }
-    global.storageInit = true;
-    msderr = msd_Info(&global.msd, &msdinfo);
+    global->storageInit = true;
+    msderr = msd_Info(&global->msd, &msdinfo);
     if (msderr != MSD_SUCCESS) {
         return false;
     }
-    num_partitions = msd_FindPartitions(&global.msd, partitions, MAX_PARTITIONS);
+    num_partitions = msd_FindPartitions(&global->msd, partitions, MAX_PARTITIONS);
     if (num_partitions < 1) {
         return false;
     }
     for (uint8_t i = 0; i < num_partitions; i++) {
         uint32_t base_lba = partitions[i].first_lba;
-        fat_callback_usr_t* usr = &global.msd;
+        fat_callback_usr_t* usr = &global->msd;
         fat_read_callback_t read = (fat_read_callback_t) &msd_Read;
         fat_write_callback_t write = (fat_write_callback_t) &msd_Write;
-        faterr = fat_Open(&global.fat, read, write, usr, base_lba);
+        faterr = fat_Open(&global->fat, read, write, usr, base_lba);
         if (faterr == FAT_SUCCESS) {
-            global.fatInit = true;
+            global->fatInit = true;
             return true;
         }
     }
     return false;
 }
 
-bool readFile(const char* path, const char* name, uint24_t bufferSize, void* buffer) {
+fat_file_t* openFile(const char* path, const char* name) {
+    fat_error_t faterr;
     usb_WaitForEvents();
-    fat_file_t file;
+    fat_file_t* file = malloc(sizeof(fat_file_t));
     char str[256];
     strncpy(str, path, 256);
-    str[255] = 0; 
+    str[255] = 0;
     if (str[strlen(str) - 1] != '/') {
-        strncat(str, "/", 256-strlen(str));
+        strcat(str, "/");
     }
     strncat(str, name, 256-strlen(str));
-    faterr = fat_OpenFile(&global.fat, str, 0, &file);
+    str[255] = 0;
+    fat_Create(&global->fat, path, name, 0);
+    faterr = fat_OpenFile(&global->fat, str, 0, file);
     if (faterr != FAT_SUCCESS) {
-        // os_PutStrFull("Failed to open file");
-        // os_PutStrFull(str);
+        /*printStringAndMoveDownCentered("Failed to open file");
+        printStringAndMoveDownCentered(str);*/
+        free(file);
+        return NULL;
+    }
+    return file;
+}
+
+void closeFile(fat_file_t* file) {
+    usb_WaitForEvents();
+    if (file != NULL) {
+        fat_CloseFile(file);
+        free(file);
+    }
+}
+
+bool readFile(fat_file_t* file, uint24_t bufferSize, void* buffer) {
+    if (file == NULL) {
         return false;
     }
-    uint32_t readSize = fat_GetFileSize(&file);
+    uint32_t readSize = fat_GetFileSize(file);
     if (readSize > bufferSize - (bufferSize%MSD_BLOCK_SIZE) - MSD_BLOCK_SIZE) {
         readSize = bufferSize - (bufferSize%MSD_BLOCK_SIZE) - MSD_BLOCK_SIZE;
     }
-    fat_SetFileBlockOffset(&file, 0);
-    bool good = fat_ReadFile(&file, (readSize/MSD_BLOCK_SIZE)+1, buffer) == (readSize/MSD_BLOCK_SIZE)+1;
-    fat_CloseFile(&file);
+    readSize = (readSize/MSD_BLOCK_SIZE)+1;
+    fat_SetFileBlockOffset(file, 0);
+    bool good = fat_ReadFile(file, readSize, buffer) == readSize;
     return good;
 }
 
-bool writeFile(const char* path, const char* name, uint24_t size, void* buffer) {
-    usb_WaitForEvents();
-    fat_file_t file;
-    char str[256];
-    strncpy(str, path, 256);
-    str[255] = 0; 
-    if (str[strlen(str) - 1] != '/') {
-        strncat(str, "/", 256-strlen(str));
-    }
-    strncat(str, name, 256-strlen(str));
-    fat_Delete(&global.fat, str);
-    faterr = fat_Create(&global.fat, path, name, 0);
-    if (faterr != FAT_SUCCESS) {
-        os_PutStrFull("Failed to create file");
-        os_PutStrFull(str);
+bool writeFile(fat_file_t* file, uint24_t size, void* buffer) {
+    fat_error_t faterr;
+    if (file == NULL) {
         return false;
     }
-    faterr = fat_OpenFile(&global.fat, str, 0, &file);
+    int extraBlock = 0;
+    div_t blockSize = div(size, MSD_BLOCK_SIZE);
+    if (blockSize.rem != 0) {
+        extraBlock = 1;
+    }
+    faterr = fat_SetFileSize(file, size);
     if (faterr != FAT_SUCCESS) {
-        os_PutStrFull("Failed to open file");
-        os_PutStrFull(str);
+        // printStringAndMoveDownCentered("Failed to set size");
         return false;
     }
-    faterr = fat_SetFileSize(&file, size);
-    if (faterr != FAT_SUCCESS) {
-        os_PutStrFull("Failed to set size");
-        os_PutStrFull(str);
-        fat_CloseFile(&file);
-        return false;
-    }
-    fat_SetFileBlockOffset(&file, 0);
-    bool good = fat_WriteFile(&file, (size/MSD_BLOCK_SIZE)+1, buffer) == (size/MSD_BLOCK_SIZE)+1;
-    fat_CloseFile(&file);
+    fat_SetFileBlockOffset(file, 0);
+    bool good = fat_WriteFile(file, blockSize.quot + extraBlock, buffer) == blockSize.quot + extraBlock;
     return good;
 }
 
 bool createDirectory(const char* path, const char* name) {
+    fat_error_t faterr;
     usb_WaitForEvents();
-    faterr = fat_Create(&global.fat, path, name, FAT_DIR);
+    faterr = fat_Create(&global->fat, path, name, FAT_DIR);
     return true;
 } 
 
-int24_t getSizeOf(const char* path, const char* name) {
-    usb_WaitForEvents();
-    fat_file_t file;
-    char str[256];
-    strncpy(str, path, 256);
-    str[255] = 0; 
-    if (str[strlen(str) - 1] != '/') {
-        strncat(str, "/", 256-strlen(str));
-    }
-    strncat(str, name, 256-strlen(str));
-    faterr = fat_OpenFile(&global.fat, str, 0, &file);
-    if (faterr != FAT_SUCCESS) {
+int24_t getSizeOf(fat_file_t* file) {
+    if (file == NULL) {
         return 0;
     }
-    int24_t size = fat_GetFileSize(&file);
-    fat_CloseFile(&file);
+    int24_t size = fat_GetFileSize(file);
     return size;
 }
 
@@ -179,17 +178,19 @@ void deleteFile(const char* path, const char* name) {
         strncat(str, "/", 256-strlen(str));
     }
     strncat(str, name, 256-strlen(str));
-    fat_Delete(&global.fat, str);
+    fat_Delete(&global->fat, str);
 }
 
 void close_USB() {
-    if (global.fatInit == true) {
+    if (global->fatInit == true) {
         usb_WaitForEvents();
-        fat_Close(&global.fat);
+        fat_Close(&global->fat);
     }
-    if (global.storageInit == true) {
+    if (global->storageInit == true) {
         usb_WaitForEvents();
-        //msd_Close(&global.msd);
+        //msd_Close(&global->msd);
     }
     usb_Cleanup();
+    cursorBackground->width = 1;
+    cursorBackground->height = 1;
 }

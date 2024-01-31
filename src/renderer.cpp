@@ -8,6 +8,7 @@
 #include "renderer.hpp"
 #include "textures.hpp"
 #include "saves.hpp"
+#include "cursor.hpp"
 /*
 optimization ideas:
 I suspect the qsort when generating polygons is taking a while, or at least is taking a not insignificant amount of time.
@@ -21,8 +22,8 @@ feature add ideas:
 Lighting:
 still thinking about how to do it
 */
-object** objects;
-object** zSortedObjects;
+object* objects[maxNumberOfObjects];
+object* zSortedObjects[maxNumberOfObjects];
 
 // Buffer for creating diagnostic strings
 char buffer[200];
@@ -212,11 +213,11 @@ void object::generatePoints() {
     // i have... hmm... zero faith in the compiler
     visible = false;
 
-    const Fixed24 x1 = x - cameraXYZ[0];
+    const Fixed24 x1 = (Fixed24)x - cameraXYZ[0];
     const Fixed24 x2 = x1 + (Fixed24)cubeSize;
-    const Fixed24 y1 = y - cameraXYZ[1];
+    const Fixed24 y1 = (Fixed24)y - cameraXYZ[1];
     const Fixed24 y2 =  y1 - (Fixed24)cubeSize;
-    const Fixed24 z1 = z - cameraXYZ[2];
+    const Fixed24 z1 = (Fixed24)z - cameraXYZ[2];
     const Fixed24 z2 = z1 + (Fixed24)cubeSize;
 
     if (angleX >= 45 && y1 > (Fixed24)0) {
@@ -343,13 +344,13 @@ void object::generatePoints() {
     renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z2squared)};
 }
 
-void object::moveBy(Fixed24 newX, Fixed24 newY, Fixed24 newZ) {
+void object::moveBy(int newX, int newY, int newZ) {
     x += newX;
     y += newY;
     z += newZ;
 }
 
-void object::moveTo(Fixed24 newX, Fixed24 newY, Fixed24 newZ) {
+void object::moveTo(int newX, int newY, int newZ) {
     x = newX;
     y = newY;
     z = newZ;
@@ -386,8 +387,6 @@ int distanceCompare(const void *arg1, const void *arg2) {
 int xCompare(const void *arg1, const void *arg2) {
     object* object1 = *((object**) arg1);
     object* object2 = *((object**) arg2);
-    /*snprintf(buffer, 200, "XComp X1: %f, X2: %f", (float)object1->x, (float)object2->x);
-    gfx_PrintString(buffer);*/
     return object1->x - object2->x;
 }
 
@@ -402,13 +401,8 @@ void deleteEverything() {
 
 void drawScreen(bool fullRedraw) {
     if (fullRedraw) {
-        gfx_SetDrawBuffer();
         gfx_SetTextXY(0, 0);
-        // Clear the zBuffer
-        gfx_FillScreen(255);
-        gfx_SetDrawScreen();
-        // Clear the screen
-        gfx_FillScreen(255);
+        memset(gfx_vram, 255, 153600);
     }
     #if diagnostics == true
     outOfBoundsPolygons = 0;
@@ -671,6 +665,7 @@ void rotateCamera(float x, float y) {
 }
 
 void redrawScreen() {
+    drawBuffer();
     __asm__ ("di");
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         objects[i]->generatePoints();
