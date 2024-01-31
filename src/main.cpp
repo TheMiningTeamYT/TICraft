@@ -123,7 +123,7 @@ int main() {
         printStringCentered("Loading...", 5);
         gfx_SetTextXY(0, 40);
         gfx_SetTextScale(1,1);
-        printStringAndMoveDownCentered("Welcome to TICraft v1.0.0! While you wait:");
+        printStringAndMoveDownCentered("Welcome to TICraft v1.2.0! While you wait:");
         printStringAndMoveDownCentered("Controls:");
         printStringAndMoveDownCentered("Graph/Clear: Exit/Emergency Exit");
         printStringAndMoveDownCentered("Cursor controls:");
