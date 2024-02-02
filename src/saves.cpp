@@ -70,7 +70,7 @@ void save(const char* name) {
         printStringAndMoveDownCentered("Press 1 for archive, press 2 for USB.");
         printStringAndMoveDownCentered("Or press clear to cancel.");
         uint8_t handle;
-        char nameBuffer[128];
+        char nameBuffer[32];
         bool userSelected = false;
         while (!userSelected) {
             switch (os_GetCSC()) {
@@ -101,11 +101,10 @@ void save(const char* name) {
                     saveGood = init_USB();
                     if (saveGood) {
                         printStringAndMoveDownCentered("Please do not disconnect the USB drive.");
-                        createDirectory("/", "saves");
-                        strncpy(nameBuffer, name, 128);
-                        nameBuffer[127] = 0;
-                        strncat(nameBuffer, ".bin", 128-strlen(nameBuffer));
-                        fat_file_t* file = openFile("/saves", nameBuffer);
+                        createDirectory("/", "SAVES");
+                        strcpy(nameBuffer, name);
+                        strcat(nameBuffer, ".SAV");
+                        fat_file_t* file = openFile("/SAVES", nameBuffer, true);
                         if (file == nullptr) {
                             saveGood = false;
                         } else {
@@ -157,10 +156,9 @@ bool checkSave(const char* name, bool USB) {
     if (USB) {
         if (init_USB()) {
             char nameBuffer[32];
-            strncpy(nameBuffer, name, 32);
-            nameBuffer[31] = 0;
-            strncat(nameBuffer, ".bin", 32-strlen(nameBuffer));
-            fat_file_t* file = openFile("/saves", nameBuffer);
+            strcpy(nameBuffer, name);
+            strcat(nameBuffer, ".SAV");
+            fat_file_t* file = openFile("/SAVES", nameBuffer, false);
             if (file == nullptr) {
                 toSaveOrNotToSave = false;
             } else {
@@ -397,11 +395,10 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                                         gfx_BlitBuffer();
                                         if (init_USB()) {
                                             printStringAndMoveDownCentered("Please do not disconnect the USB drive.");
-                                            char nameBuffer[128];
-                                            strncpy(nameBuffer, saveNames[selectedSave + offset], 128);
-                                            nameBuffer[127] = 0;
-                                            strncat(nameBuffer, ".bin", 128-strlen(nameBuffer));
-                                            deleteFile("/saves", nameBuffer);
+                                            char nameBuffer[32];
+                                            strcpy(nameBuffer, saveNames[selectedSave + offset]);
+                                            strcat(nameBuffer, ".SAV");
+                                            deleteFile("/SAVES", nameBuffer);
                                             quit = true;
                                         } else {
                                             printStringAndMoveDownCentered("Failed to init USB.");
@@ -498,7 +495,7 @@ void takeScreenshot() {
         time_t currentTime;
         time(&currentTime);
         tm* currentLocalTime = localtime(&currentTime);
-        strftime(name, 32, "%H%M-%j.bmp", currentLocalTime);
+        strftime(name, 32, "%H%M-%j.BMP", currentLocalTime);
         // actual header data is 1078B
         unsigned char header[1536] = {'B', 'M', 54, 48, 1, 0, 0, 0, 0, 0, 54, 4, 0, 0, 40, 0, 0, 0, 64, 1, 0, 0, 240, 0, 0, 0, 1, 0, 8, 0, 0, 0, 0, 0, 0, 44, 1, 0, 35, 46, 0, 0, 35, 46, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0};
         for (unsigned int i = 0; i < 256; i++) {
@@ -509,14 +506,19 @@ void takeScreenshot() {
             header[(i<<2)+57] = 0;
         }
         memcpy(header + 1078, gfx_vram + (LCD_WIDTH*LCD_HEIGHT), 458);
-        createDirectory("/", "shots");
-        fat_file_t* screenshot = openFile("/shots", name);
+        createDirectory("/", "SHOTS");
+        fat_file_t* screenshot = openFile("/SHOTS", name, true);
         if (screenshot) {
             fat_SetFileSize(screenshot, 77878);
             good = fat_WriteFile(screenshot, 3, header) == 3;
             if (good) {
                 good = fat_WriteFile(screenshot, 150, gfx_vram + (LCD_WIDTH*LCD_HEIGHT) + 458) == 150;
             }
+            time(&currentTime);
+            currentLocalTime = localtime(&currentTime);
+            uint16_t* entryPointer = *((uint16_t**)(&screenshot->priv[40]));
+            entryPointer[11] = ((currentLocalTime->tm_sec)>>1) + (currentLocalTime->tm_min<<5) + (currentLocalTime->tm_hour<<11);
+            entryPointer[9] =  entryPointer[12] = (currentLocalTime->tm_mday) + ((currentLocalTime->tm_mon + 1) << 5) + ((currentLocalTime->tm_year - 80)<<9);
             closeFile(screenshot);
         }
     } else {
@@ -524,7 +526,7 @@ void takeScreenshot() {
     }
     close_USB();
     if (good) {
-        char buffer[64] = "Screenshot saved as \"shots\\";
+        char buffer[64] = "Screenshot saved as \"SHOTS\\";
         strcat(buffer, name);
         strcat(buffer, "\".");
         printStringAndMoveDownCentered(buffer);
