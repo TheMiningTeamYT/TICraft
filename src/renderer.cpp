@@ -103,7 +103,7 @@ void object::generatePolygons() {
             // The polygon we are rendering
             polygon* polygon = &cubePolygons[polygonNum];
             // Normalized z (0-255)
-            unsigned int normalizedZ = (polygon->z >> 3);
+            uint8_t normalizedZ = (polygon->z >> 3);
 
             // Are we going to render the polygon?
             bool render = false;
@@ -439,7 +439,7 @@ void drawScreen(bool fullRedraw) {
 // but on quads, it looks pretty good at a fraction of the cost
 // idea: integrate this into generatePolygons instead of having it as a seperate function
 /*
-void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int normalizedZ) {
+void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t normalizedZ) {
     // Quick shorthand
     #define points preparedPolygon->points
     // Another useful shorthand
@@ -526,7 +526,7 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int 
 }
 */
 
-void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int normalizedZ) {
+void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t normalizedZ) {
     // Quick shorthand
     #define points preparedPolygon->points
     // Another useful shorthand

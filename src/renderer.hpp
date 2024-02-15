@@ -216,7 +216,7 @@ void deleteEverything();
 void drawScreen(bool fullRedraw);
 
 // Render a single transformed polygon
-void renderPolygon(object* sourceObject, polygon* preparedPolygon, unsigned int normalizedZ);
+void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t normalizedZ);
 
 // An array of all the objects in the world
 extern object* objects[maxNumberOfObjects];

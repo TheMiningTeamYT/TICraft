@@ -10205,15 +10205,16 @@ __ZN6object16generatePolygonsEv:
 	ld	bc, _cubePolygons
 	push	hl
 	pop	iy
+	ld	(ix - 9), hl
 BB35_2:
-	ld	(ix - 15), iy
+	ld	(ix - 18), iy
 	lea	de, iy
 	push	bc
 	pop	hl
 	add	hl, de
-	ld	(ix - 18), hl
+	ld	(ix - 21), hl
 	ld	iy, (hl)
-	ld	(ix - 9), iy
+	ld	(ix - 12), iy
 	or	a, a
 	sbc	hl, hl
 	ld	l, (iy)
@@ -10249,9 +10250,9 @@ BB35_2:
 	lea	hl, iy
 	ld	l, c
 	ld	h, b
-	ld	(ix - 12), hl
+	ld	(ix - 15), hl
 	lea	hl, iy
-	ld	iy, (ix - 9)
+	ld	iy, (ix - 12)
 	ld	l, (iy + 1)
 	ld	bc, 6
 	call	__imulu
@@ -10284,12 +10285,12 @@ BB35_2:
 	pop	hl
 	ld	l, e
 	ld	h, d
-	ld	de, (ix - 12)
+	ld	de, (ix - 15)
 	add	hl, de
-	ld	(ix - 12), hl
+	ld	(ix - 15), hl
 	push	bc
 	pop	hl
-	ld	iy, (ix - 9)
+	ld	iy, (ix - 12)
 	ld	l, (iy + 2)
 	ld	bc, 6
 	call	__imulu
@@ -10327,12 +10328,12 @@ BB35_2:
 	pop	de
 	ld	e, l
 	ld	d, h
-	ld	hl, (ix - 12)
+	ld	hl, (ix - 15)
 	add	hl, de
-	ld	(ix - 12), hl
+	ld	(ix - 15), hl
 	push	bc
 	pop	hl
-	ld	iy, (ix - 9)
+	ld	iy, (ix - 12)
 	ld	l, (iy + 3)
 	ld	bc, 6
 	call	__imulu
@@ -10368,7 +10369,7 @@ BB35_2:
 	ld	de, 0
 	ld	e, l
 	ld	d, h
-	ld	iy, (ix - 12)
+	ld	iy, (ix - 15)
 	add	iy, de
 	ld	hl, (ix - 3)
 	ld	bc, 4
@@ -10381,7 +10382,7 @@ BB35_2:
 	lea	hl, iy
 	ld	c, 2
 	call	__ishru
-	ld	iy, (ix - 18)
+	ld	iy, (ix - 21)
 	ld	bc, (ix - 3)
 	ld	(iy + 6), c
 	ld	(iy + 7), b
@@ -10390,7 +10391,7 @@ BB35_2:
 	ld	de, 10
 	ld	(iy + 4), l
 	ld	(iy + 5), h
-	ld	hl, (ix - 15)
+	ld	hl, (ix - 18)
 	add	hl, de
 	push	hl
 	pop	iy
@@ -10409,14 +10410,12 @@ BB35_2:
 	ld	hl, 12
 	add	hl, sp
 	ld	sp, hl
-	ld	iy, 0
 BB35_4:
-	ld	(ix - 3), iy
 	ld	hl, 1
 	push	hl
 	call	_gfx_SetDraw
 	pop	hl
-	ld	de, (ix - 3)
+	ld	de, (ix - 9)
 	ld	hl, _cubePolygons
 	push	hl
 	pop	iy
@@ -10430,7 +10429,7 @@ BB35_4:
 	ld	iy, (ix + 6)
 	bit	0, (iy + 56)
 	jp	nz, BB35_28
-	ld	de, (ix - 3)
+	ld	de, (ix - 9)
 	ld	iy, _cubePolygons
 	add	iy, de
 	ld	de, (iy + 6)
@@ -10440,14 +10439,14 @@ BB35_4:
 	sbc	hl, hl
 	ld	h, a
 	ld	l, e
-	ld	(ix - 9), hl
+	ld	(ix - 6), hl
 	ld	hl, (iy + 8)
 	ld	(ix - 15), hl
 	ld	a, h
 	ld	(ix - 18), a
 	rlc	a
 	sbc	hl, hl
-	ld	(ix - 6), hl
+	ld	(ix - 3), hl
 	ld	l, e
 	ld	h, d
 	ld.sis	de, 320
@@ -10481,7 +10480,7 @@ BB35_4:
 	jr	nc, BB35_9
 	ld	hl, (ix - 15)
 	push	hl
-	ld	hl, (ix - 9)
+	ld	hl, (ix - 6)
 	push	hl
 	call	_gfx_GetPixel
 	ld	bc, (ix - 21)
@@ -10489,18 +10488,15 @@ BB35_4:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	d, 0
-	ld	l, c
-	ld	h, b
-	or	a, a
-	sbc.sis	hl, de
+	ld	a, c
+	cp	a, e
 	jp	c, BB35_28
 BB35_9:
-	ld	hl, (ix - 6)
+	ld	hl, (ix - 3)
 	ld	h, (ix - 18)
 	ld	de, (ix - 15)
 	ld	l, e
-	ld	(ix - 6), hl
+	ld	(ix - 3), hl
 	ld	hl, (ix - 12)
 	ld	iy, (hl)
 	or	a, a
@@ -10522,7 +10518,7 @@ BB35_9:
 	ld	l, c
 	ld	bc, 7
 	call	__imulu
-	ld	de, (ix - 9)
+	ld	de, (ix - 6)
 	add	hl, de
 	ld	(ix - 18), hl
 	ld	iy, (iy + 2)
@@ -10537,7 +10533,7 @@ BB35_9:
 	call	__imulu
 	push	hl
 	pop	iy
-	ld	de, (ix - 6)
+	ld	de, (ix - 3)
 	add	iy, de
 	ld	hl, (ix - 18)
 	ld	de, 2560
@@ -10573,12 +10569,9 @@ BB35_9:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	d, 0
 	ld	bc, (ix - 21)
-	ld	l, c
-	ld	h, b
-	or	a, a
-	sbc.sis	hl, de
+	ld	a, c
+	cp	a, e
 	jp	c, BB35_28
 	ld	hl, (ix - 12)
 	ld	hl, (hl)
@@ -10603,7 +10596,7 @@ BB35_14:
 	ld	l, e
 	inc	bc
 	call	__imulu
-	ld	de, (ix - 9)
+	ld	de, (ix - 6)
 	add	hl, de
 	ld	(ix - 18), hl
 	ld	de, (iy + 2)
@@ -10616,7 +10609,7 @@ BB35_14:
 	call	__imulu
 	push	hl
 	pop	iy
-	ld	de, (ix - 6)
+	ld	de, (ix - 3)
 	add	iy, de
 	ld	hl, (ix - 18)
 	ld	de, 2560
@@ -10652,12 +10645,9 @@ BB35_14:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	d, 0
 	ld	bc, (ix - 21)
-	ld	l, c
-	ld	h, b
-	or	a, a
-	sbc.sis	hl, de
+	ld	a, c
+	cp	a, e
 	jp	c, BB35_28
 	ld	hl, (ix - 12)
 	ld	hl, (hl)
@@ -10682,7 +10672,7 @@ BB35_19:
 	ld	l, e
 	inc	bc
 	call	__imulu
-	ld	de, (ix - 9)
+	ld	de, (ix - 6)
 	add	hl, de
 	ld	(ix - 18), hl
 	ld	de, (iy + 2)
@@ -10695,7 +10685,7 @@ BB35_19:
 	call	__imulu
 	push	hl
 	pop	iy
-	ld	de, (ix - 6)
+	ld	de, (ix - 3)
 	add	iy, de
 	ld	hl, (ix - 18)
 	ld	de, 2560
@@ -10731,12 +10721,9 @@ BB35_19:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	d, 0
 	ld	bc, (ix - 21)
-	ld	l, c
-	ld	h, b
-	or	a, a
-	sbc.sis	hl, de
+	ld	a, c
+	cp	a, e
 	jp	c, BB35_28
 	ld	hl, (ix - 12)
 	ld	hl, (hl)
@@ -10761,9 +10748,9 @@ BB35_24:
 	ld	l, e
 	inc	bc
 	call	__imulu
-	ld	de, (ix - 9)
+	ld	de, (ix - 6)
 	add	hl, de
-	ld	(ix - 9), hl
+	ld	(ix - 6), hl
 	ld	de, (iy + 2)
 	ld	a, d
 	ld	l, a
@@ -10774,9 +10761,9 @@ BB35_24:
 	call	__imulu
 	push	hl
 	pop	iy
-	ld	de, (ix - 6)
+	ld	de, (ix - 3)
 	add	iy, de
-	ld	hl, (ix - 9)
+	ld	hl, (ix - 6)
 	ld	de, 2560
 	or	a, a
 	sbc	hl, de
@@ -10785,12 +10772,12 @@ BB35_24:
 	ld	hl, -8388608
 	ex	de, hl
 	add	iy, de
-	ld	(ix - 6), iy
+	ld	(ix - 3), iy
 	lea	hl, iy
 	or	a, a
 	sbc	hl, de
 	jr	c, BB35_29
-	ld	hl, (ix - 6)
+	ld	hl, (ix - 3)
 	ld	de, -8386688
 	or	a, a
 	sbc	hl, de
@@ -10801,7 +10788,7 @@ BB35_24:
 	call	__ishru
 	push	hl
 	pop	de
-	ld	hl, (ix - 9)
+	ld	hl, (ix - 6)
 	call	__ishru
 	push	de
 	push	hl
@@ -10811,31 +10798,24 @@ BB35_24:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	d, 0
-	ld	l, c
-	ld	h, b
-	or	a, a
-	sbc.sis	hl, de
+	ld	a, c
+	cp	a, e
 	jr	nc, BB35_29
 BB35_28:
-	or	a, a
-	sbc	hl, hl
-	ld	l, c
-	ld	h, b
-	push	hl
+	push	bc
 	ld	hl, (ix - 12)
 	push	hl
 	ld	hl, (ix + 6)
 	push	hl
-	call	__Z13renderPolygonP6objectP7polygonj
+	call	__Z13renderPolygonP6objectP7polygonh
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
 BB35_29:
+	ld	hl, (ix - 9)
 	ld	de, 10
-	ld	iy, (ix - 3)
-	add	iy, de
-	lea	hl, iy
+	add	hl, de
+	ld	(ix - 9), hl
 	ld	de, 60
 	or	a, a
 	sbc	hl, de
@@ -10875,8 +10855,8 @@ __Z8zComparePKvS0_:
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
-	public	__Z13renderPolygonP6objectP7polygonj
-__Z13renderPolygonP6objectP7polygonj:
+	public	__Z13renderPolygonP6objectP7polygonh
+__Z13renderPolygonP6objectP7polygonh:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
