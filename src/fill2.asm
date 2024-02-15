@@ -1,3 +1,7 @@
+; The majority of the cycle counts here are wrong
+; because I wrote them before I realized how long instructions truely take
+; on the TI 84 Plus CE.
+; This is something that needs to be fixed
 section .text
 public _drawTextureLineNewA
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
@@ -74,23 +78,41 @@ _drawTextureLineNewA:
     sbc hl, hl
     ; But first, some other stuff
     ; offset x0 & x1 by gfx_vram
-    ld hl, (iy + x0)
     ld de, $D40000
+    ld hl, (iy + x0)
     add hl, de
     ld (iy + x0), hl
     ld hl, (iy + x1)
     add hl, de
     ld (iy + x1), hl
     ; Pre-multiply y0 & y1
-    ld bc, 320
-    ld hl, (iy + y0)
-    call __imuls_fast
+    ld de, (iy + y0)
+    ; 44 cycles to multiply any number in DE by 320
+    ; not bad
+    ld h, d
+    ld l, e
+    add hl, hl
+    add hl, hl
+    add hl, de
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
     ld (iy + y0), hl
-    ex de, hl
-    add ix, de
-    ld bc, 320
-    ld hl, (iy + y1)
-    call __imuls_fast
+    ld de, (iy + y1)
+    ld h, d
+    ld l, e
+    add hl, hl
+    add hl, hl
+    add hl, de
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
     ld (iy + y1), hl
     ; Init column & texture ratio & draw first pixel
     exx
@@ -144,7 +166,7 @@ _drawTextureLineNewA:
 
     ; check to make sure that y isn't off the screen to the bottom or top
     ; if it is, move x/y and try again
-    ld hl, 76481 ; 4
+    ld hl, 76480 ; 4
     sbc hl, de ; 2
     jr c, update_x_y ; 2/3
 
@@ -198,70 +220,74 @@ _drawTextureLineNewA:
         ; Else, test if y0 == y1
         ld hl, (iy + y1) ; 5
         sbc hl, de ; 2
-        ; If y0 == y1 as well, jump out of the loop
-        jr z, real_end ; 2/3
+        ; If x0 == x1 as well, jump out of the loop
+        jr z, real_end_pop ; 2/3
     end_cont:
     ; Grab e2 from the stack
-    pop hl ; 4
-    dec sp ; 1
-    dec sp ; 1
-    dec sp ; 1
+    pop hl
     ; Compare e2 to dy
     ld de, (iy + dy) ; 5
     sbc hl, de ; 2
+    ; Restore e2
+    add hl, de
     ; If dy > e2, move on
     jp m, dy_cont ; 4/5
+        ; Add dy to e2
+        add hl, de
+        add hl, de
+        ; Save e2 to DE
+        ex de, hl
         ; Check if x0 == x1
         ld hl, (iy + x1) ; 5
         or a, a ; 1
         sbc hl, bc ; 2
         ; If x0 == x1, jump out of the loop
         jr z, real_end ; 2/3
-        ; Else, add dy to error
-        pop hl ; 4
-        add hl, de ; 1
-        add hl, de ; 1
-        push hl ; 4
         ; Add sx to x0
         ld hl, (iy + sx) ; 5
         add hl, bc ; 1
         ld (iy + x0), hl ; 6
+        ; Restore e2 from DE
+        ex de, hl
     dy_cont:
-    ; Grab e2 from the stack
-    pop hl ; 4
-    dec sp ; 1
-    dec sp ; 1
-    dec sp ; 1
     dec hl ; 1
     ; Compare e2 to dx
     ld de, (iy + dx) ; 5
     or a, a ; 1
     sbc hl, de ; 2
+    ; Restore e2
+    inc hl
+    add hl, de
     ; If e2 > dx, move on
     jp p, dx_cont ; 4/5
+        ; Add dx to e2
+        add hl, de
+        add hl, de
+        ; Save e2 to the stack
+        push hl
         ; Check if y0 == y1
         ld hl, (iy + y1) ; 5
         ld bc, (iy + y0) ; 6
         or a, a ; 1
         sbc hl, bc ; 2
         ; If y0 == y1, jump out of the loop
-        jr z, real_end ; 2/3
-        ; Else, add dx to error
-        pop hl ; 4
-        add hl, de ; 1
-        add hl, de ; 1
-        push hl ; 4
+        jr z, real_end_pop ; 2/3
         ; Add sy to y0
         ld hl, (iy + sy) ; 5
         add hl, bc ; 1
         ld (iy + y0), hl ; 6
+        ; Jump to the beginning of the loop
+        jp while_offscreen ; 5
     dx_cont:
+    ; Push e2 back onto the stack
+    push hl
     ; Jump to the beginning of the loop
     jp while_offscreen ; 5
+    real_end_pop:
+    inc sp
+    inc sp
+    inc sp
     real_end:
-    inc sp
-    inc sp
-    inc sp
     pop ix
     ei
     ret
@@ -296,7 +322,7 @@ line_ends_off_screen:
         ld de, (iy + y0) ; 5
         ld hl, 76480 ; 4
         sbc hl, de ; 2
-        jr c, real_end ; 2/3
+        jr c, real_end_pop ; 2/3
             lea de, ix ; 3
             ld c, a ; 1
             ld a, (iy + polygonZ) ; 4
@@ -331,30 +357,29 @@ line_ends_off_screen:
         ld de, (iy + y1) ; 5
         sbc hl, de ; 2
         ; If y0 == y1 as well, jump out of the loop
-        jr z, real_end ; 2/3
+        jr z, real_end_pop ; 2/3
     end_cont_off:
     ; Grab e2 from the stack
     pop hl ; 4
-    dec sp ; 1
-    dec sp ; 1
-    dec sp ; 1
     ; Compare e2 to dy
     ld de, (iy + dy) ; 5
     or a, a ; 1
     sbc hl, de ; 2
+    ; Restore e2
+    add hl, de
     ; If dy > e2, move on
     jp m, dy_cont_off ; 4/5
+        ; Add dy to e2
+        add hl, de
+        add hl, de
+        ; Save e2 to the stack
+        push hl
         ; Check if x0 == x1
         ld hl, (iy + x1) ; 5
         or a, a ; 1
         sbc hl, bc ; 2
         ; If x0 == x1, jump out of the loop
-        jr z, real_end_off ; 2/3
-        ; Else, add dy to error
-        pop hl ; 4
-        add hl, de ; 1
-        add hl, de ; 1
-        push hl ; 4
+        jr z, real_end_off_pop ; 2/3
         ; Add sx to x0
         ld de, (iy + sx) ; 5
         add ix, de ; 2
@@ -367,49 +392,57 @@ line_ends_off_screen:
         ld hl, $D4013F ; 4
         or a, a ; 1
         sbc hl, de ; 2
-        jr c, real_end_off ; 2/3
+        jr c, real_end_off_pop ; 2/3
 
         ; check to make sure that x isn't off the screen to the left
         ; if it is, jump out of the loop
         ld hl, $D3FFFF ; 4
         sbc hl, de ; 2
-        jr nc, real_end_off ; 2/3
+        jr nc, real_end_off_pop ; 2/3
         
         ld (iy + x0), de ; 6
+        ; Restore e2 from the stack
+        pop hl
     dy_cont_off:
-    ; Grab e2 from the stack
-    pop hl ; 4
-    dec sp ; 1
-    dec sp ; 1
-    dec sp ; 1
-    dec hl ; 1
     ; Compare e2 to dx
+    dec hl ; 1
     ld de, (iy + dx) ; 5
     or a, a ; 1
     sbc hl, de ; 2
+    ; Restore e2
+    inc hl
+    add hl, de
     ; If e2 > dx, move on
     jp p, dx_cont_off ; 4/5
+        ; Add dx to e2
+        add hl, de
+        add hl, de
+        ; Save e2 to the stack
+        push hl
         ; Check if y0 == y1
         ld hl, (iy + y1) ; 5
         ld bc, (iy + y0) ; 6
         or a, a ; 1
         sbc hl, bc ; 2
         ; If y0 == y1, jump out of the loop
-        jr z, real_end_off ; 2/3
-        ; Else, add dx to error
-        pop hl ; 4
-        add hl, de ; 1
-        add hl, de ; 1
-        push hl ; 4
+        jr z, real_end_off_pop ; 2/3
         ; Add sy to y0
         ld de, (iy + sy) ; 5
         add ix, de ; 2
         ex de, hl ; 1
         add hl, bc ; 1
         ld (iy + y0), hl ; 6
+        ; Jump to the beginning of the loop
+        jp line_ends_off_screen ; 5
     dx_cont_off:
+    ; Push e2 back onto the stack
+    push hl
     ; Jump to the beginning of the loop
     jp line_ends_off_screen ; 5
+    real_end_off_pop:
+    inc sp
+    inc sp
+    inc sp
     real_end_off:
     jp real_end ; 5
 line_ends_on_screen:
@@ -465,73 +498,79 @@ line_ends_on_screen:
     jr nz, end_cont_on ; 2/3
         ; Else, test if y0 == y1
         ld hl, (iy + y0) ; 5
-        ld de, (iy + y1) ; 5
+        ld de, (iy + y1)
         sbc hl, de ; 2
         ; If y0 == y1 as well, jump out of the loop
-        jr z, real_end_on ; 2/3
+        jr z, real_end_on_pop ; 2/3
     end_cont_on:
-    ; Grab e2 from the stack
-    pop hl ; 4
-    dec sp ; 1
-    dec sp ; 1
-    dec sp ; 1
+   ; Grab e2 from the stack
+    pop hl
     ; Compare e2 to dy
     ld de, (iy + dy) ; 5
     or a, a ; 1
     sbc hl, de ; 2
+    ; Restore e2
+    add hl, de
     ; If dy > e2, move on
     jp m, dy_cont_on ; 4/5
-        ; Check if x0 == x1
+        ; Add dy to e2
+        add hl, de
+        add hl, de
+        ; Add sx to x0
+        ld de, (iy + sx) ; 5
+        add ix, de ; 2
+        ; Put e2 into DE and sx into HL
+        ex de, hl ; 1
+        add hl, bc ; 1
+        ld (iy + x0), hl ; 6
+        ; Check if (the previous) x0 == x1
         ld hl, (iy + x1) ; 5
         or a, a ; 1
         sbc hl, bc ; 2
         ; If x0 == x1, jump out of the loop
         jr z, real_end_on ; 2/3
-        ; Else, add dy to error
-        pop hl ; 4
-        add hl, de ; 1
-        add hl, de ; 1
-        push hl ; 4
-        ; Add sx to x0
-        ld de, (iy + sx) ; 5
-        add ix, de ; 2
-        ex de, hl ; 1
-        add hl, bc ; 1
-        ld (iy + x0), hl ; 6
+        ; Restore e2 from DE
+        ex de, hl
     dy_cont_on:
-    ; Grab e2 from the stack
-    pop hl ; 4
-    dec sp ; 1
-    dec sp ; 1
-    dec sp ; 1
-    dec hl ; 1
     ; Compare e2 to dx
+    dec hl ; 1
     ld de, (iy + dx) ; 5
     or a, a ; 1
     sbc hl, de ; 2
+    ; Restore e2
+    inc hl
+    add hl, de
     ; If e2 > dx, move on
     jp p, dx_cont_on ; 4/5
+        ; Add dx to e2
+        add hl, de
+        add hl, de
+        ; Save e2 to the stack
+        push hl
         ; Check if y0 == y1
         ld hl, (iy + y1) ; 5
         ld bc, (iy + y0) ; 6
         or a, a ; 1
         sbc hl, bc ; 2
         ; If y0 == y1, jump out of the loop
-        jr z, real_end_on ; 2/3
-        ; Else, add dx to error
-        pop hl ; 4
-        add hl, de ; 1
-        add hl, de ; 1
-        push hl ; 4
+        jr z, real_end_on_pop ; 2/3
         ; Add sy to y0
         ld de, (iy + sy) ; 5
         add ix, de ; 2
         ex de, hl ; 1
         add hl, bc ; 1
         ld (iy + y0), hl ; 6
+        ; Jump to the beginning of the loop
+        jp line_ends_on_screen ; 5
     dx_cont_on:
+    ; Push e2 back onto the stack
+    push hl
     ; Jump to the beginning of the loop
     jp line_ends_on_screen ; 5
+    real_end_on_pop:
+    inc sp
+    inc sp
+    inc sp
     real_end_on:
     jp real_end ; 5
 section .data

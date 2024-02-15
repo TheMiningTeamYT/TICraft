@@ -9,6 +9,10 @@ gfx_sprite_t* cursorBackground;
 int playerCursorX = 0;
 int playerCursorY = 0;
 
+extern "C" {
+    int ti_MemChk();
+}
+
 void drawCursor() {
     __asm__ ("di");
     playerCursor.generatePoints();
@@ -35,7 +39,7 @@ void drawCursor() {
         minY--;
         int width = (maxX-minX) + 1;
         int height = (maxY-minY) + 1;
-        if (width*height <= 65025) {
+        if (width < 256 && height < 256 && width*height + 2 <= ti_MemChk()) {
             cursorBackground->width = width;
             cursorBackground->height = height;
             playerCursorX = minX;

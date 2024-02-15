@@ -131,8 +131,10 @@ async function processFile() {
         let index = diffPalette.indexOf(Math.min(...diffPalette));
         if (imageData.data[i + 3] < 128) {
             indexedImageBuffer.writeUInt8(255);
+            imageData.data[i + 3] = 0;
         } else {
             indexedImageBuffer.writeUInt8(index);
+            imageData.data[i + 3] = 255;
         }
         let closestPaletteColor = palette[index];
         let red = (closestPaletteColor[0]);

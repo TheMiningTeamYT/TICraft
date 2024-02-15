@@ -3,7 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/home/loganius/Downloads/CEdev/**"
             ],
             "defines": [],
             "compilerPath": "/home/loganius/Downloads/CEdev/bin/ez80-clang",

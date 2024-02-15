@@ -23,10 +23,11 @@ static global_t* global;
 
 // string returned by this needs to be freed
 char* stringToUpper(const char* str) {
-    char* newString = calloc(strlen(str) + 1, sizeof(char));
+    char* newString = malloc(strlen(str) + 1);
     for (unsigned int i = 0; str[i]; i++) {
         newString[i] = toupper(str[i]);
     }
+    newString[strlen(str)] = 0;
     return newString;
 }
 
@@ -109,10 +110,7 @@ fat_file_t* openFile(const char* sourcePath, const char* sourceName, bool create
     free(path);
     free(name);
     if (create) {
-        if (fat_Create(&global->fat, path, name, 0)) {
-            free(file);
-            return NULL;
-        }
+        fat_Create(&global->fat, path, name, 0);
     }
     if (fat_OpenFile(&global->fat, str, 0, file)) {
         /*printStringAndMoveDownCentered("Failed to open file");

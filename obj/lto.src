@@ -157,23 +157,21 @@ _stringToUpper:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 9
+	lea	hl, ix - 12
 	ld	sp, hl
 	ld	hl, (ix + 6)
 	push	hl
 	call	_strlen
+	push	hl
 	pop	de
-	inc	hl
-	ld	de, 1
+	pop	hl
+	ld	(ix - 9), de
+	inc	de
 	push	de
-	push	hl
-	call	_calloc
+	call	_malloc
 	ld	iy, (ix + 6)
-	push	hl
-	pop	bc
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
+	ld	(ix - 3), hl
+	pop	hl
 	ld	e, (iy)
 	ld	a, e
 	rlc	a
@@ -183,17 +181,16 @@ _stringToUpper:
 	jr	z, BB3_3
 	ld	l, e
 	inc	iy
-	ld	(ix - 3), bc
-	ld	(ix - 9), bc
+	ld	de, (ix - 3)
+	ld	(ix - 6), de
 BB3_2:
-	ld	(ix - 6), iy
+	ld	(ix - 12), iy
 	push	hl
 	call	_toupper
-	ld	bc, (ix - 9)
-	ld	iy, (ix - 6)
+	ld	iy, (ix - 12)
 	pop	de
 	ld	a, l
-	ld	hl, (ix - 3)
+	ld	hl, (ix - 6)
 	ld	(hl), a
 	ex	de, hl
 	ld	a, (iy)
@@ -202,13 +199,17 @@ BB3_2:
 	sbc	hl, hl
 	ld	l, a
 	inc	de
-	ld	(ix - 3), de
+	ld	(ix - 6), de
 	inc	iy
 	or	a, a
 	jr	nz, BB3_2
 BB3_3:
-	push	bc
-	pop	hl
+	ld	hl, (ix - 3)
+	push	hl
+	pop	iy
+	ld	de, (ix - 9)
+	add	iy, de
+	ld	(iy), 0
 	ld	sp, ix
 	pop	ix
 	ret
@@ -441,7 +442,7 @@ _openFile:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	ld	hl, -284
+	ld	hl, -287
 	add	hl, sp
 	ld	sp, hl
 	ld	bc, -266
@@ -454,21 +455,23 @@ _openFile:
 	ld	hl, (ix + 6)
 	push	hl
 	call	_strlen
-	pop	de
-	inc	hl
-	ld	de, 1
-	push	de
 	push	hl
-	call	_calloc
+	pop	de
+	pop	hl
+	ld	bc, -275
+	lea	hl, ix
+	add	hl, bc
+	ld	(hl), de
+	inc	de
+	push	de
+	call	_malloc
 	ld	iy, (ix + 6)
 	push	ix
 	ld	bc, -272
 	add	ix, bc
 	ld	(ix), hl
 	pop	ix
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
+	pop	hl
 	ld	e, (iy)
 	ld	a, e
 	rlc	a
@@ -490,13 +493,13 @@ _openFile:
 	pop	ix
 BB6_2:
 	push	ix
-	ld	bc, -275
+	ld	bc, -278
 	add	ix, bc
 	ld	(ix), iy
 	pop	ix
 	push	hl
 	call	_toupper
-	ld	bc, -275
+	ld	bc, -278
 	lea	iy, ix
 	add	iy, bc
 	ld	iy, (iy)
@@ -531,42 +534,56 @@ BB6_3:
 	lea	iy, ix
 	add	iy, bc
 	ld	(iy), hl
-	ld	hl, (ix + 9)
-	push	hl
-	call	_strlen
-	pop	de
-	inc	hl
-	ld	de, 1
-	push	de
-	push	hl
-	call	_calloc
-	ld	iy, (ix + 9)
+	ld	bc, -272
+	lea	hl, ix
+	add	hl, bc
+	ld	hl, (hl)
 	push	ix
 	ld	bc, -275
 	add	ix, bc
-	ld	(ix), hl
+	ld	de, (ix)
 	pop	ix
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
+	add	hl, de
+	ld	(hl), 0
+	ld	hl, (ix + 9)
+	push	hl
+	call	_strlen
+	push	hl
+	pop	de
+	pop	hl
+	ld	bc, -287
+	lea	hl, ix
+	add	hl, bc
+	ld	(hl), de
+	inc	de
+	push	de
+	call	_malloc
+	ld	iy, (ix + 9)
+	push	hl
+	pop	bc
+	pop	hl
 	ld	e, (iy)
 	ld	a, e
 	rlc	a
 	sbc	hl, hl
 	ld	a, e
 	or	a, a
+	ld	(ix - 3), de
+	push	ix
+	ld	de, -275
+	push	af
+	add	ix, de
+	pop	af
+	ld	(ix), bc
+	pop	ix
+	ld	de, (ix - 3)
 	jr	z, BB6_6
 	ld	l, e
 	inc	iy
 	push	ix
-	ld	bc, -275
-	add	ix, bc
-	ld	de, (ix)
-	pop	ix
-	push	ix
-	ld	bc, -278
-	add	ix, bc
-	ld	(ix), de
+	ld	de, -278
+	add	ix, de
+	ld	(ix), bc
 	pop	ix
 BB6_5:
 	push	ix
@@ -576,15 +593,20 @@ BB6_5:
 	pop	ix
 	push	hl
 	call	_toupper
-	ld	bc, -284
+	ld	de, -284
 	lea	iy, ix
-	add	iy, bc
+	add	iy, de
 	ld	iy, (iy)
+	push	ix
+	ld	de, -275
+	add	ix, de
+	ld	bc, (ix)
+	pop	ix
 	pop	de
 	ld	a, l
-	ld	bc, -278
+	ld	de, -278
 	lea	hl, ix
-	add	hl, bc
+	add	hl, de
 	ld	hl, (hl)
 	ld	(hl), a
 	ex	de, hl
@@ -595,13 +617,24 @@ BB6_5:
 	ld	l, a
 	inc	iy
 	inc	de
+	ld	(ix - 3), bc
 	push	ix
+	ld	bc, -278
 	add	ix, bc
 	ld	(ix), de
 	pop	ix
 	or	a, a
+	ld	bc, (ix - 3)
 	jr	nz, BB6_5
 BB6_6:
+	push	bc
+	pop	hl
+	ld	bc, -287
+	lea	iy, ix
+	add	iy, bc
+	ld	de, (iy)
+	add	hl, de
+	ld	(hl), 0
 	call	_usb_WaitForEvents
 	ld	hl, 64
 	push	hl
@@ -728,13 +761,9 @@ BB6_8:
 	push	hl
 	call	_fat_Create
 	ld	de, 1027
-	ld	iy, 12
-	add	iy, sp
-	ld	sp, iy
-	add	hl, bc
-	or	a, a
-	sbc	hl, bc
-	jp	nz, BB6_14
+	ld	hl, 12
+	add	hl, sp
+	ld	sp, hl
 BB6_10:
 	ld	hl, (_global)
 	add	hl, de
@@ -1196,22 +1225,21 @@ _createDirectory:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 12
+	lea	hl, ix - 15
 	ld	sp, hl
 	ld	hl, (ix + 6)
 	push	hl
 	call	_strlen
-	pop	de
-	inc	hl
-	ld	de, 1
-	push	de
 	push	hl
-	call	_calloc
+	pop	de
+	pop	hl
+	ld	(ix - 9), de
+	inc	de
+	push	de
+	call	_malloc
 	ld	iy, (ix + 6)
 	ld	(ix - 3), hl
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
+	pop	hl
 	ld	e, (iy)
 	ld	a, e
 	rlc	a
@@ -1224,10 +1252,10 @@ _createDirectory:
 	ld	de, (ix - 3)
 	ld	(ix - 6), de
 BB10_2:
-	ld	(ix - 9), iy
+	ld	(ix - 12), iy
 	push	hl
 	call	_toupper
-	ld	iy, (ix - 9)
+	ld	iy, (ix - 12)
 	pop	de
 	ld	a, l
 	ld	hl, (ix - 6)
@@ -1244,20 +1272,23 @@ BB10_2:
 	or	a, a
 	jr	nz, BB10_2
 BB10_3:
+	ld	hl, (ix - 3)
+	ld	de, (ix - 9)
+	add	hl, de
+	ld	(hl), 0
 	ld	hl, (ix + 9)
 	push	hl
 	call	_strlen
-	pop	de
-	inc	hl
-	ld	de, 1
-	push	de
 	push	hl
-	call	_calloc
+	pop	de
+	pop	hl
+	ld	(ix - 12), de
+	inc	de
+	push	de
+	call	_malloc
 	ld	iy, (ix + 9)
 	ld	(ix - 6), hl
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
+	pop	hl
 	ld	e, (iy)
 	ld	a, e
 	rlc	a
@@ -1270,10 +1301,10 @@ BB10_3:
 	ld	de, (ix - 6)
 	ld	(ix - 9), de
 BB10_5:
-	ld	(ix - 12), iy
+	ld	(ix - 15), iy
 	push	hl
 	call	_toupper
-	ld	iy, (ix - 12)
+	ld	iy, (ix - 15)
 	pop	de
 	ld	a, l
 	ld	hl, (ix - 9)
@@ -1290,6 +1321,10 @@ BB10_5:
 	or	a, a
 	jr	nz, BB10_5
 BB10_6:
+	ld	hl, (ix - 6)
+	ld	de, (ix - 12)
+	add	hl, de
+	ld	(hl), 0
 	call	_usb_WaitForEvents
 	ld	hl, (_global)
 	ld	de, 1027
@@ -1370,27 +1405,29 @@ _deleteFile:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	ld	hl, -277
+	ld	hl, -280
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, (ix + 6)
 	push	hl
 	call	_strlen
-	pop	de
-	inc	hl
-	ld	de, 1
-	push	de
 	push	hl
-	call	_calloc
+	pop	de
+	pop	hl
+	ld	bc, -271
+	lea	hl, ix
+	add	hl, bc
+	ld	(hl), de
+	inc	de
+	push	de
+	call	_malloc
 	ld	iy, (ix + 6)
 	push	ix
 	ld	bc, -268
 	add	ix, bc
 	ld	(ix), hl
 	pop	ix
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
+	pop	hl
 	ld	e, (iy)
 	ld	a, e
 	rlc	a
@@ -1412,13 +1449,13 @@ _deleteFile:
 	pop	ix
 BB12_2:
 	push	ix
-	ld	bc, -271
+	ld	bc, -274
 	add	ix, bc
 	ld	(ix), iy
 	pop	ix
 	push	hl
 	call	_toupper
-	ld	bc, -271
+	ld	bc, -274
 	lea	iy, ix
 	add	iy, bc
 	ld	iy, (iy)
@@ -1451,24 +1488,37 @@ BB12_3:
 	lea	iy, ix
 	add	iy, bc
 	ld	(iy), hl
+	ld	bc, -268
+	lea	hl, ix
+	add	hl, bc
+	ld	hl, (hl)
+	push	ix
+	ld	bc, -271
+	add	ix, bc
+	ld	de, (ix)
+	pop	ix
+	add	hl, de
+	ld	(hl), 0
 	ld	hl, (ix + 9)
 	push	hl
 	call	_strlen
-	pop	de
-	inc	hl
-	ld	de, 1
-	push	de
 	push	hl
-	call	_calloc
+	pop	de
+	pop	hl
+	ld	bc, -277
+	lea	hl, ix
+	add	hl, bc
+	ld	(hl), de
+	inc	de
+	push	de
+	call	_malloc
 	ld	iy, (ix + 9)
 	push	ix
 	ld	bc, -271
 	add	ix, bc
 	ld	(ix), hl
 	pop	ix
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
+	pop	hl
 	ld	e, (iy)
 	ld	a, e
 	rlc	a
@@ -1490,13 +1540,13 @@ BB12_3:
 	pop	ix
 BB12_5:
 	push	ix
-	ld	bc, -277
+	ld	bc, -280
 	add	ix, bc
 	ld	(ix), iy
 	pop	ix
 	push	hl
 	call	_toupper
-	ld	bc, -277
+	ld	bc, -280
 	lea	iy, ix
 	add	iy, bc
 	ld	iy, (iy)
@@ -1522,6 +1572,16 @@ BB12_5:
 	or	a, a
 	jr	nz, BB12_5
 BB12_6:
+	ld	bc, -271
+	lea	hl, ix
+	add	hl, bc
+	ld	hl, (hl)
+	ld	bc, -277
+	lea	iy, ix
+	add	iy, bc
+	ld	de, (iy)
+	add	hl, de
+	ld	(hl), 0
 	call	_usb_WaitForEvents
 	ld	hl, 256
 	push	hl
@@ -1694,7 +1754,7 @@ __Z10drawCursorv:
 	ld	sp, hl
 	ld	a, (_playerCursor+55)
 	bit	0, a
-	jp	z, BB14_88
+	jp	z, BB14_90
 	ld	bc, _playerCursor+2
 	ld	iy, _playerCursor+6
 	ld	hl, _playerCursor
@@ -2383,55 +2443,77 @@ BB14_85:
 	ld	bc, (ix - 3)
 	dec	bc
 	ld	hl, (ix - 6)
-	ld	(ix - 3), de
+	ld	(ix - 6), de
 	or	a, a
 	sbc	hl, de
-	push	hl
-	pop	de
-	inc	de
-	ld	hl, (ix - 9)
-	ld	(ix - 6), bc
-	or	a, a
-	sbc	hl, bc
 	push	hl
 	pop	iy
-	inc	iy
+	ld	hl, (ix - 9)
+	ld	(ix - 9), bc
+	or	a, a
+	sbc	hl, bc
+	ld	(ix - 3), hl
 	lea	hl, iy
-	ld	(ix - 9), de
-	push	de
-	pop	bc
-	call	__imulu
 	ld	de, -8388608
 	add	hl, de
-	ld	de, -8323582
+	ld	de, -8388353
 	or	a, a
 	sbc	hl, de
-	jr	nc, BB14_87
-	ld	hl, (ix - 9)
+	ld	bc, _playerCursor
+	jp	nc, BB14_89
+	ld	hl, (ix - 3)
+	ld	de, -8388608
+	add	hl, de
+	ld	de, -8388353
+	or	a, a
+	sbc	hl, de
+	jr	nc, BB14_89
+	ld	de, 2
+	inc	iy
+	ld	(ix - 15), iy
+	ld	hl, (ix - 3)
+	inc	hl
+	ld	(ix - 3), hl
+	lea	bc, iy
+	call	__imulu
+	add	hl, de
+	ld	(ix - 12), hl
+	call	_ti_MemChk
+	ld	bc, _playerCursor
+	ld	de, -8388608
+	ld	iy, (ix - 12)
+	add	iy, de
+	add	hl, de
+	lea	de, iy
+	or	a, a
+	sbc	hl, de
+	jr	c, BB14_89
+	ld	hl, (ix - 15)
 	ld	a, l
 	ld	hl, (_cursorBackground)
 	ld	(hl), a
-	ld	a, iyl
+	ld	hl, (ix - 3)
+	ld	a, l
 	ld	iy, (_cursorBackground)
 	ld	(iy + 1), a
-	ld	de, (ix - 3)
+	ld	de, (ix - 6)
 	ld	(_playerCursorX), de
-	ld	bc, (ix - 6)
+	ld	bc, (ix - 9)
 	ld	(_playerCursorY), bc
 	ld	hl, (_cursorBackground)
 	push	bc
 	push	de
 	push	hl
 	call	_gfx_GetSprite
+	ld	bc, _playerCursor
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-BB14_87:
-	ld	hl, _playerCursor
-	push	hl
+BB14_89:
+	push	bc
 	call	__ZN6object16generatePolygonsEv
 	pop	hl
-BB14_88:
+BB14_90:
 	ld	sp, ix
 	pop	ix
 	ret
@@ -19457,46 +19539,16 @@ __Z14takeScreenshotv:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	ld	hl, -1600
-	add	hl, sp
+	lea	hl, ix - 114
 	ld	sp, hl
-	ld	bc, -1578
-	lea	iy, ix
-	add	iy, bc
 	ld	hl, 76480
-	push	ix
-	ld	bc, -1581
-	add	ix, bc
-	ld	(ix), hl
-	pop	ix
-	xor	a, a
-	ld	bc, -1597
-	lea	hl, ix
-	add	hl, bc
-	ld	(hl), a
+	ld	(ix - 99), hl
 	ld	hl, _zSortedObjects
-	push	ix
-	ld	bc, -1584
-	add	ix, bc
-	ld	(ix), hl
-	pop	ix
-	lea	hl, ix - 38
-	push	ix
-	ld	bc, -1593
-	add	ix, bc
-	ld	(ix), hl
-	pop	ix
-	lea	hl, ix - 42
-	push	ix
-	ld	bc, -1590
-	add	ix, bc
-	ld	(ix), hl
-	pop	ix
-	lea	hl, iy
-	ld	bc, -1587
-	lea	iy, ix
-	add	iy, bc
-	ld	(iy), hl
+	ld	(ix - 102), hl
+	lea	hl, ix - 32
+	ld	(ix - 108), hl
+	lea	hl, ix - 96
+	ld	(ix - 105), hl
 	ld	hl, (_cursorBackground)
 	ld	de, (_playerCursorX)
 	ld	bc, (_playerCursorY)
@@ -19509,10 +19561,7 @@ __Z14takeScreenshotv:
 	ld	sp, hl
 	ld	iy, -2883584
 BB63_1:
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	de, (hl)
+	ld	de, (ix - 99)
 	ld	hl, -2806784
 	add	hl, de
 	ex	de, hl
@@ -19522,15 +19571,9 @@ BB63_1:
 	ld	de, 320
 	add	iy, de
 	ld	de, -320
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	add	hl, de
-	push	ix
-	add	ix, bc
-	ld	(ix), hl
-	pop	ix
+	ld	(ix - 99), hl
 	or	a, a
 	sbc	hl, de
 	jr	nz, BB63_1
@@ -19564,16 +19607,10 @@ BB63_1:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
+	ld	(ix - 99), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -19605,16 +19642,10 @@ BB63_1:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
+	ld	(ix - 99), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -19646,16 +19677,10 @@ BB63_1:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
+	ld	(ix - 99), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -19690,16 +19715,10 @@ BB63_1:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
+	ld	(ix - 99), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -19720,17 +19739,11 @@ BB63_1:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	bc, -1590
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 105)
 	push	hl
 	call	_time
 	pop	hl
-	ld	bc, -1590
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 105)
 	push	hl
 	call	_localtime
 	pop	de
@@ -19739,91 +19752,62 @@ BB63_1:
 	push	hl
 	ld	hl, 32
 	push	hl
-	ld	bc, -1593
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 108)
 	push	hl
 	call	_strftime
 	ld	hl, 12
 	add	hl, sp
 	ld	sp, hl
-	ld	bc, -1587
-	lea	hl, ix
-	add	hl, bc
-	ld	de, (hl)
+	ld	iy, (_cursorBackground)
+	ld	de, 4096
+	lea	hl, iy
+	add	hl, de
+	ld	(ix - 114), hl
+	ex	de, hl
 	ld	hl, ___const._Z14takeScreenshotv.header
-	ld	bc, 1078
+	ld	bc, 54
 	ldir
-	ld	iy, 0
-	ld	hl, -1900032
-	push	hl
-	pop	bc
+	ld	de, 4153
+	ld	(ix - 111), iy
+	add	iy, de
+	or	a, a
+	sbc	hl, hl
+	ld	(ix - 99), hl
+	ld	b, 3
 BB63_4:
-	push	bc
-	pop	hl
-	push	ix
-	ld	bc, -1581
-	add	ix, bc
-	ld	(ix), hl
-	pop	ix
+	ld	de, (ix - 99)
+	ld	hl, -1900032
+	add	hl, de
 	ld	de, (hl)
 	ld	a, e
-	ld	b, 3
 	call	__bshl
-	ld	(ix - 3), de
-	ld	de, -1596
-	lea	hl, ix
-	add	hl, de
-	ld	(hl), iy
-	lea	bc, iy
-	ld	de, -1587
-	lea	iy, ix
-	add	iy, de
-	ld	iy, (iy)
-	add	iy, bc
-	ld	(iy + 54), a
-	ld	de, (ix - 3)
+	ld	(iy - 3), a
 	ld	l, e
 	ld	h, d
 	ld	c, 2
 	call	__sshru
 	ld	a, l
 	and	a, -8
-	ld	(iy + 55), a
+	ld	(iy - 2), a
 	ld	l, e
 	ld	h, d
 	ld	c, 7
 	call	__sshru
 	ld	a, l
 	and	a, -8
-	ld	(iy + 56), a
-	ld	(iy + 57), 0
-	ld	de, 4
-	ld	(ix - 3), bc
-	ld	bc, -1596
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	(iy - 1), a
+	ld	(iy), 0
+	ld	de, 2
+	ld	hl, (ix - 99)
 	add	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	iy, (iy)
-	lea	iy, iy + 2
-	ld	bc, (ix - 3)
-	lea	bc, iy
-	push	hl
-	pop	iy
-	ld	de, 1024
+	lea	iy, iy + 4
+	ld	(ix - 99), hl
+	ld	de, 512
 	or	a, a
 	sbc	hl, de
-	jp	nz, BB63_4
-	ld	bc, -1587
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	ld	de, 1078
+	jr	nz, BB63_4
+	ld	de, 5174
+	ld	hl, (ix - 111)
 	add	hl, de
 	ex	de, hl
 	ld	hl, -2806784
@@ -19839,10 +19823,7 @@ BB63_4:
 	ld	sp, hl
 	ld	hl, 1
 	push	hl
-	ld	bc, -1593
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 108)
 	push	hl
 	ld	hl, _.str.133
 	push	hl
@@ -19864,25 +19845,16 @@ BB63_4:
 	ld	hl, 77878
 	push	hl
 	push	de
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	(hl), de
+	ld	(ix - 99), de
 	call	_fat_SetFileSize
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	bc, -1587
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 114)
 	push	hl
 	ld	hl, 3
 	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_fat_WriteFile
 	ld	iy, 9
@@ -19891,26 +19863,152 @@ BB63_4:
 	ld	de, 3
 	or	a, a
 	sbc	hl, de
-	jp	nz, BB63_21
+	jp	nz, BB63_18
+	ld	hl, _.str.134
+	push	hl
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	c, 1
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 111), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 111)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.134
+	push	hl
+	call	_gfx_PrintString
+	pop	hl
+	call	_gfx_GetTextY
+	ld	de, 10
+	add	hl, de
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
 	ld	hl, -2806326
 	push	hl
 	ld	hl, 150
 	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_fat_WriteFile
-	ld	iy, 9
-	add	iy, sp
-	ld	sp, iy
+	ld	(ix - 111), hl
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	call	_usb_WaitForEvents
+	ld	hl, (ix - 99)
+	push	hl
+	call	_fat_CloseFile
+	pop	hl
+	ld	hl, (ix - 99)
+	push	hl
+	call	_free
+	pop	hl
 	ld	de, 150
+	ld	hl, (ix - 111)
 	or	a, a
 	sbc	hl, de
-	jp	z, BB63_19
-	ld	a, 0
-	jp	BB63_20
+	jp	nz, BB63_10
+	ld	iy, (ix - 105)
+	lea	de, iy
+	ld	hl, ___const._Z14takeScreenshotv.buffer
+	ld	bc, 64
+	ldir
+	ld	hl, (ix - 108)
+	push	hl
+	push	iy
+	call	_strcat
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (ix - 105)
+	push	hl
+	call	_strlen
+	push	hl
+	pop	de
+	pop	hl
+	ld	bc, (ix - 105)
+	push	bc
+	pop	iy
+	add	iy, de
+	ld	hl, _.str.135
+	ld	a, (hl)
+	ld	(iy), a
+	ld	a, (_.str.135+1)
+	ld	(iy + 1), a
+	ld	a, (_.str.135+2)
+	ld	(iy + 2), a
+	push	bc
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	c, 1
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 99), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 99)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (ix - 105)
+	push	hl
+	call	_gfx_PrintString
+	pop	hl
+	call	_gfx_GetTextY
+	ld	de, 10
+	add	hl, de
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.118
+	push	hl
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	c, 1
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 99), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 99)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.118
+	jp	BB63_11
 BB63_9:
 	ld	hl, _.str.117
 	push	hl
@@ -19923,16 +20021,10 @@ BB63_9:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
+	ld	(ix - 99), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -19954,20 +20046,91 @@ BB63_9:
 	add	hl, sp
 	ld	sp, hl
 BB63_10:
+	ld	hl, _.str.136
+	push	hl
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	c, 1
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 99), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 99)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.136
+BB63_11:
+	push	hl
+	call	_gfx_PrintString
+	pop	hl
+	call	_gfx_GetTextY
+	ld	de, 10
+	add	hl, de
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.101
+	push	hl
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	c, 1
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 99), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 99)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.101
+	push	hl
+	call	_gfx_PrintString
+	pop	hl
+	call	_gfx_GetTextY
+	ld	de, 10
+	add	hl, de
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
 	call	_usb_WaitForEvents
 	ld	iy, (_global)
 	ld	de, 1796
 	lea	hl, iy
 	add	hl, de
 	bit	0, (hl)
-	jr	z, BB63_12
+	jr	z, BB63_13
 	ld	de, 1027
 	add	iy, de
 	push	iy
 	call	_fat_Close
 	pop	hl
 	ld	iy, (_global)
-BB63_12:
+BB63_13:
 	ld	de, 1795
 	lea	hl, iy
 	add	iy, de
@@ -19978,101 +20141,14 @@ BB63_12:
 	call	nz, _msd_Close
 	pop	hl
 	call	_usb_Cleanup
-BB63_13:
-	ld	hl, _.str.135
-	push	hl
-	call	_gfx_GetStringWidth
-	pop	de
-	ld	c, 1
-	call	__ishru
-	push	hl
-	pop	de
-	ld	hl, 160
-	or	a, a
-	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
-	call	_gfx_GetTextY
-	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.135
 BB63_14:
-	push	hl
-	call	_gfx_PrintString
-	pop	hl
-	call	_gfx_GetTextY
-	ld	de, 10
-	add	hl, de
-	push	hl
-	or	a, a
-	sbc	hl, hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.101
-	push	hl
-	call	_gfx_GetStringWidth
-	pop	de
-	ld	c, 1
-	call	__ishru
-	push	hl
-	pop	de
-	ld	hl, 160
-	or	a, a
-	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
-	call	_gfx_GetTextY
-	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.101
-	push	hl
-	call	_gfx_PrintString
-	pop	hl
-	call	_gfx_GetTextY
-	ld	de, 10
-	add	hl, de
-	push	hl
-	or	a, a
-	sbc	hl, hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-BB63_15:
 	call	_os_GetCSC
 	or	a, a
-	jr	z, BB63_15
+	jr	z, BB63_14
 	or	a, a
 	sbc	hl, hl
 	push	hl
-	ld	bc, -1581
-	lea	iy, ix
-	add	iy, bc
-	ld	(iy), hl
+	ld	(ix - 99), hl
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -20090,39 +20166,24 @@ BB63_15:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	z, BB63_18
-BB63_17:
-	ld	bc, -1584
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	jr	z, BB63_17
+BB63_16:
+	ld	hl, (ix - 102)
 	ld	de, (hl)
 	push	de
 	call	__ZN6object16generatePolygonsEv
 	pop	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	inc	hl
 	ld	de, (_numberOfObjects)
-	ld	bc, -1584
-	lea	iy, ix
-	add	iy, bc
-	ld	iy, (iy)
+	ld	iy, (ix - 102)
 	lea	iy, iy + 3
-	push	ix
-	add	ix, bc
-	ld	(ix), iy
-	pop	ix
-	ld	bc, -1581
-	lea	iy, ix
-	add	iy, bc
-	ld	(iy), hl
+	ld	(ix - 102), iy
+	ld	(ix - 99), hl
 	or	a, a
 	sbc	hl, de
-	jr	c, BB63_17
-BB63_18:
+	jr	c, BB63_16
+BB63_17:
 	ld	hl, (_cursorBackground)
 	ld	de, (_playerCursorX)
 	ld	bc, (_playerCursorY)
@@ -20137,285 +20198,17 @@ BB63_18:
 	ld	sp, ix
 	pop	ix
 	ret
-BB63_19:
-	ld	a, -1
-BB63_20:
-	ld	bc, -1597
-	lea	hl, ix
-	add	hl, bc
-	ld	(hl), a
-BB63_21:
-	ld	bc, -1590
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	call	_time
-	pop	hl
-	ld	bc, -1590
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	call	_localtime
-	push	hl
-	pop	de
-	pop	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	iy, (hl)
-	ld	hl, (iy + 40)
-	ld	bc, -1590
-	lea	iy, ix
-	add	iy, bc
-	ld	(iy), hl
-	push	de
-	pop	iy
-	ld	hl, (iy)
-	ld	c, 1
-	call	__ishru
-	ld	(ix - 3), de
-	push	ix
-	ld	de, -1596
-	add	ix, de
-	ld	(ix), hl
-	pop	ix
-	ld	hl, (iy + 3)
-	ld	a, 5
-	ld	c, a
-	call	__ishl
-	push	ix
-	add	ix, de
-	ld	bc, (ix)
-	pop	ix
-	add	hl, bc
-	push	ix
-	add	ix, de
-	ld	(ix), hl
-	pop	ix
-	ld	hl, (iy + 6)
-	ld	c, 11
-	call	__ishl
-	push	hl
-	pop	bc
-	lea	iy, ix
-	add	iy, de
-	ld	hl, (iy)
-	add	hl, bc
-	push	ix
-	ld	bc, -1590
-	add	ix, bc
-	ld	iy, (ix)
-	pop	ix
-	ld	(iy + 22), l
-	ld	(iy + 23), h
-	ld	de, (ix - 3)
-	push	de
-	pop	iy
-	ld	hl, (iy + 9)
-	push	ix
-	ld	bc, -1596
-	add	ix, bc
-	ld	(ix), hl
-	pop	ix
-	ld	hl, (iy + 12)
-	ld	c, a
-	call	__ishl
-	ld	(ix - 3), de
-	push	ix
-	ld	de, -1600
-	add	ix, de
-	ld	(ix), hl
-	pop	ix
-	ld	hl, (iy + 15)
-	ld	c, 9
-	call	__ishl
-	push	hl
-	pop	bc
-	ld	de, (ix - 3)
-	ld	de, 24608
-	ld	(ix - 3), bc
-	ld	bc, -1596
-	lea	iy, ix
-	add	iy, bc
-	ld	hl, (iy)
-	add	hl, de
-	push	ix
-	ld	bc, -1600
-	add	ix, bc
-	ld	de, (ix)
-	pop	ix
-	add	hl, de
-	ld	bc, (ix - 3)
-	add	hl, bc
-	push	ix
-	ld	bc, -1590
-	add	ix, bc
-	ld	iy, (ix)
-	pop	ix
-	ld	(iy + 24), l
-	ld	(iy + 25), h
-	ld	(iy + 18), l
-	ld	(iy + 19), h
+BB63_18:
 	call	_usb_WaitForEvents
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_fat_CloseFile
 	pop	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
+	ld	hl, (ix - 99)
 	push	hl
 	call	_free
 	pop	hl
-	call	_usb_WaitForEvents
-	ld	iy, (_global)
-	ld	de, 1796
-	lea	hl, iy
-	add	hl, de
-	bit	0, (hl)
-	jr	z, BB63_23
-	ld	de, 1027
-	add	iy, de
-	push	iy
-	call	_fat_Close
-	pop	hl
-	ld	iy, (_global)
-BB63_23:
-	ld	de, 1795
-	lea	hl, iy
-	add	iy, de
-	bit	0, (iy)
-	push	hl
-	pop	iy
-	pea	iy + 3
-	call	nz, _msd_Close
-	pop	hl
-	call	_usb_Cleanup
-	ld	bc, -1597
-	lea	hl, ix
-	add	hl, bc
-	bit	0, (hl)
-	jp	z, BB63_13
-	ld	bc, -1587
-	lea	hl, ix
-	add	hl, bc
-	ld	iy, (hl)
-	lea	de, iy
-	ld	hl, ___const._Z14takeScreenshotv.buffer
-	ld	bc, 64
-	ldir
-	ld	bc, -1593
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	push	iy
-	call	_strcat
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	bc, -1587
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	call	_strlen
-	push	hl
-	pop	de
-	pop	hl
-	ld	(ix - 3), de
-	ld	de, -1587
-	lea	hl, ix
-	add	hl, de
-	ld	bc, (hl)
-	push	bc
-	pop	iy
-	ld	de, (ix - 3)
-	add	iy, de
-	ld	hl, _.str.134
-	ld	a, (hl)
-	ld	(iy), a
-	ld	a, (_.str.134+1)
-	ld	(iy + 1), a
-	ld	a, (_.str.134+2)
-	ld	(iy + 2), a
-	push	bc
-	call	_gfx_GetStringWidth
-	pop	de
-	ld	c, 1
-	call	__ishru
-	push	hl
-	pop	de
-	ld	hl, 160
-	or	a, a
-	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
-	call	_gfx_GetTextY
-	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	bc, -1587
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	call	_gfx_PrintString
-	pop	hl
-	call	_gfx_GetTextY
-	ld	de, 10
-	add	hl, de
-	push	hl
-	or	a, a
-	sbc	hl, hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.118
-	push	hl
-	call	_gfx_GetStringWidth
-	pop	de
-	ld	c, 1
-	call	__ishru
-	push	hl
-	pop	de
-	ld	hl, 160
-	or	a, a
-	sbc	hl, de
-	ld	de, -1581
-	lea	iy, ix
-	add	iy, de
-	ld	(iy), hl
-	call	_gfx_GetTextY
-	push	hl
-	ld	bc, -1581
-	lea	hl, ix
-	add	hl, bc
-	ld	hl, (hl)
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.118
-	jp	BB63_14
+	jp	BB63_10
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -21321,7 +21114,7 @@ _.str.10:
 	section	.rodata,"a",@progbits
 	private	_.str.11
 _.str.11:
-	db	"Welcome to TICraft v1.2.0! While you wait:", 0
+	db	"Welcome to TICraft v2.0.0! While you wait:", 0
 
 	section	.rodata,"a",@progbits
 	private	_.str.12
@@ -22426,8 +22219,7 @@ _.str.131:
 	section	.rodata,"a",@progbits
 	private	___const._Z14takeScreenshotv.header
 ___const._Z14takeScreenshotv.header:
-	db	"BM60", 0, 0, 0, 0, 0, "6", 0, 0, "(", 0, 0, 0, "@", 0, 0, "ð", 0, 0, 0, "", 0, "", 0, 0, 0, 0, 0, 0, ",", 0, "#.", 0, 0, "#.", 0, 0, 0, ""
-	db	1488 dup 0
+	db	"BM60", 0, 0, 0, 0, 0, "6", 0, 0, "(", 0, 0, 0, "@", 0, 0, "ð", 0, 0, 0, "", 0, "", 0, 0, 0, 0, 0, 0, ",", 0, "#.", 0, 0, "#.", 0, 0, 0, "", 0, 0, 0, 0, 0, 0
 
 	section	.rodata,"a",@progbits
 	private	_.str.132
@@ -22440,19 +22232,24 @@ _.str.133:
 	db	"/SHOTS", 0
 
 	section	.rodata,"a",@progbits
+	private	_.str.134
+_.str.134:
+	db	"Writing image data", 0
+
+	section	.rodata,"a",@progbits
 	private	___const._Z14takeScreenshotv.buffer
 ___const._Z14takeScreenshotv.buffer:
 	db	"Screenshot saved as ""SHOTS\"
 	db	37 dup 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.134
-_.str.134:
+	private	_.str.135
+_.str.135:
 	db	""".", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.135
-_.str.135:
+	private	_.str.136
+_.str.136:
 	db	"Failed to write screenshot.", 0
 
 	section	.bss,"aw",@nobits

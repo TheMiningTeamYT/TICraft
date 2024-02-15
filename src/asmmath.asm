@@ -336,52 +336,52 @@ section .text
 ; is this faster? IDK!
 public _fp_to_int
 _fp_to_int:
-  ld hl, 5 ; 4
-  add hl, sp ; 1
-  ld b, (hl) ; 2
-  ld a, b ; 1
-  add a, b ; 1 // if the upper bits are greater than 127 (the sign bit is set), then adding the bits to themselves will carry.
-  dec hl ; 1
-  ld a, (hl) ; 2  
-  sbc hl, hl ; 2 // if original number was negative, set hl to -1. else, set it to 0.
-  sra b ; 2
-  rra ; 1
-  sra b ; 2
-  rra ; 1
-  sra b ; 2
-  rra ; 1
-  sra b ; 2
-  rra ; 1
-  ld h, b ; 1
-  ld l, a ; 1
-  ret nc ; 2/7 (30/35)
-  inc hl ; 1
-  ret ; 6 (37)
+  ld hl, 5 ; 16
+  add hl, sp ; 4
+  ld b, (hl) ; 8
+  ld a, b ; 4
+  rla ; 4 // Shift out the sign bit into the carry flag
+  dec hl ; 4
+  ld a, (hl) ; 8  
+  sbc hl, hl ; 8 // if original number was negative, set hl to -1. else, set it to 0.
+  sra b ; 8
+  rra ; 4
+  sra b ; 8
+  rra ; 4
+  sra b ; 8
+  rra ; 4
+  sra b ; 8
+  rra ; 4
+  ld h, b ; 4
+  ld l, a ; 4
+  ret nc ; 8/22 (120/134)
+  inc hl ; 4
+  ret ; 18 (142)
 section .text
 public _fp_to_int_floor
 _fp_to_int_floor:
-  ld hl, 5 ; 4
-  add hl, sp ; 1
-  ld b, (hl) ; 2
-  ld a, b ; 1
-  add a, b ; 1 // if the upper bits are greater than 127 (the sign bit is set), then adding the bits to themselves will carry.
-  dec hl ; 1
-  ld a, (hl) ; 2  
-  sbc hl, hl ; 2 // if original number was negative, set hl to -1. else, set it to 0.
-  sra b ; 2
-  rra ; 1
-  sra b ; 2
-  rra ; 1
-  sra b ; 2
-  rra ; 1
-  sra b ; 2
-  rra ; 1
-  ld h, b ; 1
-  ld l, a ; 1
+  ld hl, 5 ; 16
+  add hl, sp ; 4
+  ld b, (hl) ; 8
+  ld a, b ; 4
+  rla ; 4 // Shift out the sign bit into the carry flag
+  dec hl ; 4
+  ld a, (hl) ; 8  
+  sbc hl, hl ; 8 // if original number was negative, set hl to -1. else, set it to 0.
+  sra b ; 8
+  rra ; 4
+  sra b ; 8
+  rra ; 4
+  sra b ; 8
+  rra ; 4
+  sra b ; 8
+  rra ; 4
+  ld h, b ; 4
+  ld l, a ; 4
   ; fixed a potential arbritrary code execution exploit XD
   ; previously this said ret nc
   ; meaning that if you fed a number that should have rounded
   ; it wouldn't return
   ; and would instead start executing whatever happened to come after this code
   ; whoops
-  ret ; 6 (34)
+  ret ; 18 (130)

@@ -15,7 +15,6 @@
 extern "C" {
     void ti_CleanAll();
     int ti_MemChk();
-    void exploitTest();
     #include "printString.h"
 }
 

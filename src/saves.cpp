@@ -497,34 +497,31 @@ void takeScreenshot() {
         tm* currentLocalTime = localtime(&currentTime);
         strftime(name, 32, "%H%M-%j.BMP", currentLocalTime);
         // actual header data is 1078B
-        unsigned char header[1536] = {'B', 'M', 54, 48, 1, 0, 0, 0, 0, 0, 54, 4, 0, 0, 40, 0, 0, 0, 64, 1, 0, 0, 240, 0, 0, 0, 1, 0, 8, 0, 0, 0, 0, 0, 0, 44, 1, 0, 35, 46, 0, 0, 35, 46, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0};
+        unsigned char header[] = {'B', 'M', 54, 48, 1, 0, 0, 0, 0, 0, 54, 4, 0, 0, 40, 0, 0, 0, 64, 1, 0, 0, 240, 0, 0, 0, 1, 0, 8, 0, 0, 0, 0, 0, 0, 44, 1, 0, 35, 46, 0, 0, 35, 46, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0};
+        unsigned char* headerBuffer = ((unsigned char*)cursorBackground) + 4096;
+        memcpy(headerBuffer, header, 54);
         for (unsigned int i = 0; i < 256; i++) {
             uint16_t color = gfx_palette[i];
-            header[(i<<2)+54] = (color & 0x001F)<<3;
-            header[(i<<2)+55] = (color & 0x03E0)>>2;
-            header[(i<<2)+56] = (color & 0x7C00)>>7;
-            header[(i<<2)+57] = 0;
+            headerBuffer[(i<<2)+54] = (color & 0x001F)<<3;
+            headerBuffer[(i<<2)+55] = (color & 0x03E0)>>2;
+            headerBuffer[(i<<2)+56] = (color & 0x7C00)>>7;
+            headerBuffer[(i<<2)+57] = 0;
         }
-        memcpy(header + 1078, gfx_vram + (LCD_WIDTH*LCD_HEIGHT), 458);
+        memcpy(headerBuffer + 1078, gfx_vram + (LCD_WIDTH*LCD_HEIGHT), 458);
         createDirectory("/", "SHOTS");
         fat_file_t* screenshot = openFile("/SHOTS", name, true);
         if (screenshot) {
             fat_SetFileSize(screenshot, 77878);
-            good = fat_WriteFile(screenshot, 3, header) == 3;
+            good = fat_WriteFile(screenshot, 3, headerBuffer) == 3;
             if (good) {
+                printStringAndMoveDownCentered("Writing image data");
                 good = fat_WriteFile(screenshot, 150, gfx_vram + (LCD_WIDTH*LCD_HEIGHT) + 458) == 150;
             }
-            time(&currentTime);
-            currentLocalTime = localtime(&currentTime);
-            uint16_t* entryPointer = *((uint16_t**)(&screenshot->priv[40]));
-            entryPointer[11] = ((currentLocalTime->tm_sec)>>1) + (currentLocalTime->tm_min<<5) + (currentLocalTime->tm_hour<<11);
-            entryPointer[9] =  entryPointer[12] = (currentLocalTime->tm_mday) + ((currentLocalTime->tm_mon + 1) << 5) + ((currentLocalTime->tm_year - 80)<<9);
             closeFile(screenshot);
         }
     } else {
         printStringAndMoveDownCentered("Failed to init USB.");
     }
-    close_USB();
     if (good) {
         char buffer[64] = "Screenshot saved as \"SHOTS\\";
         strcat(buffer, name);
@@ -535,6 +532,7 @@ void takeScreenshot() {
         printStringAndMoveDownCentered("Failed to write screenshot.");
     }
     printStringAndMoveDownCentered("Press any key to continue.");
+    close_USB();
     while (!os_GetCSC());
     drawScreen(true);
     getBuffer();
