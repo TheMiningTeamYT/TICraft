@@ -4,12 +4,10 @@
 #include <fileioc.h>
 #include <ti/screen.h>
 #include <ti/getcsc.h>
-/*
-TODO:
-Handle what happens if a GC cycle happens during the game and the texture pack gets moved.\
-*/
+
 char* texturePackName;
 uint16_t* texPalette;
+
 // assuming textures are 16x16;
 uint8_t* bedrock_texture[6];
 uint8_t* bookshelf_texture[6];
@@ -34,6 +32,7 @@ uint8_t* smooth_stone_texture[6];
 uint8_t* sponge_texture[6];
 uint8_t* stone_texture[6];
 uint8_t* tnt_texture[6];
+
 // new textures
 uint8_t* diamond_texture[6];
 uint8_t* glass_texture[6];
@@ -250,7 +249,7 @@ void initPalette() {
     log_oak_texture[2] = log_oak;
     log_oak_texture[3] = log_oak;
     log_oak_texture[4] = log_oak;
-    log_oak_texture[5] = log_oak;
+    log_oak_texture[5] = log_oak_top;
 
     planks_texture[0] = planks_oak;
     planks_texture[1] = planks_oak;

@@ -87,9 +87,8 @@ void object::generatePolygons() {
                 totalY += renderedPoints[polygon->points[i]].y;
                 z += renderedPoints[polygon->points[i]].z;
             }
-            totalX /= 4;
-            totalY /= 4;
-            z /= 4;
+            totalX >>= 2;
+            totalY >>= 2;
             polygon->x = totalX;
             polygon->y = totalY;
             polygon->z = z;
@@ -103,7 +102,7 @@ void object::generatePolygons() {
             // The polygon we are rendering
             polygon* polygon = &cubePolygons[polygonNum];
             // Normalized z (0-255)
-            uint8_t normalizedZ = (polygon->z >> 3);
+            uint8_t normalizedZ = (polygon->z >> 5);
 
             // Are we going to render the polygon?
             bool render = false;
@@ -150,20 +149,6 @@ void object::generatePolygons() {
 void object::deleteObject() {
     if (visible) {
         gfx_SetColor(255);
-        /*int x1 = renderedPoints[cubePolygons[polygonNum].points[0]].x;
-        int x2 = renderedPoints[cubePolygons[polygonNum].points[1]].x;
-        int x3 = renderedPoints[cubePolygons[polygonNum].points[2]].x;
-        int x4 = renderedPoints[cubePolygons[polygonNum].points[3]].x;
-        int y1 = renderedPoints[cubePolygons[polygonNum].points[0]].y;
-        int y2 = renderedPoints[cubePolygons[polygonNum].points[1]].y;
-        int y3 = renderedPoints[cubePolygons[polygonNum].points[2]].y;
-        int y4 = renderedPoints[cubePolygons[polygonNum].points[3]].y;
-        gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-        gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-        gfx_SetDrawScreen();
-        gfx_FillTriangle_NoClip(x1, y1, x2, y2, x3, y3);
-        gfx_FillTriangle_NoClip(x1, y1, x4, y4, x3, y3);
-        gfx_SetDrawBuffer();*/
         int minX = renderedPoints[0].x;
         int minY = renderedPoints[0].y;
         int maxX = renderedPoints[0].x;
@@ -212,7 +197,7 @@ void object::generatePoints() {
     // i want to rewrite this in assembly
     // i have... hmm... zero faith in the compiler
     visible = false;
-
+    
     const Fixed24 x1 = (Fixed24)x - cameraXYZ[0];
     const Fixed24 x2 = x1 + (Fixed24)cubeSize;
     const Fixed24 y1 = (Fixed24)y - cameraXYZ[1];
@@ -241,9 +226,9 @@ void object::generatePoints() {
         return;
     }
 
-    const Fixed24 cyx1 = cy*x1;
+    const Fixed24 ncyx1 = -cy*x1;
     const Fixed24 syz1 = sy*z1;
-    Fixed24 dx = cyx1 - syz1;
+    Fixed24 dx = ncyx1 + syz1;
     if (dz + (Fixed24)20 < (dx).abs()) {
         return;
     }
@@ -252,7 +237,7 @@ void object::generatePoints() {
     const int y2squared = (int)y2*(int)y2;
     const int z2squared = (int)z2*(int)z2;
 
-    const Fixed24 cyx2 = cy*x2;
+    const Fixed24 ncyx2 = -cy*x2;
     const Fixed24 syx2 = sy*x2;
     const Fixed24 cxy1 = cx*y1;
     const Fixed24 cxy2 = cx*y2;
@@ -264,8 +249,8 @@ void object::generatePoints() {
     if (dz > (Fixed24)40 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
         visible = true;
     }
-    Fixed24 sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[0] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy))};
+    Fixed24 sum2 = ((Fixed24)-171.3777608f)/dz;
+    renderedPoints[0] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy))};
 
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
@@ -274,10 +259,10 @@ void object::generatePoints() {
             visible = true;
         }
     }
-    sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[3] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x1squared + y2squared + z1squared)};
+    sum2 = ((Fixed24)-171.3777608f)/dz;
+    renderedPoints[3] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x1squared + y2squared + z1squared)};
 
-    dx = cyx2 - syz1;
+    dx = ncyx2 + syz1;
     sum1 = cyz1 + syx2;
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
@@ -286,8 +271,8 @@ void object::generatePoints() {
             visible = true;
         }
     }
-    sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[1] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y1squared + z1squared)};
+    sum2 = ((Fixed24)-171.3777608f)/dz;
+    renderedPoints[1] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x2squared + y1squared + z1squared)};
 
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
@@ -296,10 +281,10 @@ void object::generatePoints() {
             visible = true;
         }
     }
-    sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[2] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z1squared)};
+    sum2 = ((Fixed24)-171.3777608f)/dz;
+    renderedPoints[2] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z1squared)};
     
-    dx = cyx1 - syz2;
+    dx = ncyx1 + syz2;
     sum1 = cyz2 + syx1;
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
@@ -308,8 +293,8 @@ void object::generatePoints() {
             visible = true;
         }
     }
-    sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[4] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x1squared + y1squared + z2squared)};
+    sum2 = ((Fixed24)-171.3777608f)/dz;
+    renderedPoints[4] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x1squared + y1squared + z2squared)};
 
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
@@ -318,10 +303,10 @@ void object::generatePoints() {
             visible = true;
         }
     }
-    sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[7] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x1squared + y2squared + z2squared)};
+    sum2 = ((Fixed24)-171.3777608f)/dz;
+    renderedPoints[7] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x1squared + y2squared + z2squared)};
 
-    dx = cyx2 - syz2;
+    dx = ncyx2 + syz2;
     sum1 = cyz2 + syx2;
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
@@ -330,8 +315,8 @@ void object::generatePoints() {
             visible = true;
         }
     }
-    sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[5] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y1squared + z2squared)};
+    sum2 = ((Fixed24)-171.3777608f)/dz;
+    renderedPoints[5] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x2squared + y1squared + z2squared)};
 
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
@@ -340,8 +325,8 @@ void object::generatePoints() {
             visible = true;
         }
     }
-    sum2 = ((Fixed24)171.3777608f)/dz;
-    renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120-(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z2squared)};
+    sum2 = ((Fixed24)-171.3777608f)/dz;
+    renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z2squared)};
 }
 
 void object::moveBy(int newX, int newY, int newZ) {
@@ -548,7 +533,7 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t norma
     } else {
         bool clipLines = false;
         for (unsigned int i = 0; i < 4; i++) {
-            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 3 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 2) {
+            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 2 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 1) {
                 clipLines = true;
                 break;
             }
@@ -618,7 +603,7 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t norma
             }
             errorY1 += dy1;
             if (clipLines) {
-                if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT - 1) && y1 > (GFX_LCD_HEIGHT - 1))))
+                if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT) && y1 > (GFX_LCD_HEIGHT))))
                     drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
             } else {
                 drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);

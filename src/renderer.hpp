@@ -75,10 +75,10 @@ struct polygon {
     uint8_t polygonNum;
 
     // The distance from the polygon to the camera
-    uint16_t z;
+    unsigned int z;
 
-    int16_t x;
-    int16_t y;
+    int x;
+    int y;
 };
 
 /*
@@ -137,20 +137,6 @@ class object {
 
     // draw as outline or texture
     bool outline;
-};
-
-/*
-A polygon that has been prepared for rendering
-*/
-struct transformedPolygon {
-    // A pointer to the parent object of this polygon
-    object* object;
-
-    // The distance from the camera
-    uint16_t z;
-
-    // The original number of the polygon (in the unwrapping order)
-    uint8_t polygonNum;
 };
 
 // this can (and should) be replaced by a more efficient cubeSave
@@ -221,12 +207,6 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t norma
 // An array of all the objects in the world
 extern object* objects[maxNumberOfObjects];
 extern object* zSortedObjects[maxNumberOfObjects];
-
-// An array of all the polygons that are ready to be rendered
-extern transformedPolygon* preparedPolygons;
-
-// The number of polygons ready to be rendered
-extern unsigned int numberOfPreparedPolygons;
 
 // The number of objects in the world
 extern unsigned int numberOfObjects;

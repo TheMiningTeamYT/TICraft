@@ -16,9 +16,11 @@ public _drawTextureLineNewA_NoClip
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
 _drawTextureLineNewA_NoClip:
     di
+    push ix
     ld iy, 0
     add iy, sp
-    push ix
+    lea hl, iy - 12
+    ld sp, hl
     ; BC will be sx
     ld bc, 1
     ; Compute dx
@@ -99,70 +101,63 @@ _drawTextureLineNewA_NoClip:
     mlt hl ; 6
     add hl, hl ; 1
     ld (iy + y1), hl ; 6
-
-    ; Init column & texture ratio & draw first pixel
+    ; Init A
+    ld a, (iy + polygonZ)
+    ; Init the alternate register set
     exx
         pop de
-        xor a, a
-        srl d
-        rr e
-        rra
-        srl e
-        rra
-        srl e
-        rra
-        srl e
-        rra
-        ld d, a
-        ld b, a
-        or a, e
-        jr nz, not_zero
-            inc e
-        not_zero:
+        ex af, af'
+            xor a, a
+            or a, e
+            jr nz, lengthNotZero
+                inc a
+                inc e
+            lengthNotZero:
+        ex af, af'
         ld c, (iy + colorOffset)
         inc c
         ld hl, (iy + texture)
-        ex af, af'
-            ld a, e
-        ex af, af'
+        ld b, (hl)
+        ld d, 16
     exx
     ; At this point, all our registers/variables should be initialized
-    ; hl': texture
-    ; c': colorOffset
-    ; b': running error
-    ; e': whole number component of length / 16
-    ; d': fractional component of length / 16
-    ; a': Running total of the fractional component of column
+    ; a': texture error
+    ; b': texel value
+    ; c': color offset
+    ; d': 8
+    ; e': (length of the textured line being drawn)/2
+    ; hl': texture pointer
+    ; a: polygonZ
     ; 75-208 cycles per pixel
     new_fillLoop:
-        ; Load the texel value and advance column
+        ; Save polygonZ to B
+        ld b, a
+        ; Load the texel value and advance the texture pointer
         exx ; 1
+            ; Load the texel value
+            ld a, b ; 2
             ; Add the color offset to the pixel
-            ld a, (hl) ; 2
             add a, c ; 1
             ex af, af' ; 1
-                or a, a ;1
-                jr nz, decrement_texture_error ; 2/3
-                    move_pointer:
-                    ld a, b ; 1
-                    add a, d ; 1
-                    ld b, a ; 1
-                    ld a, e ; 1
-                    inc hl ; 1
-                    adc a, 0 ; 2
-                    jr z, move_pointer ; 2/3
-                decrement_texture_error:
-                dec a ; 1
+                sub a, d
+                jr nc, textureCont
+                    moveTexturePointer:
+                    inc hl
+                    add a, e
+                    jr nc, moveTexturePointer
+                    ld b, (hl)
+                textureCont:
             ex af, af'
         exx ; 1
+        ; Save the pixel value to C and restore polygonZ to A
+        ld c, a
+        ld a, b
         ; If the texel is 255 (the transparency color), skip drawing the pixel
         jr c, fill_cont ; 2/3
-            dec a ; 1
-            lea hl, ix ; 3
-            ld de, 76800 ; 4
+            dec c ; 1
+            lea de, ix + 1 ; 3
+            ld hl, 76799 ; 4
             add hl, de ; 1
-            ld c, a ; 1
-            ld a, (iy + polygonZ) ; 4
             cp a, (hl) ; 2
             jr nc, fill_upper_cont ; 2/3
                 ld (hl), a ; 2
@@ -171,8 +166,9 @@ _drawTextureLineNewA_NoClip:
             inc hl ; 1
             cp a, (hl) ; 2
             jr nc, fill_lower_cont ; 2/3
-                ld (hl), a ; 2
-                ld (ix + 1), c ; 4
+                ex de, hl
+                ld (de), a ; 2
+                ld (hl), c
         fill_cont:
         or a, a ; 1
         fill_lower_cont:
@@ -187,7 +183,7 @@ _drawTextureLineNewA_NoClip:
             ld de, (iy + y1) ; 5
             sbc hl, de ; 2
             ; If y0 == y1 as well, jump out of the loop
-            jr z, real_end_pop ; 2/3
+            jr z, real_end ; 2/3
         end_cont:
         ; Grab e2 from the stack
         pop hl ; 4
@@ -239,7 +235,7 @@ _drawTextureLineNewA_NoClip:
             or a, a ; 1
             sbc hl, bc ; 2
             ; If y0 == y1, jump out of the loop
-            jr z, real_end_pop ; 2/3
+            jr z, real_end ; 2/3
             ; Add sy to y0
             ld de, (iy + sy) ; 5
             add ix, de ; 2
@@ -253,11 +249,8 @@ _drawTextureLineNewA_NoClip:
         push hl
         ; Jump to the beginning of the loop
         jp new_fillLoop ; 5
-    real_end_pop:
-    inc sp
-    inc sp
-    inc sp
     real_end:
+    ld sp, iy
     pop ix
     ei
     ret
@@ -450,27 +443,25 @@ extern _fp_div
 extern _fp_mul
 extern __idvrmu
 private x0
-x0 = 3
+x0 = 6
 private x1
-x1 = 6
+x1 = 9
 private y0
-y0 = 9
+y0 = 12
 private y1
-y1 = 12
+y1 = 15
 private texture
-texture = 15
+texture = 18
 private colorOffset
-colorOffset = 18
+colorOffset = 21
 private polygonZ
-polygonZ = 21
+polygonZ = 24
 private dx
-dx = -24
+dx = -3
 private sx
-sx = -27
+sx = -6
 private dy
-dy = -30
+dy = -9
 private sy
-sy = -33
-private error
-error = -36
+sy = -12
 extern _texPalette

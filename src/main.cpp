@@ -43,6 +43,8 @@ void drawTexturePackSelection(texturePack* pack, int row, bool selected);
 bool verifyTexturePack(packEntry pack);
 void exitOverlay(int code) {memset((void*) 0xD031F6, 0, 69090); exit(code);};
 
+bool fineMovement = false;
+
 int main() {
     os_ClrHomeFull();
     ti_SetGCBehavior(gfx_End, texturePackMenu);
@@ -475,44 +477,88 @@ int main() {
                     selectBlock();
                     break;
                 case sk_Up:
-                    cameraXYZ[0] += (Fixed24)40*sy;
-                    cameraXYZ[2] += (Fixed24)40*cy;
+                    if (fineMovement) {
+                        cameraXYZ[0] += (Fixed24)10*sy;
+                        cameraXYZ[2] += (Fixed24)10*cy;
+                    } else {
+                        cameraXYZ[0] += (Fixed24)40*sy;
+                        cameraXYZ[2] += (Fixed24)40*cy;
+                    }
                     redrawScreen();
                     break;
                 case sk_Down:
-                    cameraXYZ[0] -= (Fixed24)40*sy;
-                    cameraXYZ[2] -= (Fixed24)40*cy;
+                    if (fineMovement) {
+                        cameraXYZ[0] -= (Fixed24)10*sy;
+                        cameraXYZ[2] -= (Fixed24)10*cy;
+                    } else {
+                        cameraXYZ[0] -= (Fixed24)40*sy;
+                        cameraXYZ[2] -= (Fixed24)40*cy;
+                    }
                     redrawScreen();
                     break;
                 case sk_Left:
-                    cameraXYZ[0] -= (Fixed24)40*cy;
-                    cameraXYZ[2] += (Fixed24)40*sy;
+                    if (fineMovement) {
+                        cameraXYZ[0] -= (Fixed24)10*cy;
+                        cameraXYZ[2] += (Fixed24)10*sy;
+                    } else {
+                        cameraXYZ[0] -= (Fixed24)40*cy;
+                        cameraXYZ[2] += (Fixed24)40*sy;
+                    }
                     redrawScreen();
                     break;
                 case sk_Right:
-                    cameraXYZ[0] += (Fixed24)40*cy;
-                    cameraXYZ[2] -= (Fixed24)40*sy;
+                    if (fineMovement) {
+                        cameraXYZ[0] += (Fixed24)10*cy;
+                        cameraXYZ[2] -= (Fixed24)10*sy;
+                    } else {
+                        cameraXYZ[0] += (Fixed24)40*cy;
+                        cameraXYZ[2] -= (Fixed24)40*sy;
+                    }
                     redrawScreen();
                     break;
                 case sk_Del:
-                    cameraXYZ[1] += 20;
+                    if (fineMovement) {
+                        cameraXYZ[1] += 5;
+                    } else {
+                        cameraXYZ[1] += 20;
+                    }
                     redrawScreen();
                     break;
                 case sk_Stat:
-                    cameraXYZ[1] -= 20;
+                    if (fineMovement) {
+                        cameraXYZ[1] -= 5;
+                    } else {
+                        cameraXYZ[1] -= 20;
+                    }
                     redrawScreen();
                     break;
                 case sk_Prgm:
-                    rotateCamera(-5, 0);
+                    if (fineMovement) {
+                        rotateCamera(-2.5, 0);
+                    } else {
+                        rotateCamera(-10, 0);
+                    }
                     break;
                 case sk_Cos:
-                    rotateCamera(5, 0);
+                    if (fineMovement) {
+                        rotateCamera(2.5, 0);
+                    } else {
+                        rotateCamera(10, 0);
+                    }
                     break;
                 case sk_Sin:
-                    rotateCamera(0, -5);
+                    if (fineMovement) {
+                        rotateCamera(0, -2.5);
+                    } else {
+                        rotateCamera(0, -10);
+                    }
                     break;
                 case sk_Tan:
-                    rotateCamera(0, 5);
+                    if (fineMovement) {
+                        rotateCamera(0, 2.5);
+                    } else {
+                        rotateCamera(0, 10);
+                    }
                     break;
                 case sk_Alpha:
                     cameraXYZ[0] = (Fixed24)playerCursor.x - (((Fixed24)84.85281375f)*sy);
@@ -522,6 +568,9 @@ int main() {
                     break;
                 case sk_Window:
                     takeScreenshot();
+                    break;
+                case sk_Trace:
+                    fineMovement = !fineMovement;
                     break;
                 default:
                     break;

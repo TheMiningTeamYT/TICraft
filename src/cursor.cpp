@@ -66,44 +66,34 @@ void moveCursor(uint8_t direction) {
     bool visibleBefore = playerCursor.visible;
     switch (direction) {
         case 0:
-            if (playerCursor.y < 2027)
-                playerCursor.moveBy(0, 20, 0);
+            playerCursor.moveBy(0, 20, 0);
             break;
         case 1:
-            if (playerCursor.y > -2027)
-                playerCursor.moveBy(0, -20, 0);
+            playerCursor.moveBy(0, -20, 0);
             break;
         case 2:
-            if (playerCursor.z < 2027)
-                playerCursor.moveBy(0, 0, 20);
+            playerCursor.moveBy(0, 0, 20);
             break;
         case 3:
-            if (playerCursor.z > -2027)
-                playerCursor.moveBy(0, 0, -20);
+            playerCursor.moveBy(0, 0, -20);
             break;
         case 4:
-            if (playerCursor.x < 2027)
-                playerCursor.moveBy(20, 0, 0);
+            playerCursor.moveBy(20, 0, 0);
             break;
         case 5:
-            if (playerCursor.x > -2027)
-                playerCursor.moveBy(-20, 0, 0);
+            playerCursor.moveBy(-20, 0, 0);
             break;
         case 6:
-            if (playerCursor.x > -2027 && playerCursor.z < 2027)
-                playerCursor.moveBy(-20, 0, 20);
+            playerCursor.moveBy(-20, 0, 20);
             break;
         case 7:
-            if (playerCursor.x < 2027 && playerCursor.z > -2027)
-                playerCursor.moveBy(20, 0, -20);
+            playerCursor.moveBy(20, 0, -20);
             break;
         case 8:
-            if (playerCursor.x < 2027 && playerCursor.z < 2027)
-                playerCursor.moveBy(20, 0, 20);
+            playerCursor.moveBy(20, 0, 20);
             break;
         case 9:
-            if (playerCursor.x > -2027 && playerCursor.z > -2027)
-                playerCursor.moveBy(-20, 0, -20);
+            playerCursor.moveBy(-20, 0, -20);
             break;
         default:
             return;
