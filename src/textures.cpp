@@ -460,7 +460,7 @@ void initPalette() {
     hay_block_texture[2] = hay_block_side;
     hay_block_texture[3] = hay_block_side;
     hay_block_texture[4] = hay_block_side;
-    hay_block_texture[5] = hay_block_side;
+    hay_block_texture[5] = hay_block_top;
 
     bacon_texture[0] = bacon;
     bacon_texture[1] = bacon;

@@ -25,8 +25,6 @@ _drawTextureLineNewA_NoClip:
     ld bc, 1
     ; Compute dx
     ld hl, (iy + x1)
-    dec hl
-    ld (iy + x1), hl
     ld de, (iy + x0)
     or a, a
     sbc hl, de
@@ -38,6 +36,17 @@ _drawTextureLineNewA_NoClip:
     sx_cont:
     ; Store sx
     ld (iy + sx), bc
+    ; If x1 != x0, continue
+    jr nz, zero_cont
+        ; Else, check if y1 == y0
+        ex de, hl
+            ld hl, (iy + y1)
+            ld bc, (iy + y0)
+            sbc hl, bc
+            ; If y1 == y0, don't render anything
+            jp z, real_end
+        ex de, hl
+    zero_cont:
     ; Compute abs(dx)
     call abs
     ; Store dx
@@ -62,9 +71,6 @@ _drawTextureLineNewA_NoClip:
     push hl
     ; Negate hl
     ex de, hl
-    or a, a
-    sbc hl, hl
-    sbc hl, de
     ; Store hl to dy
     ld (iy + dy), hl
     ; Load dx
@@ -85,170 +91,172 @@ _drawTextureLineNewA_NoClip:
     push hl ; 4
     ; 52 cycles
     ; offset ix (screen pointer) by gfx_vram
-    ld ix, (iy + x0) ; 6
-    ld de, $D40000 ; 4
-    add ix, de ; 2
+    ld ix, (iy + x0) ; 24
+    ld de, $D40000 ; 16
+    add ix, de ; 8
     ; Pre-multiply y0 & y1
-    ld e, 160 ; 2
-    ld h, (iy + y0) ; 4
-    ld l, e ; 1
-    mlt hl ; 6
-    add hl, hl ; 1
-    ld (iy + y0), hl; 6
-    ex de, hl ; 1
-    add ix, de ; 2
-    ld h, (iy + y1) ; 4
-    mlt hl ; 6
-    add hl, hl ; 1
-    ld (iy + y1), hl ; 6
+    ld e, 160 ; 8
+    ld h, (iy + y0) ; 16
+    ld l, e ; 4
+    mlt hl ; 12
+    add hl, hl ; 4
+    ld (iy + y0), hl ; 18
+    ex de, hl ; 4
+    add ix, de ; 8
+    ld h, (iy + y1) ; 16
+    mlt hl ; 12
+    add hl, hl ; 4
+    ld (iy + y1), hl ; 18
     ; Init A
-    ld a, (iy + polygonZ)
+    ld a, (iy + polygonZ) ; 16
     ; Init the alternate register set
     exx
-        pop de
+        pop bc
+        ld d, 16
         ex af, af'
+            shiftLength:
             xor a, a
-            or a, e
+            or a, b
+            jr z, lengthShiftCont
+            srl d
+            srl b
+            rr c
+            jr shiftLength
+            lengthShiftCont:
+            or a, c
             jr nz, lengthNotZero
                 inc a
-                inc e
             lengthNotZero:
+            ld e, a
         ex af, af'
         ld c, (iy + colorOffset)
         inc c
         ld hl, (iy + texture)
         ld b, (hl)
-        ld d, 16
     exx
     ; At this point, all our registers/variables should be initialized
     ; a': texture error
     ; b': texel value
     ; c': color offset
-    ; d': 8
-    ; e': (length of the textured line being drawn)/2
+    ; d': shifted texture length
+    ; e': shifted length of the textured line being drawn
     ; hl': texture pointer
     ; a: polygonZ
     ; 75-208 cycles per pixel
     new_fillLoop:
-        ; Save polygonZ to B
-        ld b, a
+        ; Save polygonZ to D
+        ld d, a ; 4
         ; Load the texel value and advance the texture pointer
         exx ; 1
             ; Load the texel value
-            ld a, b ; 2
+            ld a, b ; 4
             ; Add the color offset to the pixel
-            add a, c ; 1
-            ex af, af' ; 1
-                sub a, d
-                jr nc, textureCont
+            add a, c ; 4
+            ex af, af' ; 4
+                sub a, d ; 4
+                jr nc, textureCont ; 8/9
                     moveTexturePointer:
-                    inc hl
-                    add a, e
-                    jr nc, moveTexturePointer
-                    ld b, (hl)
+                    inc hl ; 4
+                    add a, e ; 4
+                    jr nc, moveTexturePointer ; 8/9
+                    ld b, (hl) ; 9 - 208 cycles (depending on flash) (most likely: 9, 10, or 17 cycles)
                 textureCont:
-            ex af, af'
-        exx ; 1
-        ; Save the pixel value to C and restore polygonZ to A
-        ld c, a
-        ld a, b
+            ex af, af' ; 4
+        exx ; 4
+        ; Load x0 into BC
+        ld bc, (iy + x0) ; 24
         ; If the texel is 255 (the transparency color), skip drawing the pixel
-        jr c, fill_cont ; 2/3
-            dec c ; 1
-            lea de, ix + 1 ; 3
-            ld hl, 76799 ; 4
-            add hl, de ; 1
-            cp a, (hl) ; 2
-            jr nc, fill_upper_cont ; 2/3
-                ld (hl), a ; 2
-                ld (ix), c ; 4
-            fill_upper_cont:
-            inc hl ; 1
-            cp a, (hl) ; 2
-            jr nc, fill_lower_cont ; 2/3
-                ex de, hl
-                ld (de), a ; 2
-                ld (hl), c
+        jr c, fill_cont ; 8/9
+            dec a ; 4
+            ld hl, (iy + x1) ; 23
+            sbc hl, bc ; 8
+            ld c, a ; 4
+            ld a, d ; 4
+            lea de, ix ; 12
+            ld hl, 76801 ; 16
+            add hl, de ; 4
+            jr z, right_fill_cont ; 8/9
+                cp a, (hl) ; 8
+                jr nc, right_fill_cont ; 8/9
+                    ld (hl), a ; 9
+                    ld (ix + 1), c ; 14
+            right_fill_cont:
+            dec hl ; 4
+            cp a, (hl) ; 8
+            jr nc, left_fill_cont ; 8/9
+                ex de, hl ; 4
+                ld (de), a ; 9
+                ld (hl), c ; 9
+            left_fill_cont:
+            ld c, (iy + x0) ; 16
+            ld d, a ; 4
         fill_cont:
-        or a, a ; 1
-        fill_lower_cont:
-        ; Test if x0 == x1
-        ld hl, (iy + x1) ; 5
-        ld bc, (iy + x0) ; 6
-        sbc hl, bc ; 2
-        ; If x0 != x1, move on
-        jr nz, end_cont ; 2/3
-            ; Else, test if y0 == y1
-            ld hl, (iy + y0) ; 5
-            ld de, (iy + y1) ; 5
-            sbc hl, de ; 2
-            ; If y0 == y1 as well, jump out of the loop
-            jr z, real_end ; 2/3
-        end_cont:
+        ; Restore polygonZ to A
+        ld a, d ; 4
         ; Grab e2 from the stack
-        pop hl ; 4
+        pop hl ; 16
         ; Compare e2 to dy
-        ld de, (iy + dy) ; 5
-        or a, a ; 1
-        sbc hl, de ; 2
+        ld de, (iy + dy) ; 23
+        or a, a ; 4
+        sbc hl, de ; 8
         ; Restore e2
-        add hl, de
+        add hl, de ; 4
         ; If dy > e2, move on
-        jp m, dy_cont ; 4/5
+        jp m, dy_cont ; 16/17
             ; Add dy to e2
-            add hl, de
-            add hl, de
+            add hl, de ; 4
+            add hl, de ; 4
             ; Add sx to x0
-            ld de, (iy + sx) ; 5
-            add ix, de ; 2
+            ld de, (iy + sx) ; 23
+            add ix, de ; 8
             ; Put e2 into DE and sx into HL
-            ex de, hl ; 1
-            add hl, bc ; 1
-            ld (iy + x0), hl ; 6
+            ex de, hl ; 4
+            add hl, bc ; 4
+            ld (iy + x0), hl ; 18
             ; Check if (the previous) x0 == x1
-            ld hl, (iy + x1) ; 5
-            or a, a ; 1
-            sbc hl, bc ; 2
+            ld hl, (iy + x1) ; 23
+            or a, a ; 4
+            sbc hl, bc ; 8
             ; If x0 == x1, jump out of the loop
-            jr z, real_end ; 2/3
+            jr z, real_end ; 8/9
             ; Restore e2 from DE
-            ex de, hl
+            ex de, hl ; 4
         dy_cont:
         ; Compare e2 to dx
-        dec hl ; 1
-        ld de, (iy + dx) ; 5
-        or a, a ; 1
-        sbc hl, de ; 2
+        dec hl ; 4
+        ld de, (iy + dx) ; 23
+        or a, a ; 4
+        sbc hl, de ; 8
         ; Restore e2
-        inc hl
-        add hl, de
+        inc hl ; 4
+        add hl, de ; 4
         ; If e2 > dx, move on
-        jp p, dx_cont ; 4/5
+        jp p, dx_cont ; 16/17
             ; Add dx to e2
-            add hl, de
-            add hl, de
+            add hl, de ; 4
+            add hl, de ; 4
             ; Save e2 to the stack
-            push hl
+            push hl ; 10
             ; Check if y0 == y1
-            ld hl, (iy + y1) ; 5
-            ld bc, (iy + y0) ; 6
-            or a, a ; 1
-            sbc hl, bc ; 2
+            ld hl, (iy + y1) ; 23
+            ld bc, (iy + y0) ; 24
+            or a, a ; 4
+            sbc hl, bc ; 8
             ; If y0 == y1, jump out of the loop
-            jr z, real_end ; 2/3
+            jr z, real_end ; 8/9
             ; Add sy to y0
-            ld de, (iy + sy) ; 5
-            add ix, de ; 2
-            ex de, hl ; 1
-            add hl, bc ; 1
-            ld (iy + y0), hl ; 6
+            ld de, (iy + sy) ; 23
+            add ix, de ; 8
+            ex de, hl ; 4
+            add hl, bc ; 4
+            ld (iy + y0), hl ; 18
             ; Jump to the beginning of the loop
-            jp new_fillLoop ; 5
+            jp new_fillLoop ; 17
         dx_cont:
         ; Push e2 back onto the stack
-        push hl
+        push hl ; 10
         ; Jump to the beginning of the loop
-        jp new_fillLoop ; 5
+        jp new_fillLoop ; 17
     real_end:
     ld sp, iy
     pop ix

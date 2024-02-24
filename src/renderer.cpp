@@ -246,7 +246,7 @@ void object::generatePoints() {
     const Fixed24 syz2 = sy*z2;
 
     Fixed24 dy = (sx*sum1) + cxy1;
-    if (dz > (Fixed24)40 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+    if (dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
         visible = true;
     }
     Fixed24 sum2 = ((Fixed24)-171.3777608f)/dz;
@@ -255,7 +255,7 @@ void object::generatePoints() {
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
     if (!visible) {
-        if (dz > (Fixed24)40 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)20 && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
@@ -267,7 +267,7 @@ void object::generatePoints() {
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
     if (!visible) {
-        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)20 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
@@ -277,7 +277,7 @@ void object::generatePoints() {
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
     if (!visible) {
-        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)20 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
@@ -289,7 +289,7 @@ void object::generatePoints() {
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
     if (!visible) {
-        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)20 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
@@ -299,7 +299,7 @@ void object::generatePoints() {
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
     if (!visible) {
-        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)20 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
@@ -311,7 +311,7 @@ void object::generatePoints() {
     dy = (sx*sum1) + cxy1;
     dz = (cx*sum1) + nsxy1;
     if (!visible) {
-        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)20 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
@@ -321,7 +321,7 @@ void object::generatePoints() {
     dy = (sx*sum1) + cxy2;
     dz = (cx*sum1) + nsxy2;
     if (!visible) {
-        if (dz > (Fixed24)40 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
+        if (dz > (Fixed24)20 && dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
             visible = true;
         }
     }
@@ -533,7 +533,7 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t norma
     } else {
         bool clipLines = false;
         for (unsigned int i = 0; i < 4; i++) {
-            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 2 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 1) {
+            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 1 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT) {
                 clipLines = true;
                 break;
             }
@@ -581,7 +581,13 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t norma
         int errorY0 = length;
         int tIndex = 0;
         // main body
-        for (int i = -1; i < length; i++) {
+        for (int i = -2; i < length; i++) {
+            if (clipLines) {
+                if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT) && y1 > (GFX_LCD_HEIGHT))))
+                    drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
+            } else {
+                drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
+            }
             while (errorX0 <= 0) {
                 errorX0 += length;
                 x0 += sx0;
@@ -602,12 +608,6 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t norma
                 y1 += sy1;
             }
             errorY1 += dy1;
-            if (clipLines) {
-                if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT) && y1 > (GFX_LCD_HEIGHT))))
-                    drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
-            } else {
-                drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
-            }
             while (tError <= 0 && tIndex < 240) {
                 tError += length;
                 tIndex += 16;

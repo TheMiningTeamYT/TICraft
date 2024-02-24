@@ -2,6 +2,9 @@
 ; because I wrote them before I realized how long instructions truely take
 ; on the TI 84 Plus CE.
 ; This is something that needs to be fixed
+; I just removed the check on each pixel fill loop to see if we're at the end of the line
+; in favor of relying entirely on the checks we do when we advance x or y
+; It seems to be fine so far but it could result in problems down the line
 section .text
 public _drawTextureLineNewA
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
@@ -14,7 +17,6 @@ _drawTextureLineNewA:
     ld sp, hl
     ; BC will be sx
     ld bc, 1
-
     ; Compute dx
     ld hl, (iy + x1)
     ld de, (iy + x0)
@@ -28,6 +30,17 @@ _drawTextureLineNewA:
     sx_cont:
     ; Store sx
     ld (iy + sx), bc
+    ; If x1 != x0, continue
+    jr nz, zero_cont
+        ; Else, check if y1 == y0
+        ex de, hl
+            ld hl, (iy + y1)
+            ld bc, (iy + y0)
+            sbc hl, bc
+            ; If y1 == y0, don't render anything
+            jp z, real_end
+        ex de, hl
+    zero_cont:
     ; Compute abs(dx)
     call abs
     ; Store dx
@@ -36,8 +49,6 @@ _drawTextureLineNewA:
     ld bc, 320
     ; Compute dy
     ld hl, (iy + y1)
-    dec hl
-    ld (iy + y1), hl
     ld de, (iy + y0)
     or a, a
     sbc hl, de
@@ -54,9 +65,6 @@ _drawTextureLineNewA:
     push hl
     ; Negate hl
     ex de, hl
-    or a, a
-    sbc hl, hl
-    sbc hl, de
     ; Store hl to dy
     ld (iy + dy), hl
     ; Load dx
@@ -76,17 +84,6 @@ _drawTextureLineNewA:
     ; At this point dx or dy (whichever has a bigger absolute value) is in hl
     ; push hl to the stack
     push hl
-    or a, a
-    sbc hl, hl
-    ; But first, some other stuff
-    ; offset x0 & x1 by gfx_vram
-    ld de, $D40000
-    ld hl, (iy + x0)
-    add hl, de
-    ld (iy + x0), hl
-    ld hl, (iy + x1)
-    add hl, de
-    ld (iy + x1), hl
     ; Pre-multiply y0 & y1
     ld de, (iy + y0)
     ; 44 cycles to multiply any number in DE by 320
@@ -120,27 +117,34 @@ _drawTextureLineNewA:
     ld a, (iy + polygonZ)
     ; Init the alternate register set
     exx
-        pop de
+        pop bc
+        ld d, 16
         ex af, af'
+            shiftLength:
             xor a, a
-            or a, e
+            or a, b
+            jr z, lengthShiftCont
+            srl d
+            srl b
+            rr c
+            jr shiftLength
+            lengthShiftCont:
+            or a, c
             jr nz, lengthNotZero
                 inc a
-                inc e
             lengthNotZero:
+            ld e, a
         ex af, af'
         ld c, (iy + colorOffset)
         inc c
         ld hl, (iy + texture)
-        ld b, (hl)
-        ld d, 16
     exx
     ; At this point, all our registers/variables should be initialized
     ; a': texture error
     ; b': texel value
     ; c': color offset
-    ; d': 8
-    ; e': (length of the textured line being drawn)/2
+    ; d': shifted texture length
+    ; e': shifted length of the textured line being drawn
     ; hl': texture pointer
     ; a: polygonZ
     while_offscreen:
@@ -155,51 +159,35 @@ _drawTextureLineNewA:
     sbc hl, de ; 8
     jr c, update_x_y ; 8/9
 
-    ; check to make sure that x isn't off the screen to the right
+    ; check to make sure that x isn't off the screen to the left or right
     ; if it is, move x/y and try again
-    ld hl, $D4013F ; 16
+    ld hl, 319 ; 16
     sbc hl, bc ; 8
     jr c, update_x_y ; 8/9
-
-    ; check to make sure that x isn't off the screen to the left
-    ; if it is, move x/y and try again
-    ld hl, $D3FFFF ; 16
-    sbc hl, bc ; 8
-    jr nc, update_x_y ; 8/9
 
     exx ; 4
         ld b, (hl) ; 9-17-208 cycles (depending on flash wait states)
     exx ; 4
     ex af, af' ; 4
-        ld ix, (iy + x0) ; 24
+        ld ix, $D40000 ; 20
+        add ix, bc ; 8
         add ix, de ; 8
     ex af, af' ; 4
 
-    jr z, line_ends_off_screen_jump ; 8/9
+    jr z, line_ends_off_screen ; 8/9
 
-    ld hl, $D4013E ; 16
-    or a, a ; 4
-    sbc hl, bc ; 8
-    jr c, line_ends_off_screen_jump ; 8/9
+    add hl, bc ; 4
+    ld bc, (iy + x1) ; 24
+    scf ; 4
+    sbc hl, bc ; 8/9
+    jr c, line_ends_off_screen ; 8/9
 
     ld hl, 76479 ; 16
     ld de, (iy + y1) ; 23
     sbc hl, de ; 8
-    jr c, line_ends_off_screen_jump ; 8/9
-
-    ld de, (iy + x1) ; 23
-    ld hl, $D4013E ; 16
-    sbc hl, de ; 2
     jr c, line_ends_off_screen ; 8/9
-
-    ld hl, $D40000 ; 16
-    sbc hl, de ; 8
-    jr nc, line_ends_off_screen ; 8/9
     
     jp line_ends_on_screen ; 17
-    
-line_ends_off_screen_jump:
-    jr line_ends_off_screen ; 9
 update_x_y:
     ; Advance the texture pointer
     exx ; 4
@@ -213,22 +201,11 @@ update_x_y:
             textureCont:
         ex af, af' ; 4
     exx ; 4
-    ; Test if x0 == x1
-    ld hl, (iy + x1) ; 5
-    or a, a ; 1
-    sbc hl, bc ; 2
-    ; If x0 != x1, move on
-    jr nz, end_cont ; 2/3
-        ; Else, test if y0 == y1
-        ld hl, (iy + y1) ; 5
-        sbc hl, de ; 2
-        ; If x0 == x1 as well, jump out of the loop
-        jr z, real_end ; 2/3
-    end_cont:
     ; Grab e2 from the stack
     pop hl
     ; Compare e2 to dy
     ld de, (iy + dy) ; 5
+    or a, a ; 4
     sbc hl, de ; 2
     ; Restore e2
     add hl, de
@@ -291,82 +268,76 @@ update_x_y:
     ei
     ret
 line_ends_off_screen:
-    ; Save polygonZ to B
-    ld b, a
+    ; Save polygonZ to D
+    ld d, a ; 4
     ; Load the texel value and advance the texture pointer
-    exx ; 1
+    exx ; 4
         ; Load the texel value
-        ld a, b ; 2
+        ld a, b ; 4
         ; Add the color offset to the pixel
-        add a, c ; 1
-        ex af, af' ; 1
-            sub a, d
-            jr nc, textureCont_off
+        add a, c ; 4
+        ex af, af' ; 4
+            sub a, d ; 4
+            jr nc, textureCont_off ; 8/9
                 moveTexturePointer_off:
-                inc hl
-                add a, e
-                jr nc, moveTexturePointer_off
-                ld b, (hl)
+                inc hl ; 4
+                add a, e ; 4
+                jr nc, moveTexturePointer_off ; 8/9
+                ld b, (hl) ; 9 - 208 cycles (depending on flash) (most likely: 9, 10, or 17 cycles)
             textureCont_off:
-        ex af, af'
-    exx ; 1
-    ; Save the pixel value to E and restore polygonZ to A
-    ld e, a
-    ld a, b
+        ex af, af' ; 4
+    exx ; 4
+    ; Load x0 into BC
     ld bc, (iy + x0) ; 24
     ; If the texel is 255 (the transparency color), skip drawing the pixel
-    jr c, fill_cont_off ; 2/3
+    jr c, fill_cont_off ; 8/9
         ; check to make sure that x isn't off the screen to the left or right
         ; if it is, don't draw the pixel
         ; also used to make sure we don't draw off the screen
-        dec e ; 1
-        ex af, af'
-            ld hl, $D4013F ; 4
-            or a, a
-            sbc hl, bc ; 2
-            jr c, real_end ; 2/3
-        ex af, af'
-        ld hl, $D3FFFF
-        sbc hl, bc
-        jr nc, real_end
-        ld c, e
-        lea de, ix + 1
-        ld hl, 76799
-        add hl, de
-        jr z, left_fill_cont_off
-            cp a, (hl)
+        inc bc ; 4
+        ex af, af' ; 4
+            ld hl, 320 ; 16
+            or a, a ; 4
+            sbc hl, bc ; 8
+            jr c, real_end ; 8/9
+        ex af, af' ; 4
+        dec a ; 4
+        ld e, a ; 4
+        ld a, b ; 4
+        or a, c ; 4
+        dec bc ; 4
+        ld c, e ; 4
+        ld a, d ; 4
+        lea de, ix + 1 ; 12
+        ld hl, 76799 ; 16
+        add hl, de ; 4
+        jr z, left_fill_cont_off_2 ; 8/9
+            cp a, (hl) ; 8
             jr nc, left_fill_cont_off
-                ld (hl), a
-                ld (ix), c
+                ld (hl), a ; 4
+                ld (ix), c ; 14
         left_fill_cont_off:
-        ex af, af'
-            jr z, right_fill_cont_off
-        ex af, af'
-        inc hl
-        cp a, (hl)
-        jr nc, fill_cont_off_2
-            ex de, hl
-            ld (de), a
-            ld (hl), c
-            ex af, af'
+        ex af, af' ; 4
+            jr z, right_fill_cont_off ; 8/9
+        ex af, af' ; 4
+        left_fill_cont_off_2:
+        inc hl ; 4
+        cp a, (hl) ; 8
+        jr nc, fill_cont_off_2 ; 8/9
+            ex de, hl ; 4
+            ld (de), a ; 9
+            ld (hl), c ; 9
+            ld c, (iy + x0) ; 16
+            jr fill_cont_off_3
         right_fill_cont_off:
-        ex af, af'
+        ex af, af' ; 4
         fill_cont_off_2:
         ld c, (iy + x0) ; 16
+        ld d, a ; 4
     fill_cont_off:
-    or a, a
-    ; Test if x0 == x1
-    ld hl, (iy + x1) ; 5
-    sbc hl, bc ; 2
-    ; If x0 != x1, move on
-    jr nz, end_cont_off ; 2/3
-        ; Else, test if y0 == y1
-        ld hl, (iy + y0) ; 5
-        ld de, (iy + y1) ; 5
-        sbc hl, de ; 2
-        ; If y0 == y1 as well, jump out of the loop
-        jr z, real_end ; 2/3
-    end_cont_off:
+    ; Restore polygonZ to A
+    ld a, d
+    fill_cont_off_3:
     ; Grab e2 from the stack
     pop hl ; 4
     ; Compare e2 to dy
@@ -440,8 +411,8 @@ line_ends_off_screen:
     real_end_off:
     jp real_end ; 5
 line_ends_on_screen:
-    ; Save polygonZ to B
-    ld b, a
+    ; Save polygonZ to D
+    ld d, a
     ; Load the texel value and advance the texture pointer
     exx ; 1
         ; Load the texel value
@@ -459,43 +430,37 @@ line_ends_on_screen:
             textureCont_on:
         ex af, af'
     exx ; 1
-    ; Save the pixel value to C and restore polygonZ to A
-    ld c, a
-    ld a, b
-    ; If the texel is 255 (the transparency color), skip drawing the pixel
-    jr c, fill_cont_on ; 2/3
-        dec c ; 1
-        lea de, ix + 1 ; 3
-        ld hl, 76799 ; 4
-        add hl, de ; 1
-        cp a, (hl) ; 2
-        jr nc, fill_upper_cont_on ; 2/3
-            ld (hl), a ; 2
-            ld (ix), c ; 4
-        fill_upper_cont_on:
-        inc hl ; 1
-        cp a, (hl) ; 2
-        jr nc, fill_lower_cont_on ; 2/3
-            ex de, hl
-            ld (de), a ; 2
-            ld (hl), c
-    fill_cont_on:
-    or a, a ; 1
-    fill_lower_cont_on:
-    ; Test if x0 == x1
-    ld hl, (iy + x1) ; 5
+    ; Load x0 into BC
     ld bc, (iy + x0) ; 6
-    sbc hl, bc ; 2
-    ; If x0 != x1, move on
-    jr nz, end_cont_on ; 2/3
-        ; Else, test if y0 == y1
-        ld hl, (iy + y0) ; 5
-        ld de, (iy + y1)
-        sbc hl, de ; 2
-        ; If y0 == y1 as well, jump out of the loop
-        jr z, real_end_on ; 2/3
-    end_cont_on:
-   ; Grab e2 from the stack
+    ; If the texel is 255 (the transparency color), skip drawing the pixel
+    jr c, fill_cont_on ; 8/9
+        dec a ; 4
+        ld hl, (iy + x1) ; 23
+        sbc hl, bc ; 8
+        ld c, a ; 4
+        ld a, d ; 4
+        lea de, ix ; 12
+        ld hl, 76801 ; 16
+        add hl, de ; 4
+        jr z, right_fill_cont_on ; 8/9
+            cp a, (hl) ; 8
+            jr nc, right_fill_cont_on ; 8/9
+                ld (hl), a ; 9
+                ld (ix + 1), c ; 14
+        right_fill_cont_on:
+        dec hl ; 4
+        cp a, (hl) ; 8
+        jr nc, left_fill_cont_on ; 8/9
+            ex de, hl ; 4
+            ld (de), a ; 9
+            ld (hl), c ; 9
+        left_fill_cont_on:
+        ld c, (iy + x0) ; 16
+        ld d, a ; 4
+    fill_cont_on:
+    ; Restore polygonZ to A
+    ld a, d ; 4
+    ; Grab e2 from the stack
     pop hl
     ; Compare e2 to dy
     ld de, (iy + dy) ; 5
