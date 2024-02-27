@@ -1,5 +1,6 @@
 section .text
 assume adl = 1
+; Work In Progress
 public ___ZN6object14generatePointsEv
 ___ZN6object14generatePointsEv:
     ; save ix to the stack
