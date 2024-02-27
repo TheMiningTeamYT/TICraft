@@ -15,7 +15,7 @@ section .text
 ; An implementation of Bresenham's line algorithm based on the psuedo-code from Wikipedia
 ; https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 public _drawTextureLineNewA_NoClip
-; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset 
+; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
 _drawTextureLineNewA_NoClip:
     di
     push ix
