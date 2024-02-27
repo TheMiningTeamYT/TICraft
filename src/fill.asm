@@ -15,7 +15,7 @@ section .text
 ; An implementation of Bresenham's line algorithm based on the psuedo-code from Wikipedia
 ; https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 public _drawTextureLineNewA_NoClip
-; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
+; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset 
 _drawTextureLineNewA_NoClip:
     di
     push ix
@@ -362,6 +362,7 @@ approx_sqrt_a:
         ret
     log_less_than_8:
     pop de
+    ; Carry flag is always set by the time we get here, so this sets HL to -1
     sbc hl, hl
     add hl, sp
     ld a, e
