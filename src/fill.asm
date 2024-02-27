@@ -1,4 +1,5 @@
 section .text
+; Thanks Runer112 on Cemetech!
 ; Source: https://www.cemetech.net/forum/viewtopic.php?t=11178&start=0
 section .text
 public abs
