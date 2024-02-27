@@ -1696,7 +1696,6 @@ BB12_8:
 	section	.text,"ax",@progbits
 	public	_close_USB
 _close_USB:
-	call	_usb_WaitForEvents
 	ld	iy, (_global)
 	ld	de, 1796
 	lea	hl, iy
@@ -4118,6 +4117,7 @@ BB26_15:
 	jr	z, BB26_17
 	call	__Z4loadv
 	ld	bc, 0
+	xor	a, a
 	jp	BB26_22
 BB26_17:
 	ld.sis	hl, 20
@@ -4163,6 +4163,7 @@ BB26_17:
 	or	a, a
 	sbc	hl, bc
 	ld	bc, 0
+	ld	a, b
 	jp	nc, BB26_22
 	push	bc
 	pop	de
@@ -4184,6 +4185,7 @@ BB26_19:
 	ld	hl, 57
 	push	hl
 	call	__Znwj
+	xor	a, a
 	push	hl
 	pop	iy
 	pop	hl
@@ -4207,7 +4209,7 @@ BB26_19:
 	ld	(iy + 41), d
 	ld	(iy + 46), e
 	ld	(iy + 47), d
-	ld	(iy + 55), d
+	ld	(iy + 55), a
 	ld.sis	bc, 20
 	call	__smulu
 	ld	(iy + 49), l
@@ -4219,7 +4221,7 @@ BB26_19:
 	ld	(iy + 53), l
 	ld	(iy + 54), h
 	ld	(iy + 48), 10
-	ld	(iy + 56), b
+	ld	(iy + 56), a
 	ld	de, (_numberOfObjects)
 	push	de
 	pop	hl
@@ -4245,6 +4247,7 @@ BB26_21:
 	ld	bc, 0
 	jp	nz, BB26_19
 BB26_22:
+	ld	(_fineMovement), a
 	;APP
 	di
 	assume	adl = 1
@@ -9940,16 +9943,14 @@ BB35_2:
 	ld	hl, (ix - 6)
 	add	hl, de
 	ld	(ix - 6), hl
+	ld	de, 13
 	ld	hl, (ix - 3)
 	ld	c, 2
 	call	__ishrs
-	push	hl
-	pop	de
+	ld	iy, (ix - 21)
+	ld	(iy + 7), hl
 	ld	hl, (ix - 9)
 	call	__ishrs
-	ld	iy, (ix - 21)
-	ld	(iy + 7), de
-	ld	de, 13
 	ld	(iy + 10), hl
 	ld	hl, (ix - 6)
 	ld	(iy + 4), hl
@@ -16052,7 +16053,6 @@ BB55_24:
 	push	hl
 	call	_free
 	pop	hl
-	call	_usb_WaitForEvents
 	ld	iy, (_global)
 	lea	hl, iy
 	ld	de, 1796
@@ -16191,7 +16191,6 @@ BB55_30:
 	or	a, a
 	jr	z, BB55_30
 BB55_31:
-	call	_usb_WaitForEvents
 	ld	iy, (_global)
 	lea	hl, iy
 	ld	de, 1796
@@ -16575,7 +16574,7 @@ __Z9checkSavePKcb:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 45
+	lea	hl, ix - 47
 	ld	sp, hl
 	lea	hl, ix - 32
 	ld	(ix - 35), hl
@@ -16587,8 +16586,8 @@ __Z9checkSavePKcb:
 	jp	z, BB57_9
 	call	_init_USB
 	bit	0, a
-	ld	hl, 0
-	ld	c, h
+	ld	bc, 0
+	ld	l, b
 	jp	z, BB57_18
 	ld	hl, (ix + 6)
 	push	hl
@@ -16618,6 +16617,7 @@ __Z9checkSavePKcb:
 	ld	hl, _.str.116
 	push	hl
 	call	_openFile
+	xor	a, a
 	push	hl
 	pop	de
 	ld	hl, 9
@@ -16629,8 +16629,9 @@ __Z9checkSavePKcb:
 	or	a, a
 	sbc	hl, bc
 	ld	hl, 0
-	ld	a, h
-	ld	c, a
+	push	hl
+	pop	bc
+	ld	l, a
 	jp	z, BB57_18
 	ld	(ix - 44), de
 	push	de
@@ -16665,7 +16666,7 @@ BB57_7:
 	ld	a, iyl
 	call	__ladd
 	ld	(ix - 41), hl
-	ld	(ix - 45), e
+	ld	(ix - 47), e
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -16682,7 +16683,7 @@ BB57_7:
 	ld	hl, (ix - 44)
 	push	hl
 	call	_fat_ReadFile
-	ld	e, (ix - 45)
+	ld	e, (ix - 47)
 	ld	iy, (ix - 41)
 	push	hl
 	pop	bc
@@ -16723,7 +16724,7 @@ BB57_9:
 	ld	hl, -2806784
 	push	hl
 	call	_ti_Read
-	ld	(ix - 38), hl
+	ld	(ix - 47), hl
 	ld	hl, 12
 	add	hl, sp
 	ld	sp, hl
@@ -16734,7 +16735,7 @@ BB57_9:
 	ld	e, l
 	ld	d, h
 	pop	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 47)
 	ld	(ix - 44), de
 	or	a, a
 	sbc	hl, de
@@ -16744,10 +16745,10 @@ BB57_9:
 BB57_12:
 	ld	a, 1
 BB57_13:
+	ld	(ix - 38), a
 	ld	iy, 0
 	ld	bc, (ix - 41)
-	ld	hl, (ix - 38)
-	ld	(ix - 38), a
+	ld	hl, (ix - 47)
 	ld	de, (ix - 44)
 	or	a, a
 	sbc	hl, de
@@ -16791,17 +16792,16 @@ BB57_17:
 	push	hl
 	call	_free
 	pop	hl
-	ld	hl, (ix - 41)
-	ld	c, (ix - 38)
+	ld	bc, (ix - 41)
+	ld	l, (ix - 38)
 BB57_18:
-	ld	(ix - 38), c
-	ld	(ix - 41), hl
-	call	_usb_WaitForEvents
+	ld	(ix - 38), l
 	ld	iy, (_global)
 	ld	de, 1796
 	lea	hl, iy
 	add	hl, de
 	bit	0, (hl)
+	ld	(ix - 41), bc
 	jr	z, BB57_20
 	ld	de, 1027
 	add	iy, de
@@ -18438,7 +18438,6 @@ BB60_24:
 	or	a, a
 	jr	z, BB60_24
 BB60_25:
-	call	_usb_WaitForEvents
 	ld	iy, (_global)
 	lea	hl, iy
 	ld	de, 1796
@@ -19603,7 +19602,6 @@ BB63_11:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	call	_usb_WaitForEvents
 	ld	iy, (_global)
 	ld	de, 1796
 	lea	hl, iy
@@ -20766,11 +20764,6 @@ _.str.44:
 	public	_zSortedObjects
 _zSortedObjects:
 	rb	3000
-
-	section	.bss,"aw",@nobits
-	public	_buffer
-_buffer:
-	rb	200
 
 	section	.bss,"aw",@nobits
 	public	_outOfBoundsPolygons

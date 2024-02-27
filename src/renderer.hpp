@@ -240,8 +240,8 @@ void drawRectangle(int x, int y, int width, int height, uint16_t color);
 void redrawScreen();
 
 extern "C" {
-    void drawTextureLineNewA(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t z);
-    void drawTextureLineNewA_NoClip(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t z);
+    void drawTextureLineNewA(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t polygonZ);
+    void drawTextureLineNewA_NoClip(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t polygonZ);
     uint16_t approx_sqrt_a(unsigned int n);
     void shadeScreen();
 }

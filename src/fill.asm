@@ -1,17 +1,18 @@
 section .text
-assume adl = 1
-; stole some code from people on a forum
+; Source: https://www.cemetech.net/forum/viewtopic.php?t=11178&start=0
 section .text
 public abs
 abs:
-    ex de, hl ; 1
-    or a, a ; 1
-    sbc hl, hl ; 2
-    sbc hl, de ; 2
-    ret p ; 2/6
-    ex de, hl ; 1
-    ret ; 6
+    ex de, hl ; 4
+    or a, a ; 4
+    sbc hl, hl ; 8
+    sbc hl, de ; 8
+    ret p ; 5/19
+    ex de, hl ; 4
+    ret ; 18
 section .text
+; An implementation of Bresenham's line algorithm based on the psuedo-code from Wikipedia
+; https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 public _drawTextureLineNewA_NoClip
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
 _drawTextureLineNewA_NoClip:
@@ -163,15 +164,18 @@ _drawTextureLineNewA_NoClip:
                 textureCont:
             ex af, af' ; 4
         exx ; 4
+        ; Save the pixel value to E
+        ld e, a ; 4
+        ; Restore polygonZ to A
+        ld a, d ; 4
         ; Load x0 into BC
         ld bc, (iy + x0) ; 24
         ; If the texel is 255 (the transparency color), skip drawing the pixel
         jr c, fill_cont ; 8/9
-            dec a ; 4
+            dec e ; 4
             ld hl, (iy + x1) ; 23
             sbc hl, bc ; 8
-            ld c, a ; 4
-            ld a, d ; 4
+            ld c, e ; 4
             lea de, ix ; 12
             ld hl, 76801 ; 16
             add hl, de ; 4
@@ -189,10 +193,7 @@ _drawTextureLineNewA_NoClip:
                 ld (hl), c ; 9
             left_fill_cont:
             ld c, (iy + x0) ; 16
-            ld d, a ; 4
         fill_cont:
-        ; Restore polygonZ to A
-        ld a, d ; 4
         ; Grab e2 from the stack
         pop hl ; 16
         ; Compare e2 to dy
@@ -251,7 +252,7 @@ _drawTextureLineNewA_NoClip:
             add hl, bc ; 4
             ld (iy + y0), hl ; 18
             ; Jump to the beginning of the loop
-            jp new_fillLoop ; 17
+            jr new_fillLoop ; 9
         dx_cont:
         ; Push e2 back onto the stack
         push hl ; 10

@@ -221,7 +221,6 @@ void deleteFile(const char* sourcePath, const char* sourceName) {
 }
 
 void close_USB() {
-    usb_WaitForEvents();
     if (global->fatInit == true) {
         fat_Close(&global->fat);
     }

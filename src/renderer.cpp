@@ -25,9 +25,6 @@ still thinking about how to do it
 object* objects[maxNumberOfObjects];
 object* zSortedObjects[maxNumberOfObjects];
 
-// Buffer for creating diagnostic strings
-char buffer[200];
-
 unsigned int numberOfObjects = 0;
 
 unsigned int outOfBoundsPolygons = 0;
@@ -79,7 +76,7 @@ void object::generatePolygons() {
         for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
             // Set the polygon's distance from the camera
             polygon* polygon = &cubePolygons[polygonNum];
-            int z = 0;
+            unsigned int z = 0;
             int totalX = 0;
             int totalY = 0;
             for (uint8_t i = 0; i < 4; i++) {
@@ -87,10 +84,8 @@ void object::generatePolygons() {
                 totalY += renderedPoints[polygon->points[i]].y;
                 z += renderedPoints[polygon->points[i]].z;
             }
-            totalX >>= 2;
-            totalY >>= 2;
-            polygon->x = totalX;
-            polygon->y = totalY;
+            polygon->x = totalX >> 2;
+            polygon->y = totalY >> 2;
             polygon->z = z;
         }
         // Sort the polygons by distance from the camera, front to back
@@ -342,10 +337,9 @@ void object::moveTo(int newX, int newY, int newZ) {
 }
 
 int object::getDistance() {
-    if (renderedPoints[0].z != 0) {
-        return renderedPoints[0].z;
+    if (renderedPoints[0].z == 0) {
+        renderedPoints[0].z = getPointDistance({x, y, z});
     }
-    renderedPoints[0].z = getPointDistance({x, y, z});
     return renderedPoints[0].z;
 }
 
@@ -400,6 +394,8 @@ void drawScreen(bool fullRedraw) {
     // Print some diagnostic information
     #if diagnostics == true
     if (mode == 0) {
+        // Buffer for creating diagnostic strings
+        char buffer[200];
         snprintf(buffer, 200, "Out of bounds polygons: %u", outOfBoundsPolygons);
         gfx_PrintString(buffer);
         gfx_SetTextXY(0, gfx_GetTextY() + 10);
@@ -423,93 +419,6 @@ void drawScreen(bool fullRedraw) {
 // as noted in The Science Elf's original video, affine texture mapping can look very weird on triangles
 // but on quads, it looks pretty good at a fraction of the cost
 // idea: integrate this into generatePolygons instead of having it as a seperate function
-/*
-void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t normalizedZ) {
-    // Quick shorthand
-    #define points preparedPolygon->points
-    // Another useful shorthand
-    screenPoint renderedPoints[] = {sourceObject->renderedPoints[points[0]], sourceObject->renderedPoints[points[1]], sourceObject->renderedPoints[points[2]], sourceObject->renderedPoints[points[3]]};
-    // result of memory optimization
-    const uint8_t* texture = textures[sourceObject->texture][preparedPolygon->polygonNum];
-
-    // uint8_t* points = polygon.points;
-    if (sourceObject->outline) {
-        gfx_SetDrawScreen();
-        gfx_SetColor(outlineColor);
-        for (uint8_t i = 0; i < 4; i++) {
-            uint8_t nextPoint = i + 1;
-            if (nextPoint > 3) {
-                nextPoint = 0;
-            }
-            gfx_Line(renderedPoints[i].x, renderedPoints[i].y, renderedPoints[nextPoint].x, renderedPoints[nextPoint].y);
-        }
-    } else {
-        bool clipLines = false;
-        for (unsigned int i = 0; i < 4; i++) {
-            if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 2 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT - 1) {
-                clipLines = true;
-                break;
-            }
-        }
-        uint8_t colorOffset = 0;
-        if (preparedPolygon->polygonNum == 2 || preparedPolygon->polygonNum == 5) {
-            colorOffset = 126;
-        }
-        // Generate the lines from the points of the polygon
-        Fixed24 dx1 = renderedPoints[3].x - renderedPoints[0].x;
-        Fixed24 dy1 = renderedPoints[3].y - renderedPoints[0].y;
-        Fixed24 dx2 = renderedPoints[2].x - renderedPoints[1].x;
-        Fixed24 dy2 = renderedPoints[2].y - renderedPoints[1].y;
-        int length1 = (abs(dx1) > abs(dy1)) ? abs(dx1) : abs(dy1);
-        int length2 = (abs(dx2) > abs(dy2)) ? abs(dx2) : abs(dy2);
-        int length = (length1 > length2) ? length1 : length2;
-        length++;
-
-        // Ratios that make the math faster (means we can multiply instead of divide)
-        const Fixed24 reciprocalOfLength = (Fixed24)1/(Fixed24)length;
-        
-        Fixed24 textureRatio = reciprocalOfLength;
-        textureRatio.n <<=4;
-        textureRatio.n--;
-        Fixed24 row = 0;
-        Fixed24 lineCX = renderedPoints[0].x;
-        Fixed24 linePX = renderedPoints[1].x;
-        Fixed24 lineCY = renderedPoints[0].y;
-        Fixed24 linePY = renderedPoints[1].y;
-        Fixed24 CXdiff = dx1*reciprocalOfLength;
-        Fixed24 CYdiff = dy1*reciprocalOfLength;
-        Fixed24 PXdiff = dx2*reciprocalOfLength;
-        Fixed24 PYdiff = dy2*reciprocalOfLength;
-
-        // main body
-        if (clipLines) {
-            for (int i = 0; i < length; i++) {
-                if (!((lineCX < (Fixed24)0 && linePX < (Fixed24)0) || (lineCX > (Fixed24)(GFX_LCD_WIDTH - 1) && linePX > (Fixed24)(GFX_LCD_WIDTH - 1))) && !((lineCY < (Fixed24)0 && linePY < (Fixed24)0) || (lineCY > (Fixed24)(GFX_LCD_HEIGHT - 1) && linePY > (Fixed24)(GFX_LCD_HEIGHT - 1))))
-                    drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[(row.floor())*16], colorOffset, normalizedZ);
-                lineCX += CXdiff;
-                linePX += PXdiff;
-                lineCY += CYdiff;
-                linePY += PYdiff;
-                row += textureRatio;
-            }
-        } else {
-            for (int i = 0; i < length; i++) {
-                drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[(row.floor())*16], colorOffset, normalizedZ);
-                lineCX += CXdiff;
-                linePX += PXdiff;
-                lineCY += CYdiff;
-                linePY += PYdiff;
-                row += textureRatio;
-            }
-        }
-        if (clipLines) {
-            drawTextureLineNewA(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, normalizedZ);
-        } else {
-            drawTextureLineNewA_NoClip(lineCX, linePX, lineCY, linePY, &texture[240], colorOffset, normalizedZ);
-        }
-    }
-}
-*/
 
 void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t normalizedZ) {
     // Quick shorthand

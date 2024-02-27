@@ -43,7 +43,7 @@ void drawTexturePackSelection(texturePack* pack, int row, bool selected);
 bool verifyTexturePack(packEntry pack);
 void exitOverlay(int code) {memset((void*) 0xD031F6, 0, 69090); exit(code);};
 
-bool fineMovement = false;
+bool fineMovement;
 
 int main() {
     os_ClrHomeFull();
@@ -158,6 +158,7 @@ int main() {
         } else {
             load();
         }
+        fineMovement = false;
         __asm__ ("di");
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             objects[i]->generatePoints();

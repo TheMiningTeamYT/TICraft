@@ -6,6 +6,8 @@
 ; in favor of relying entirely on the checks we do when we advance x or y
 ; It seems to be fine so far but it could result in problems down the line
 section .text
+; An implementation of Bresenham's line algorithm based on the psuedo-code from Wikipedia
+; https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 public _drawTextureLineNewA
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
 _drawTextureLineNewA:
@@ -161,24 +163,27 @@ _drawTextureLineNewA:
 
     ; check to make sure that x isn't off the screen to the left or right
     ; if it is, move x/y and try again
-    ld hl, 319 ; 16
+    inc bc ; 4
+    ld hl, 320 ; 16
     sbc hl, bc ; 8
+    dec bc ; 4
     jr c, update_x_y ; 8/9
 
     exx ; 4
         ld b, (hl) ; 9-17-208 cycles (depending on flash wait states)
     exx ; 4
     ex af, af' ; 4
-        ld ix, $D40000 ; 20
+        ld ix, gfx_vram ; 20
         add ix, bc ; 8
         add ix, de ; 8
     ex af, af' ; 4
 
-    jr z, line_ends_off_screen ; 8/9
+    ld hl, 318 ; 16
+    sbc hl, bc ; 8
+    jr c, line_ends_off_screen ; 8/9
 
     add hl, bc ; 4
     ld bc, (iy + x1) ; 24
-    scf ; 4
     sbc hl, bc ; 8/9
     jr c, line_ends_off_screen ; 8/9
 
@@ -202,71 +207,71 @@ update_x_y:
         ex af, af' ; 4
     exx ; 4
     ; Grab e2 from the stack
-    pop hl
+    pop hl ; 16
     ; Compare e2 to dy
-    ld de, (iy + dy) ; 5
+    ld de, (iy + dy) ; 23
     or a, a ; 4
-    sbc hl, de ; 2
+    sbc hl, de ; 8
     ; Restore e2
-    add hl, de
+    add hl, de ; 4
     ; If dy > e2, move on
-    jp m, dy_cont ; 4/5
+    jp m, dy_cont ; 16/17
         ; Add dy to e2
-        add hl, de
-        add hl, de
+        add hl, de ; 4
+        add hl, de ; 4
         ; Save e2 to DE
-        ex de, hl
+        ex de, hl ; 4
         ; Check if x0 == x1
-        ld hl, (iy + x1) ; 5
-        or a, a ; 1
-        sbc hl, bc ; 2
+        ld hl, (iy + x1) ; 23
+        or a, a ; 4
+        sbc hl, bc ; 8
         ; If x0 == x1, jump out of the loop
-        jr z, real_end ; 2/3
+        jr z, real_end ; 8/9
         ; Add sx to x0
-        ld hl, (iy + sx) ; 5
-        add hl, bc ; 1
-        ld (iy + x0), hl ; 6
+        ld hl, (iy + sx) ; 23
+        add hl, bc ; 4
+        ld (iy + x0), hl ; 18
         ; Restore e2 from DE
-        ex de, hl
+        ex de, hl ; 4
     dy_cont:
-    dec hl ; 1
+    dec hl ; 4
     ; Compare e2 to dx
-    ld de, (iy + dx) ; 5
-    or a, a ; 1
-    sbc hl, de ; 2
+    ld de, (iy + dx) ; 23
+    or a, a ; 4
+    sbc hl, de ; 8
     ; Restore e2
-    inc hl
-    add hl, de
+    inc hl ; 4
+    add hl, de ; 4
     ; If e2 > dx, move on
-    jp p, dx_cont ; 4/5
+    jp p, dx_cont ; 16/17
         ; Add dx to e2
-        add hl, de
-        add hl, de
+        add hl, de ; 4
+        add hl, de ; 4
         ; Save e2 to the stack
-        push hl
+        push hl ; 10
         ; Check if y0 == y1
-        ld hl, (iy + y1) ; 5
-        ld bc, (iy + y0) ; 6
-        or a, a ; 1
-        sbc hl, bc ; 2
+        ld hl, (iy + y1) ; 23
+        ld bc, (iy + y0) ; 24
+        or a, a ; 4
+        sbc hl, bc ; 8
         ; If y0 == y1, jump out of the loop
-        jr z, real_end ; 2/3
+        jr z, real_end ; 8/9
         ; Add sy to y0
-        ld hl, (iy + sy) ; 5
-        add hl, bc ; 1
-        ld (iy + y0), hl ; 6
+        ld hl, (iy + sy) ; 23
+        add hl, bc ; 4
+        ld (iy + y0), hl ; 18
         ; Jump to the beginning of the loop
-        jp while_offscreen ; 5
+        jp while_offscreen ; 17
     dx_cont:
     ; Push e2 back onto the stack
-    push hl
+    push hl ; 10
     ; Jump to the beginning of the loop
-    jp while_offscreen ; 5
+    jp while_offscreen ; 17
     real_end:
-    ld sp, iy
-    pop ix
-    ei
-    ret
+    ld sp, iy ; 8
+    pop ix ; 20
+    ei ; 4
+    ret ; 18
 line_ends_off_screen:
     ; Save polygonZ to D
     ld d, a ; 4
@@ -287,6 +292,10 @@ line_ends_off_screen:
             textureCont_off:
         ex af, af' ; 4
     exx ; 4
+    ; Save the pixel value to E
+    ld e, a ; 4
+    ; Restore polygonZ to A
+    ld a, d ; 4
     ; Load x0 into BC
     ld bc, (iy + x0) ; 24
     ; If the texel is 255 (the transparency color), skip drawing the pixel
@@ -301,8 +310,7 @@ line_ends_off_screen:
             sbc hl, bc ; 8
             jr c, real_end ; 8/9
         ex af, af' ; 4
-        dec a ; 4
-        ld e, a ; 4
+        dec e ; 4
         ld a, b ; 4
         or a, c ; 4
         dec bc ; 4
@@ -327,118 +335,116 @@ line_ends_off_screen:
             ex de, hl ; 4
             ld (de), a ; 9
             ld (hl), c ; 9
-            ld c, (iy + x0) ; 16
-            jr fill_cont_off_3
+            ex af, af' ; 4
         right_fill_cont_off:
         ex af, af' ; 4
         fill_cont_off_2:
         ld c, (iy + x0) ; 16
-        ld d, a ; 4
     fill_cont_off:
-    ; Restore polygonZ to A
-    ld a, d
-    fill_cont_off_3:
     ; Grab e2 from the stack
-    pop hl ; 4
+    pop hl ; 16
     ; Compare e2 to dy
-    ld de, (iy + dy) ; 5
-    or a, a ; 1
-    sbc hl, de ; 2
+    ld de, (iy + dy) ; 23
+    or a, a ; 4
+    sbc hl, de ; 8
     ; Restore e2
-    add hl, de
+    add hl, de ; 4
     ; If dy > e2, move on
-    jp m, dy_cont_off ; 4/5
+    jp m, dy_cont_off ; 16/17
         ; Add dy to e2
-        add hl, de
-        add hl, de
+        add hl, de ; 4
+        add hl, de ; 4
         ; Add sx to x0
-        ld de, (iy + sx) ; 5
-        add ix, de ; 2
+        ld de, (iy + sx) ; 23
+        add ix, de ; 8
         ; Put e2 into DE and sx into HL
-        ex de, hl ; 1
-        add hl, bc ; 1
-        ld (iy + x0), hl ; 6
+        ex de, hl ; 4
+        add hl, bc ; 4
+        ld (iy + x0), hl ; 18
         ; Check if x0 == x1
-        ld hl, (iy + x1) ; 5
-        or a, a ; 1
-        sbc hl, bc ; 2
+        ld hl, (iy + x1) ; 23
+        or a, a ; 4
+        sbc hl, bc ; 8
         ; If x0 == x1, jump out of the loop
-        jr z, real_end_off ; 2/3
+        jr z, real_end_off ; 8/9
         ; Restore e2 from DE
-        ex de, hl
+        ex de, hl ; 4
     dy_cont_off:
     ; Compare e2 to dx
-    dec hl ; 1
-    ld de, (iy + dx) ; 5
-    or a, a ; 1
-    sbc hl, de ; 2
+    dec hl ; 4
+    ld de, (iy + dx) ; 23
+    or a, a ; 4
+    sbc hl, de ; 8
     ; Restore e2
-    inc hl
-    add hl, de
+    inc hl ; 4
+    add hl, de ; 4
     ; If e2 > dx, move on
-    jp p, dx_cont_off ; 4/5
+    jp p, dx_cont_off ; 16/17
         ; Add dx to e2
-        add hl, de
-        add hl, de
+        add hl, de ; 4
+        add hl, de ; 4
         ; Save e2 to the stack
-        push hl
+        push hl ; 10
         ; Check if y0 == y1
-        ld hl, (iy + y1) ; 5
-        ld bc, (iy + y0) ; 6
-        or a, a ; 1
-        sbc hl, bc ; 2
+        ld hl, (iy + y1) ; 23
+        ld bc, (iy + y0) ; 24
+        or a, a ; 4
+        sbc hl, bc ; 8
         ; If y0 == y1, jump out of the loop
-        jr z, real_end_off ; 2/3
+        jr z, real_end_off ; 8/9
         ; Add sy to y0
-        ld de, (iy + sy) ; 5
-        add ix, de ; 2
-        ex de, hl ; 1
-        add hl, bc ; 1
-        ex de, hl
+        ld de, (iy + sy) ; 23
+        add ix, de ; 8
+        ex de, hl ; 4
+        add hl, bc ; 4
+        ex de, hl ; 4
         ; check to make sure that y isn't off the screen to the top or bottom
         ; if it is, jump out of the loop
-        ld hl, 76480 ; 4
-        sbc hl, de ; 2
-        jr c, real_end_off ; 2/3
-        ld (iy + y0), de ; 6
+        ld hl, 76480 ; 16
+        sbc hl, de ; 8
+        jr c, real_end_off ; 8/9
+        ld (iy + y0), de ; 18
         ; Jump to the beginning of the loop
-        jp line_ends_off_screen ; 5
+        jp line_ends_off_screen ; 17
     dx_cont_off:
     ; Push e2 back onto the stack
-    push hl
+    push hl ; 10
     ; Jump to the beginning of the loop
-    jp line_ends_off_screen ; 5
+    jp line_ends_off_screen ; 17
     real_end_off:
-    jp real_end ; 5
+    jp real_end ; 17
 line_ends_on_screen:
     ; Save polygonZ to D
-    ld d, a
+    ld d, a ; 4
     ; Load the texel value and advance the texture pointer
-    exx ; 1
+    exx ; 4
         ; Load the texel value
-        ld a, b ; 2
+        ld a, b ; 4
         ; Add the color offset to the pixel
-        add a, c ; 1
-        ex af, af' ; 1
-            sub a, d
-            jr nc, textureCont_on
+        add a, c ; 4
+        ex af, af' ; 4
+            sub a, d ; 4
+            jr nc, textureCont_on ; 8/9
                 moveTexturePointer_on:
-                inc hl
-                add a, e
-                jr nc, moveTexturePointer_on
-                ld b, (hl)
+                inc hl ; 4
+                add a, e ; 4
+                jr nc, moveTexturePointer_on ; 8/9
+                ld b, (hl) ; 9 - 208 cycles (depending on flash) (most likely: 9, 10, or 17 cycles)
             textureCont_on:
-        ex af, af'
-    exx ; 1
+        ex af, af' ; 4
+    exx ; 4
+    ; Save the pixel value to E
+    ld e, a ; 4
+    ; Restore polygonZ to A
+    ld a, d ; 4
     ; Load x0 into BC
-    ld bc, (iy + x0) ; 6
+    ld bc, (iy + x0) ; 24
     ; If the texel is 255 (the transparency color), skip drawing the pixel
     jr c, fill_cont_on ; 8/9
-        dec a ; 4
+        dec e ; 4
         ld hl, (iy + x1) ; 23
         sbc hl, bc ; 8
-        ld c, a ; 4
-        ld a, d ; 4
+        ld c, e ; 4
         lea de, ix ; 12
         ld hl, 76801 ; 16
         add hl, de ; 4
@@ -456,76 +462,73 @@ line_ends_on_screen:
             ld (hl), c ; 9
         left_fill_cont_on:
         ld c, (iy + x0) ; 16
-        ld d, a ; 4
     fill_cont_on:
-    ; Restore polygonZ to A
-    ld a, d ; 4
     ; Grab e2 from the stack
-    pop hl
+    pop hl ; 16
     ; Compare e2 to dy
-    ld de, (iy + dy) ; 5
-    or a, a ; 1
-    sbc hl, de ; 2
+    ld de, (iy + dy) ; 23
+    or a, a ; 4
+    sbc hl, de ; 8
     ; Restore e2
-    add hl, de
+    add hl, de ; 4
     ; If dy > e2, move on
-    jp m, dy_cont_on ; 4/5
+    jp m, dy_cont_on ; 16/17
         ; Add dy to e2
-        add hl, de
-        add hl, de
+        add hl, de ; 4
+        add hl, de ; 4
         ; Add sx to x0
-        ld de, (iy + sx) ; 5
-        add ix, de ; 2
+        ld de, (iy + sx) ; 23
+        add ix, de ; 8
         ; Put e2 into DE and sx into HL
-        ex de, hl ; 1
-        add hl, bc ; 1
-        ld (iy + x0), hl ; 6
+        ex de, hl ; 4
+        add hl, bc ; 4
+        ld (iy + x0), hl ; 18
         ; Check if (the previous) x0 == x1
-        ld hl, (iy + x1) ; 5
-        or a, a ; 1
-        sbc hl, bc ; 2
+        ld hl, (iy + x1) ; 23
+        or a, a ; 4
+        sbc hl, bc ; 8
         ; If x0 == x1, jump out of the loop
-        jr z, real_end_on ; 2/3
+        jr z, real_end_on ; 8/9
         ; Restore e2 from DE
-        ex de, hl
+        ex de, hl ; 4
     dy_cont_on:
     ; Compare e2 to dx
-    dec hl ; 1
-    ld de, (iy + dx) ; 5
-    or a, a ; 1
-    sbc hl, de ; 2
+    dec hl ; 4
+    ld de, (iy + dx) ; 23
+    or a, a ; 4
+    sbc hl, de ; 8
     ; Restore e2
-    inc hl
-    add hl, de
+    inc hl ; 4
+    add hl, de ; 4
     ; If e2 > dx, move on
-    jp p, dx_cont_on ; 4/5
+    jp p, dx_cont_on ; 16/17
         ; Add dx to e2
-        add hl, de
-        add hl, de
+        add hl, de ; 4
+        add hl, de ; 4
         ; Save e2 to the stack
-        push hl
+        push hl ; 10
         ; Check if y0 == y1
-        ld hl, (iy + y1) ; 5
-        ld bc, (iy + y0) ; 6
-        or a, a ; 1
-        sbc hl, bc ; 2
+        ld hl, (iy + y1) ; 23
+        ld bc, (iy + y0) ; 24
+        or a, a ; 4
+        sbc hl, bc ; 8
         ; If y0 == y1, jump out of the loop
-        jr z, real_end_on ; 2/3
+        jr z, real_end_on ; 8/9
         ; Add sy to y0
-        ld de, (iy + sy) ; 5
-        add ix, de ; 2
-        ex de, hl ; 1
-        add hl, bc ; 1
-        ld (iy + y0), hl ; 6
+        ld de, (iy + sy) ; 23
+        add ix, de ; 8
+        ex de, hl ; 4
+        add hl, bc ; 4
+        ld (iy + y0), hl ; 18
         ; Jump to the beginning of the loop
-        jp line_ends_on_screen ; 5
+        jr line_ends_on_screen ; 9
     dx_cont_on:
     ; Push e2 back onto the stack
-    push hl
+    push hl ; 10
     ; Jump to the beginning of the loop
-    jp line_ends_on_screen ; 5
+    jp line_ends_on_screen ; 17
     real_end_on:
-    jp real_end ; 5
+    jp real_end ; 17
 section .data
 private gfx_vram
 gfx_vram = $D40000
