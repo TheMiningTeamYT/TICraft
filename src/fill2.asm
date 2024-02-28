@@ -170,7 +170,7 @@ _drawTextureLineNewA:
     jr c, update_x_y ; 8/9
 
     exx ; 4
-        ld b, (hl) ; 9-17-208 cycles (depending on flash wait states)
+        ld b, (hl) ; 6 - 205 cycles (depending on flash) (most likely: 6, 7, or 14 cycles)
     exx ; 4
     ex af, af' ; 4
         ld ix, gfx_vram ; 20
@@ -288,7 +288,7 @@ line_ends_off_screen:
                 inc hl ; 4
                 add a, e ; 4
                 jr nc, moveTexturePointer_off ; 8/9
-                ld b, (hl) ; 9 - 208 cycles (depending on flash) (most likely: 9, 10, or 17 cycles)
+                ld b, (hl) ; 6 - 205 cycles (depending on flash) (most likely: 6, 7, or 14 cycles)
             textureCont_off:
         ex af, af' ; 4
     exx ; 4
@@ -429,7 +429,7 @@ line_ends_on_screen:
                 inc hl ; 4
                 add a, e ; 4
                 jr nc, moveTexturePointer_on ; 8/9
-                ld b, (hl) ; 9 - 208 cycles (depending on flash) (most likely: 9, 10, or 17 cycles)
+                ld b, (hl) ; 6 - 205 cycles (depending on flash) (most likely: 6, 7, or 14 cycles)
             textureCont_on:
         ex af, af' ; 4
     exx ; 4
@@ -451,15 +451,15 @@ line_ends_on_screen:
         jr z, right_fill_cont_on ; 8/9
             cp a, (hl) ; 8
             jr nc, right_fill_cont_on ; 8/9
-                ld (hl), a ; 9
+                ld (hl), a ; 6
                 ld (ix + 1), c ; 14
         right_fill_cont_on:
         dec hl ; 4
         cp a, (hl) ; 8
         jr nc, left_fill_cont_on ; 8/9
             ex de, hl ; 4
-            ld (de), a ; 9
-            ld (hl), c ; 9
+            ld (de), a ; 6
+            ld (hl), c ; 6
         left_fill_cont_on:
         ld c, (iy + x0) ; 16
     fill_cont_on:

@@ -5,9 +5,8 @@ public _fp_mul
 ; bits 8 to 39 of the result and extract the middle 24 bits of that.
 ; This means we do a 24x24->40 multiplication with the low 8 bits discarded.
 _fp_mul:
-  push iy
   ; Align iy to the arguments in the stack
-  ld iy, 6
+  ld iy, 3
   add iy, sp
 
   ; Perform each of the component-wise multiplications
@@ -121,7 +120,6 @@ _fp_mul:
 
   ; Add with prior intermediate result, rounding to nearest
   adc hl, de
-  pop iy
   ret
 
 section .text
@@ -221,8 +219,7 @@ section .text
 ; Only verified when the result does not overflow
 public _fp_div
 _fp_div:
-  push iy
-  ld iy, 6
+  ld iy, 3
   add iy, sp
   xor a, a
   sbc hl, hl
@@ -267,7 +264,6 @@ _fp_div:
 .no_round:
   ld a, (iy + 5)
   xor a, (iy + 2)
-  pop iy
   ret p
   ex de, hl
   sbc hl, hl
@@ -281,13 +277,11 @@ section .text
 ; what is this magic -- loganius
 public _fp_sqrt
 _fp_sqrt:
-  push iy
   ; Align iy to last byte of the argument in the stack
-  ld iy, 8
+  ld iy, 5
   add iy, sp
 
   ; Initialize de and hl to 0
-  or a, a
   sbc hl, hl
   ex de, hl
   sbc hl, hl
@@ -305,7 +299,6 @@ _fp_sqrt:
   ex de, hl
   ret nc
   dec hl
-  pop iy
   ret
 
 .process_byte:
@@ -329,8 +322,9 @@ _fp_sqrt:
   add a, a
   adc hl, hl
   djnz .loop
-  pop iy
   ret
+
+
 section .text
 ; Takes a Fixed24 and converts it to an int
 ; is this faster? IDK!
@@ -354,10 +348,12 @@ _fp_to_int:
   rra ; 4
   ld h, b ; 4
   ld l, a ; 4
-  ret nc ; 8/22 (120/134)
+  ret nc ; 5/19 (117/131)
   inc hl ; 4
   ret ; 18 (142)
 section .text
+
+
 public _fp_to_int_floor
 _fp_to_int_floor:
   ld hl, 5 ; 16

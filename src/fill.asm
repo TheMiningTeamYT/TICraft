@@ -161,7 +161,7 @@ _drawTextureLineNewA_NoClip:
                     inc hl ; 4
                     add a, e ; 4
                     jr nc, moveTexturePointer ; 8/9
-                    ld b, (hl) ; 9 - 208 cycles (depending on flash) (most likely: 9, 10, or 17 cycles)
+                    ld b, (hl) ; 6 - 205 cycles (depending on flash) (most likely: 6, 7, or 14 cycles)
                 textureCont:
             ex af, af' ; 4
         exx ; 4
@@ -183,15 +183,15 @@ _drawTextureLineNewA_NoClip:
             jr z, right_fill_cont ; 8/9
                 cp a, (hl) ; 8
                 jr nc, right_fill_cont ; 8/9
-                    ld (hl), a ; 9
+                    ld (hl), a ; 6
                     ld (ix + 1), c ; 14
             right_fill_cont:
             dec hl ; 4
             cp a, (hl) ; 8
             jr nc, left_fill_cont ; 8/9
                 ex de, hl ; 4
-                ld (de), a ; 9
-                ld (hl), c ; 9
+                ld (de), a ; 6
+                ld (hl), c ; 6
             left_fill_cont:
             ld c, (iy + x0) ; 16
         fill_cont:
@@ -265,27 +265,32 @@ _drawTextureLineNewA_NoClip:
     ei
     ret
 section .text
-public _approx_sqrt_a
-public approx_sqrt_a
-_approx_sqrt_a:
-    ld hl, 3
-    add hl, sp
-    ld hl, (hl)
 ; approximates the square root of hl
 ; 2^(floor((floor(log2(hl))+1)/2)-1) + (hl)/(2^(floor((floor(log2(hl))+1)/2)+1))
-approx_sqrt_a:
-    ex de, hl
-    ; clear the carry flag and set hl to 1
-    or a, a
-    sbc hl, hl
-    inc hl
+; Seems to be consistently within 10% of the real answer
+public _approx_sqrt_a
+_approx_sqrt_a:
+    ; Set hl to 3
+    ld hl, 3
+    add hl, sp
+    ld de, (hl)
+    sbc hl, sp
     sbc hl, de
     ex de, hl
-    ; if the number is 0 or 1, the square root is no different
+    jr c, threeCont
+    ; Jf the number is greater than 3, move on
+    ; Else, if the number is 1 or 0, return HL
+    bit 1, l
+    ret z
+    ; Else, return HL - 1
+    dec hl
     ret nc
-    ; we need to save the value in hl for later
+threeCont:
+    ; Save the original number for later
     push hl
-    ld b, 11
+    ; Count the number of bits
+    ; ((x+1)/2)
+    ld b, 12
     add hl, hl
     jr c, count_bits_cont
     dec b
@@ -342,8 +347,10 @@ approx_sqrt_a:
     count_bits_cont:
     ; generate our guess
     ld a, b
-    sub a, 8
+    sub a, 9
+    ; If the log is less than 9 (true log is less than 18), continue
     jr c, log_less_than_8
+        ; Else, shift the number right by 8 and the guess left by 8
         ld b, a
         inc sp
         pop de
@@ -357,25 +364,30 @@ approx_sqrt_a:
         rra
         ld e, a
         
-        ; add the guess and the divided square together
+        ; add the guess and the shifted original number together
         add hl, de
         ret
     log_less_than_8:
     pop de
-    ; Carry flag is always set by the time we get here, so this sets HL to -1
+    ; Because the carry flag is always set by the time we get here, this gives -1
     sbc hl, hl
     add hl, sp
+    ; Shift the guess left by 1 to start
     ld a, e
-    ld e, (hl)
-    srl e
+    srl (hl)
     rr d
     rra
+    ; Start our guess at 2
     ld hl, 2
+    dec b
+    ; If the log is 1, return
+    ret z
     dec b
     jr z, guess_cont
     ; 1 << b
     ; (2^b)
     shift_guess:
+    ; Shift our guess left and the original number right
     add hl, hl
     srl d
     rra
@@ -405,13 +417,13 @@ approx_sqrt_a:
     srl d
     rra
     guess_cont:
+    ; Shift the original number right 2 final times
     srl d
     rra
     srl d
     rra
     ld e, a
-
-    ; add the guess and the divided square together
+    ; add the guess and the shifted original number together
     add hl, de
     ret
 section .text
