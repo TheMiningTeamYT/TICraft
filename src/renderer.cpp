@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
-#include <ti/getcsc.h>
 #include <graphx.h>
 #include "renderer.hpp"
 #include "textures.hpp"
@@ -71,74 +70,76 @@ clip = 1 // affected by clipping, no z buffer
 clip = 2 // affected by clipping, write to z buffer
 */
 void object::generatePolygons() {
-    // Rendering the object (Preparing polygons for rendering)
-    if (visible) {
-        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
-            // Set the polygon's distance from the camera
-            polygon* polygon = &cubePolygons[polygonNum];
-            unsigned int z = 0;
-            int totalX = 0;
-            int totalY = 0;
-            for (uint8_t i = 0; i < 4; i++) {
-                totalX += renderedPoints[polygon->points[i]].x;
-                totalY += renderedPoints[polygon->points[i]].y;
-                z += renderedPoints[polygon->points[i]].z;
-            }
-            polygon->x = totalX >> 2;
-            polygon->y = totalY >> 2;
-            polygon->z = z;
-        }
-        // Sort the polygons by distance from the camera, front to back
-        qsort(cubePolygons, 6, sizeof(polygon), zCompare);
-
-        // Prepare the polygons for rendering
-        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
-            gfx_SetDrawBuffer();
-            // The polygon we are rendering
-            polygon* polygon = &cubePolygons[polygonNum];
-            // Normalized z (0-255)
-            uint8_t normalizedZ = (polygon->z >> 5);
-
-            // Are we going to render the polygon?
-            bool render = false;
-            if (outline) {
-                render = true;
-            } else {
-                // Get the average x & y of the polygon
-                int x = polygon->x;
-                int y = polygon->y;
-
-                if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
-                    if (normalizedZ < gfx_GetPixel(x, y)) {
-                        render = true;
-                        goto renderThePolygon;
-                    }
-                }
-                for (uint8_t i = 0; i < 4; i++) {
-                    screenPoint* point = &renderedPoints[polygon->points[i]];
-                    int pointX = (point->x + point->x + point->x + point->x + point->x + point->x + point->x + x)>>3;
-                    int pointY = (point->y + point->y + point->y + point->y + point->y + point->y + point->y + y)>>3;
-                    if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
-                        if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
-                            render = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            // Prepare this polygon for rendering
-            renderThePolygon:
-            if (render) {
-                renderPolygon(this, polygon, normalizedZ);
-            }
-            #if diagnostics == true
-            else {
-                obscuredPolygons++;
-            }
-            #endif
-        }
-        gfx_SetDrawScreen();
+    if (!visible) {
+        return;
     }
+    // Rendering the object (Preparing polygons for rendering)
+    for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
+        // Set the polygon's distance from the camera
+        polygon* polygon = &cubePolygons[polygonNum];
+        unsigned int z = 0;
+        int totalX = 0;
+        int totalY = 0;
+        for (uint8_t i = 0; i < 4; i++) {
+            totalX += renderedPoints[polygon->points[i]].x;
+            totalY += renderedPoints[polygon->points[i]].y;
+            z += renderedPoints[polygon->points[i]].z;
+        }
+        polygon->x = totalX >> 2;
+        polygon->y = totalY >> 2;
+        polygon->z = z;
+    }
+    // Sort the polygons by distance from the camera, front to back
+    qsort(cubePolygons, 6, sizeof(polygon), zCompare);
+
+    // Prepare the polygons for rendering
+    // It was pointed out to me that backface culling might result in some speed improvements here... maybe implement?
+    for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
+        gfx_SetDrawBuffer();
+        // The polygon we are rendering
+        polygon* polygon = &cubePolygons[polygonNum];
+        // Normalized z (0-255)
+        uint8_t normalizedZ = (polygon->z >> 5);
+
+        // Are we going to render the polygon?
+        bool render = false;
+        if (outline) {
+            render = true;
+        } else {
+            // Get the average x & y of the polygon
+            int x = polygon->x;
+            int y = polygon->y;
+
+            if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
+                if (normalizedZ < gfx_GetPixel(x, y)) {
+                    render = true;
+                    goto renderThePolygon;
+                }
+            }
+            for (uint8_t i = 0; i < 4; i++) {
+                screenPoint* point = &renderedPoints[polygon->points[i]];
+                int pointX = (point->x + point->x + point->x + point->x + point->x + point->x + point->x + x)>>3;
+                int pointY = (point->y + point->y + point->y + point->y + point->y + point->y + point->y + y)>>3;
+                if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
+                    if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
+                        render = true;
+                        break;
+                    }
+                }
+            }
+        }
+        // Render this polygon
+        renderThePolygon:
+        if (render) {
+            renderPolygon(this, polygon, normalizedZ);
+        }
+        #if diagnostics == true
+        else {
+            obscuredPolygons++;
+        }
+        #endif
+    }
+    gfx_SetDrawScreen();
 }
 
 void object::deleteObject() {
@@ -559,16 +560,16 @@ void rotateCamera(float x, float y) {
 }
 
 void redrawScreen() {
-    drawBuffer();
     __asm__ ("di");
+    drawBuffer();
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         objects[i]->generatePoints();
     }
-    __asm__ ("ei");
     qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
     drawScreen(true);
     getBuffer();
     drawCursor();
+    __asm__ ("ei");
 }
 
 void resetCamera() {

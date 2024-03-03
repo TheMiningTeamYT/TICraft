@@ -3,7 +3,6 @@
 #include "textures.hpp"
 #include <fileioc.h>
 #include <ti/screen.h>
-#include <ti/getcsc.h>
 
 char* texturePackName;
 uint16_t* texPalette;

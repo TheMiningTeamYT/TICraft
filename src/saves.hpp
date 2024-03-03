@@ -6,6 +6,7 @@
 // hey we can just use the back buffer
 #define saveDataBuffer 0xD52C00
 #define saveBufferSize 76800
+#define k_F5 0x3D
 
 void gfxStart();
 void failedToSave();

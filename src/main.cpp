@@ -1,6 +1,7 @@
 #include <graphx.h>
 #include <fileioc.h>
-#include <ti/getcsc.h>
+#include <ti/flags.h>
+#include <ti/getkey.h>
 #include <sys/power.h>
 #include <cstdint>
 #include <cstdio>
@@ -18,6 +19,8 @@ extern "C" {
     #include "printString.h"
 }
 
+// APD = Automatic Power Down (AFAIK)
+
 /*
 Implement chunking
 Idea:
@@ -30,22 +33,35 @@ Cons:
 Doing a re-render will be INSANELY expensive
 */
 
+// TODO:
+// Finish adding the alternate controls for keyboards
+
 struct packEntry {
     texturePack* pack;
     unsigned int size;
 };
-
+uint8_t interruptOriginalValue;
 void selectBlock();
 void drawSelection(int offset);
 void texturePackError(const char* message);
 void texturePackMenu();
 void drawTexturePackSelection(texturePack* pack, int row, bool selected);
 bool verifyTexturePack(packEntry pack);
-void exitOverlay(int code) {memset((void*) 0xD031F6, 0, 69090); exit(code);};
+void exitOverlay(int code) {
+    // Restore RTC interrupts
+    *((uint8_t*)0xF00005) = interruptOriginalValue;
+    os_EnableAPD();
+    memset((void*) 0xD031F6, 0, 69090);
+    exit(code);
+};
 
 bool fineMovement;
 
 int main() {
+    interruptOriginalValue = *((uint8_t*)0xF00005);
+    // Disable RTC interrupt
+    *((uint8_t*)0xF00005) &= 0xEF;
+    os_DisableAPD();
     os_ClrHomeFull();
     ti_SetGCBehavior(gfx_End, texturePackMenu);
     // what exactly do you do?
@@ -53,9 +69,8 @@ int main() {
     // sizeof(object*)*1000 + (255*255) + 2 = 68027B (66.43 KiB)
     if (ti_MemChk() < (255*255) + 2) {
         os_PutStrFull("WARNING!! Not enough free user mem to run TICRAFT! Continuing may result in corruption or your calculator crashing and resetting. Try deleting or archiving some programs or AppVars. Press \"Enter\" to continue or press any other key to exit.");
-        uint8_t key;
-        while (!(key = os_GetCSC()));
-        if (key != sk_Enter) {
+        os_ResetFlag(SHIFT, ALPHALOCK);
+        if (os_GetKey() != k_Enter) {
             return 1;
         }
         os_ClrHomeFull();
@@ -84,13 +99,14 @@ int main() {
             printStringAndMoveDownCentered("Or press clear to cancel.");
             userSelected = false;
             while (!userSelected) {
-                switch (os_GetCSC()) {
-                    case sk_1:
+                os_ResetFlag(SHIFT, ALPHALOCK);
+                switch (os_GetKey()) {
+                    case k_1:
                         usb = false;
                         quit = true;
                         userSelected = true;
                         break;
-                    case sk_2:
+                    case k_2:
                         printStringAndMoveDownCentered("Please plug in a FAT32 formatted USB drive now.");
                         printStringAndMoveDownCentered("Do not unplug the drive until");
                         printStringAndMoveDownCentered("the save is loaded.");
@@ -101,7 +117,7 @@ int main() {
                         quit = true;
                         userSelected = true;
                         break;
-                    case sk_Clear:
+                    case k_Clear:
                         goto load_save;
                         break;
                     default:
@@ -124,7 +140,7 @@ int main() {
         printStringCentered("Loading...", 5);
         gfx_SetTextXY(0, 40);
         gfx_SetTextScale(1,1);
-        printStringAndMoveDownCentered("Welcome to TICraft v2.0.1! While you wait:");
+        printStringAndMoveDownCentered("Welcome to TICraft v2.1.0! While you wait:");
         printStringAndMoveDownCentered("Controls:");
         printStringAndMoveDownCentered("Graph/Clear: Exit/Emergency Exit");
         printStringAndMoveDownCentered("Cursor controls:");
@@ -163,7 +179,6 @@ int main() {
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             objects[i]->generatePoints();
         }
-        __asm__ ("ei");
         memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
         xSort();
         gfx_Sprite_NoClip(cursorBackground, 0, 0);
@@ -174,15 +189,20 @@ int main() {
         gfx_SetTextScale(4,4);
         printStringCentered("Loaded!", 5);
         gfx_SetTextScale(1,1);
-        while (!os_GetCSC());
+        __asm__ ("ei");
+        os_GetKey();
+        __asm__ ("di");
         drawScreen(true);
         getBuffer();
         drawCursor();
+        __asm__ ("ei");
         quit = false;
         while (!quit) {
-            switch (os_GetCSC()) {
+            os_ResetFlag(SHIFT, ALPHALOCK);
+            switch (os_GetKey()) {
                 // forward
-                case sk_9:
+                case 0xFCE6:
+                case k_9:
                     if (angleY < -67.5f) {
                         moveCursor(6);
                     } else if (angleY < -22.5f) {
@@ -204,7 +224,8 @@ int main() {
                     }
                     break;
                 // backward
-                case sk_1:
+                case 0xFCFB:
+                case k_1:
                     if (angleY < -67.5f) {
                         moveCursor(7);
                     } else if (angleY < -22.5f) {
@@ -226,7 +247,8 @@ int main() {
                     }
                     break;
                 // left
-                case sk_7:
+                case 0xFCF2:
+                case k_7:
                     if (angleY < -67.5f) {
                         moveCursor(9);
                     } else if (angleY < -22.5f) {
@@ -248,7 +270,8 @@ int main() {
                     }
                     break;
                 // right
-                case sk_3:
+                case 0xFCE4:
+                case k_3:
                     if (angleY < -67.5f) {
                         moveCursor(8);
                     } else if (angleY < -22.5f) {
@@ -270,13 +293,17 @@ int main() {
                     }
                     break;
                 // up
-                case sk_Mul:
+                case 0xFCF3:
+                case k_Mul:
                     moveCursor(0);
                     break;
-                case sk_Sub:
+                // down
+                case 0xFCE7:
+                case k_Sub:
                     moveCursor(1);
                     break;
-                case sk_8:
+                case 0xFCF8:
+                case k_8:
                     if (angleY < -67.5f) {
                         moveCursor(5);
                     } else if (angleY < -22.5f) {
@@ -297,7 +324,8 @@ int main() {
                         moveCursor(5);
                     }
                     break;
-                case sk_2:
+                case 0xFCF4:
+                case k_2:
                     if (angleY < -67.5f) {
                         moveCursor(4);
                     } else if (angleY < -22.5f) {
@@ -318,7 +346,8 @@ int main() {
                         moveCursor(4);
                     }
                     break;
-                case sk_4:
+                case 0xFCE2:
+                case k_4:
                     if (angleY < -67.5f) {
                         moveCursor(3);
                     } else if (angleY < -22.5f) {
@@ -339,7 +368,8 @@ int main() {
                         moveCursor(3);
                     }
                     break;
-                case sk_6:
+                case 0xFCE5:
+                case k_6:
                     if (angleY < -67.5f) {
                         moveCursor(2);
                     } else if (angleY < -22.5f) {
@@ -360,7 +390,8 @@ int main() {
                         moveCursor(2);
                     }
                     break;
-                case sk_5: {
+                case k_Space:
+                case k_5: {
                     object* annoyingPointer = &playerCursor;
                     object** matchingObject = (object**) bsearch(&annoyingPointer, objects, numberOfObjects, sizeof(object*), xCompare);
                     bool deletedObject = false;
@@ -433,13 +464,17 @@ int main() {
                     drawCursor();
                     break;
                 }
-                case sk_Mode:
+                case 0x21:
+                case k_Mode:
+                    __asm__ ("di");
                     drawScreen(true);
                     getBuffer();
                     drawCursor();
+                    __asm__ ("ei");
                     break;
                 // exit
-                case sk_Graph:
+                case k_Quit:
+                case k_Graph:
                     gfx_SetDrawBuffer();
                     gfx_SetTextFGColor(254);
                     gfx_SetTextXY(0, 105);
@@ -451,33 +486,37 @@ int main() {
                     gfx_SetDrawScreen();
                     userSelected = false;
                     while (!userSelected) {
-                        switch (os_GetCSC()) {
-                            case sk_1:
+                        os_ResetFlag(SHIFT, ALPHALOCK);
+                        switch (os_GetKey()) {
+                            case k_1:
                                 save(nameBuffer);
-                            case sk_2:
+                            case k_2:
                                 userSelected = true;
                                 quit = true;
                                 break;
-                            case sk_Graph:
+                            case k_Graph:
                                 quit = false;
                                 userSelected = true;
+                                __asm__ ("di");
                                 drawScreen(true);
                                 getBuffer();
                                 drawCursor();
+                                __asm__ ("ei");
                                 break;
                             default:
                                 break;
                         }
                     }
                     break;
-                case sk_Clear:
+                case 0x1C3D:
+                case k_Clear:
                     quit = true;
                     emergencyExit = true;
                     break;
-                case sk_Enter:
+                case k_Enter:
                     selectBlock();
                     break;
-                case sk_Up:
+                case k_Up:
                     if (fineMovement) {
                         cameraXYZ[0] += (Fixed24)10*sy;
                         cameraXYZ[2] += (Fixed24)10*cy;
@@ -487,7 +526,7 @@ int main() {
                     }
                     redrawScreen();
                     break;
-                case sk_Down:
+                case k_Down:
                     if (fineMovement) {
                         cameraXYZ[0] -= (Fixed24)10*sy;
                         cameraXYZ[2] -= (Fixed24)10*cy;
@@ -497,7 +536,7 @@ int main() {
                     }
                     redrawScreen();
                     break;
-                case sk_Left:
+                case k_Left:
                     if (fineMovement) {
                         cameraXYZ[0] -= (Fixed24)10*cy;
                         cameraXYZ[2] += (Fixed24)10*sy;
@@ -507,7 +546,7 @@ int main() {
                     }
                     redrawScreen();
                     break;
-                case sk_Right:
+                case k_Right:
                     if (fineMovement) {
                         cameraXYZ[0] += (Fixed24)10*cy;
                         cameraXYZ[2] -= (Fixed24)10*sy;
@@ -517,7 +556,8 @@ int main() {
                     }
                     redrawScreen();
                     break;
-                case sk_Del:
+                case 0xFE27:
+                case k_Del:
                     if (fineMovement) {
                         cameraXYZ[1] += 5;
                     } else {
@@ -525,7 +565,8 @@ int main() {
                     }
                     redrawScreen();
                     break;
-                case sk_Stat:
+                case 0x83:
+                case k_Stat:
                     if (fineMovement) {
                         cameraXYZ[1] -= 5;
                     } else {
@@ -533,44 +574,51 @@ int main() {
                     }
                     redrawScreen();
                     break;
-                case sk_Prgm:
+                case 0xFCEC:
+                case k_Prgm:
                     if (fineMovement) {
                         rotateCamera(-2.5, 0);
                     } else {
                         rotateCamera(-10, 0);
                     }
                     break;
-                case sk_Cos:
+                case 0x8B:
+                case k_Cos:
                     if (fineMovement) {
                         rotateCamera(2.5, 0);
                     } else {
                         rotateCamera(10, 0);
                     }
                     break;
-                case sk_Sin:
+                case 0xFCEE:
+                case k_Sin:
                     if (fineMovement) {
                         rotateCamera(0, -2.5);
                     } else {
                         rotateCamera(0, -10);
                     }
                     break;
-                case sk_Tan:
+                case 0x8D:
+                case k_Tan:
                     if (fineMovement) {
                         rotateCamera(0, 2.5);
                     } else {
                         rotateCamera(0, 10);
                     }
                     break;
-                case sk_Alpha:
+                case 0xFE0A:
+                case k_Math:
                     cameraXYZ[0] = (Fixed24)playerCursor.x - (((Fixed24)84.85281375f)*sy);
                     cameraXYZ[1] = (Fixed24)playerCursor.y + (Fixed24)75;
                     cameraXYZ[2] = (Fixed24)playerCursor.z - (((Fixed24)84.85281375f)*cy);
                     redrawScreen();
                     break;
-                case sk_Window:
+                case 0x193D:
+                case k_Window:
                     takeScreenshot();
                     break;
-                case sk_Trace:
+                case 0x1B3D:
+                case k_Trace:
                     fineMovement = !fineMovement;
                     break;
                 default:
@@ -582,6 +630,9 @@ int main() {
     gfx_SetDrawScreen();
     gfx_FillScreen(254);
     gfx_End();
+    // Restore RTC interrupts
+    *((uint8_t*)0xF00005) = interruptOriginalValue;
+    os_EnableAPD();
     // clear out pixel shadow
     memset((void*) 0xD031F6, 0, 69090);
     os_ClrHomeFull();
@@ -605,54 +656,56 @@ void selectBlock() {
     }
     bool quit = false;
     while (!quit) {
-        uint8_t key = os_GetCSC();
-        if (key) {
-            switch (key) {
-                case sk_Up:
-                case sk_8:
-                    if (selectedObject/8 > 0) {
-                        drawSelection(-8);
-                    } else {
-                        drawSelection(40);
-                    }
-                    break;
-                case sk_Down:
-                case sk_2:
-                    if (selectedObject/8 < 5) {
-                        drawSelection(8);
-                    } else {
-                        drawSelection(-40);
-                    }
-                    break;
-                case sk_Left:
-                case sk_4:
-                    if (selectedObject > 0) {
-                        drawSelection(-1);
-                    } else {
-                        drawSelection(((int)-selectedObject) + 47);
-                    }
-                    break;
-                case sk_Right:
-                case sk_6:
-                    if (selectedObject < 47) {
-                        drawSelection(1);
-                    } else {
-                        drawSelection(((int)-selectedObject));
-                    }
-                    break;
-                case sk_Enter:
-                    quit = true;
-                    break;
-                case sk_Clear:
-                    quit = true;
-                    break;
-            }
+        os_ResetFlag(SHIFT, ALPHALOCK);
+        switch (os_GetKey()) {
+            case k_Up:
+            case k_8:
+                if (selectedObject/8 > 0) {
+                    drawSelection(-8);
+                } else {
+                    drawSelection(40);
+                }
+                break;
+            case k_Down:
+            case k_2:
+                if (selectedObject/8 < 5) {
+                    drawSelection(8);
+                } else {
+                    drawSelection(-40);
+                }
+                break;
+            case k_Left:
+            case k_4:
+                if (selectedObject > 0) {
+                    drawSelection(-1);
+                } else {
+                    drawSelection(((int)-selectedObject) + 47);
+                }
+                break;
+            case k_Right:
+            case k_6:
+                if (selectedObject < 47) {
+                    drawSelection(1);
+                } else {
+                    drawSelection(((int)-selectedObject));
+                }
+                break;
+            case k_Enter:
+                quit = true;
+                break;
+            case k_Clear:
+                quit = true;
+                break;
+            default:
+                break;
         }
     }
     gfx_palette[255] = texPalette[255];
+    __asm__ ("di");
     drawScreen(true);
     getBuffer();
     drawCursor();
+    __asm__ ("ei");
 }
 
 void drawSelection(int offset) {
@@ -673,7 +726,7 @@ void texturePackError(const char* message) {
     os_PutStrFull("Texture pack is invalid (");
     os_PutStrFull(message);
     os_PutStrFull("). Please select another texture pack or load on the texture pack again. Press any key to continue.");
-    while (!os_GetCSC());
+    os_GetKey();
 }
 
 void fontPrintString(const char* string, uint16_t row) {
@@ -732,40 +785,45 @@ void texturePackMenu() {
         uint8_t key;
         bool quit2 = false;
         while (!quit2) {
-            while (!(key = os_GetCSC()));
-            switch (key) {
-                case sk_5:
-                case sk_Enter:
+            os_ResetFlag(SHIFT, ALPHALOCK);
+            switch (os_GetKey()) {
+                case 0xFC08:
+                case k_5:
+                case k_Enter:
                     quit2 = true;
                     if (verifyTexturePack(packs[selectedPack + offset])) {
                         quit = true;
                     }
                     break;
-                case sk_Up:
-                case sk_8:
+                case 0xFCF8:
+                case k_Up:
+                case k_8:
                     if (selectedPack > 0) {
                         drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, false);
                         selectedPack--;
                         drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, true);
                     }
                     break;
-                case sk_Down:
-                case sk_2:
+                case 0xFCF4:
+                case k_Down:
+                case k_2:
                     if (selectedPack + offset + 1 < numberOfTexturePacks && selectedPack < 4) {
                         drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, false);
                         selectedPack++;
                         drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, true);
                     }
                     break;
-                case sk_Left:
-                case sk_4:
+                case 0xFCE2:
+                case k_Left:
+                case k_4:
                     if (offset > 4) {
                         offset -= 5;
                         quit2 = true;
                     }
                     break;
-                case sk_Right:
-                case sk_6:
+                case 0xFCE5:
+                case k_Right:
+                case k_6:
                     if (numberOfTexturePacks > offset + 5) {
                         offset += 5;
                         if (selectedPack + offset >= numberOfTexturePacks) {
@@ -774,8 +832,9 @@ void texturePackMenu() {
                         quit2 = true;
                     }
                     break;
-                case sk_Graph:
-                case sk_Clear:
+                case 0x1C3D:
+                case k_Graph:
+                case k_Clear:
                     exitOverlay(0);
                 default:
                     break;

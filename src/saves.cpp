@@ -1,4 +1,4 @@
-#include <ti/getcsc.h>
+#include <ti/getkey.h>
 #include <fatdrvce.h>
 #include <graphx.h>
 #include <fileioc.h>
@@ -21,13 +21,13 @@ uint8_t offset = 0;
 void failedToSave() {
     printStringAndMoveDownCentered("Failed to save.");
     printStringAndMoveDownCentered("Press any key to continue.");
-    while (!os_GetCSC());
+    os_GetKey();
 }
 
 void failedToLoadSave() {
     printStringAndMoveDownCentered("Failed to load save.");
     printStringAndMoveDownCentered("Press any key to continue.");
-    while (!os_GetCSC());
+    os_GetKey();
 }
 
 void save(const char* name) {
@@ -73,8 +73,9 @@ void save(const char* name) {
         char nameBuffer[32];
         bool userSelected = false;
         while (!userSelected) {
-            switch (os_GetCSC()) {
-                case sk_1:
+            os_ResetFlag(SHIFT, ALPHALOCK);
+            switch (os_GetKey()) {
+                case k_1:
                     userSelected = true;
                     handle = ti_Open(name, "w+");
                     if (handle) {
@@ -92,7 +93,7 @@ void save(const char* name) {
                         ti_Close(handle);
                     }
                     break;
-                case sk_2:
+                case k_2:
                     userSelected = true;
                     fillDirt();
                     gfx_SetTextXY(0, 110);
@@ -119,20 +120,21 @@ void save(const char* name) {
                     if (saveGood) {
                         printStringAndMoveDownCentered("You may now remove the drive.");
                         printStringAndMoveDownCentered("Press any key to continue.");
-                        while (!os_GetCSC());
+                        os_GetKey();
                         quit = true;
                     }
                     break;
-                case sk_Clear:
+                case k_Clear:
                     fillDirt();
                     gfx_SetTextXY(0, 110);
                     printStringAndMoveDownCentered("Are you sure you don't want to save?");
                     printStringAndMoveDownCentered("Press 1 for yes, 2 for no.");
                     while (!userSelected) {
-                        switch (os_GetCSC()) {
-                            case sk_1:
+                        os_ResetFlag(SHIFT, ALPHALOCK);
+                        switch (os_GetKey()) {
+                            case k_1:
                                 quit = true;
-                            case sk_2:
+                            case k_2:
                                 userSelected = true;
                                 break;
                             default:
@@ -304,9 +306,11 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
     redrawSaveOptions();
     bool quit = false;
     while (!quit) {
-        switch (os_GetCSC()) {
-            case sk_8:
-            case sk_Up:
+        os_ResetFlag(SHIFT, ALPHALOCK);
+        switch (os_GetKey()) {
+            case 0xFCF8:
+            case k_8:
+            case k_Up:
                 drawSaveOption(selectedSave, false, saveNames[selectedSave + offset], true);
                 if (selectedSave > 0) {
                     selectedSave--;
@@ -316,8 +320,9 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                 drawSaveOption(selectedSave, true, saveNames[selectedSave + offset], false);
                 gfx_BlitBuffer();
                 break;
-            case sk_2:
-            case sk_Down:
+            case 0xFCF4:
+            case k_2:
+            case k_Down:
                 drawSaveOption(selectedSave, false, saveNames[selectedSave + offset], true);
                 if (selectedSave < 3) {
                     selectedSave++;
@@ -327,8 +332,9 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                 drawSaveOption(selectedSave, true, saveNames[selectedSave + offset], false);
                 gfx_BlitBuffer();
                 break;
-            case sk_4:
-            case sk_Left:
+            case 0xFCE2:
+            case k_4:
+            case k_Left:
                 if (offset > 3) {
                     offset -= 4;
                 } else {
@@ -336,8 +342,9 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                 }
                 redrawSaveOptions();
                 break;
-            case sk_6:
-            case sk_Right:
+            case 0xFCE5:
+            case k_6:
+            case k_Right:
                 if (offset < 96) {
                     offset += 4;
                 } else {
@@ -345,18 +352,21 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                 }
                 redrawSaveOptions();
                 break;
-            case sk_5:
-            case sk_Enter:
+            case 0xFB08:
+            case k_5:
+            case k_Enter:
                 strcpy(nameBuffer, saveNames[selectedSave + offset]);
                 gfx_SetDrawScreen();
                 return true;
                 break;
-            case sk_Clear:
-            case sk_Graph:
+            case k_Quit:
+            case 0x1C3D:
+            case k_Clear:
+            case k_Graph:
                 gfx_SetDrawScreen();
                 return false;
                 break;
-            case sk_Del:
+            case k_Del:
                 gfx_SetTextFGColor(254);
                 fillDirt();
                 char buffer[100] = "Are you sure you'd like to delete ";
@@ -367,8 +377,9 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                 gfx_BlitBuffer();
                 bool userSelected = false;
                 while (!userSelected) {
-                    switch (os_GetCSC()) {
-                        case sk_1:
+                    os_ResetFlag(SHIFT, ALPHALOCK);
+                    switch (os_GetKey()) {
+                        case k_1:
                             userSelected = true;
                             quit = false;
                             while (!quit) {
@@ -379,16 +390,13 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                                 printStringAndMoveDownCentered("Press 1 for archive, 2 for USB.");
                                 printStringAndMoveDownCentered("Or press clear to cancel.");
                                 gfx_BlitBuffer();
-                                uint8_t key = os_GetCSC();
-                                while (!key) {
-                                    key = os_GetCSC();
-                                }
-                                switch (key) {
-                                    case sk_1:
+                                os_ResetFlag(SHIFT, ALPHALOCK);
+                                switch (os_GetKey()) {
+                                    case k_1:
                                         ti_Delete(saveNames[selectedSave + offset]);
                                         quit = true;
                                         break;
-                                    case sk_2:
+                                    case k_2:
                                         gfx_SetTextXY(0, 110);
                                         printStringAndMoveDownCentered("Please plug in a FAT32 formatted USB drive now.");
                                         printStringAndMoveDownCentered("Press any key to cancel");
@@ -404,12 +412,11 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                                             printStringAndMoveDownCentered("Failed to init USB.");
                                             printStringAndMoveDownCentered("Press any key to continue.");
                                             gfx_BlitBuffer();
-                                            uint8_t key = os_GetCSC();
-                                            while (!(key = os_GetCSC()));
+                                            os_GetKey();
                                         }
                                         close_USB();
                                         break;
-                                    case sk_Clear:
+                                    case k_Clear:
                                         quit = true;
                                         break;
                                     default:
@@ -419,7 +426,7 @@ bool mainMenu(char* nameBuffer, unsigned int nameBufferLength) {
                             quit = false;
                             redrawSaveOptions();
                             break;
-                        case sk_2:
+                        case k_2:
                             userSelected = true;
                             redrawSaveOptions();
                             break;
@@ -533,7 +540,7 @@ void takeScreenshot() {
     }
     printStringAndMoveDownCentered("Press any key to continue.");
     close_USB();
-    while (!os_GetCSC());
+    os_GetKey();
     drawScreen(true);
     getBuffer();
     drawCursor();

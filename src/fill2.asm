@@ -151,7 +151,7 @@ _drawTextureLineNewA:
     ; a: polygonZ
     while_offscreen:
     ; init registers
-    ld de, (iy + y0) ; 23
+    ld de, (iy + y0) ; 24
     ld bc, (iy + x0) ; 24
 
     ; check to make sure that y isn't off the screen to the bottom or top
@@ -188,7 +188,7 @@ _drawTextureLineNewA:
     jr c, line_ends_off_screen ; 8/9
 
     ld hl, 76479 ; 16
-    ld de, (iy + y1) ; 23
+    ld de, (iy + y1) ; 24
     sbc hl, de ; 8
     jr c, line_ends_off_screen ; 8/9
     
@@ -209,7 +209,7 @@ update_x_y:
     ; Grab e2 from the stack
     pop hl ; 16
     ; Compare e2 to dy
-    ld de, (iy + dy) ; 23
+    ld de, (iy + dy) ; 24
     or a, a ; 4
     sbc hl, de ; 8
     ; Restore e2
@@ -222,13 +222,13 @@ update_x_y:
         ; Save e2 to DE
         ex de, hl ; 4
         ; Check if x0 == x1
-        ld hl, (iy + x1) ; 23
+        ld hl, (iy + x1) ; 24
         or a, a ; 4
         sbc hl, bc ; 8
         ; If x0 == x1, jump out of the loop
         jr z, real_end ; 8/9
         ; Add sx to x0
-        ld hl, (iy + sx) ; 23
+        ld hl, (iy + sx) ; 24
         add hl, bc ; 4
         ld (iy + x0), hl ; 18
         ; Restore e2 from DE
@@ -236,7 +236,7 @@ update_x_y:
     dy_cont:
     dec hl ; 4
     ; Compare e2 to dx
-    ld de, (iy + dx) ; 23
+    ld de, (iy + dx) ; 24
     or a, a ; 4
     sbc hl, de ; 8
     ; Restore e2
@@ -250,14 +250,14 @@ update_x_y:
         ; Save e2 to the stack
         push hl ; 10
         ; Check if y0 == y1
-        ld hl, (iy + y1) ; 23
+        ld hl, (iy + y1) ; 24
         ld bc, (iy + y0) ; 24
         or a, a ; 4
         sbc hl, bc ; 8
         ; If y0 == y1, jump out of the loop
         jr z, real_end ; 8/9
         ; Add sy to y0
-        ld hl, (iy + sy) ; 23
+        ld hl, (iy + sy) ; 24
         add hl, bc ; 4
         ld (iy + y0), hl ; 18
         ; Jump to the beginning of the loop
@@ -270,7 +270,6 @@ update_x_y:
     real_end:
     ld sp, iy ; 8
     pop ix ; 20
-    ei ; 4
     ret ; 18
 line_ends_off_screen:
     ; Save polygonZ to D
@@ -344,7 +343,7 @@ line_ends_off_screen:
     ; Grab e2 from the stack
     pop hl ; 16
     ; Compare e2 to dy
-    ld de, (iy + dy) ; 23
+    ld de, (iy + dy) ; 24
     or a, a ; 4
     sbc hl, de ; 8
     ; Restore e2
@@ -355,14 +354,14 @@ line_ends_off_screen:
         add hl, de ; 4
         add hl, de ; 4
         ; Add sx to x0
-        ld de, (iy + sx) ; 23
+        ld de, (iy + sx) ; 24
         add ix, de ; 8
         ; Put e2 into DE and sx into HL
         ex de, hl ; 4
         add hl, bc ; 4
         ld (iy + x0), hl ; 18
         ; Check if x0 == x1
-        ld hl, (iy + x1) ; 23
+        ld hl, (iy + x1) ; 24
         or a, a ; 4
         sbc hl, bc ; 8
         ; If x0 == x1, jump out of the loop
@@ -372,7 +371,7 @@ line_ends_off_screen:
     dy_cont_off:
     ; Compare e2 to dx
     dec hl ; 4
-    ld de, (iy + dx) ; 23
+    ld de, (iy + dx) ; 24
     or a, a ; 4
     sbc hl, de ; 8
     ; Restore e2
@@ -386,14 +385,14 @@ line_ends_off_screen:
         ; Save e2 to the stack
         push hl ; 10
         ; Check if y0 == y1
-        ld hl, (iy + y1) ; 23
+        ld hl, (iy + y1) ; 24
         ld bc, (iy + y0) ; 24
         or a, a ; 4
         sbc hl, bc ; 8
         ; If y0 == y1, jump out of the loop
         jr z, real_end_off ; 8/9
         ; Add sy to y0
-        ld de, (iy + sy) ; 23
+        ld de, (iy + sy) ; 24
         add ix, de ; 8
         ex de, hl ; 4
         add hl, bc ; 4
@@ -442,7 +441,7 @@ line_ends_on_screen:
     ; If the texel is 255 (the transparency color), skip drawing the pixel
     jr c, fill_cont_on ; 8/9
         dec e ; 4
-        ld hl, (iy + x1) ; 23
+        ld hl, (iy + x1) ; 24
         sbc hl, bc ; 8
         ld c, e ; 4
         lea de, ix ; 12
@@ -466,7 +465,7 @@ line_ends_on_screen:
     ; Grab e2 from the stack
     pop hl ; 16
     ; Compare e2 to dy
-    ld de, (iy + dy) ; 23
+    ld de, (iy + dy) ; 24
     or a, a ; 4
     sbc hl, de ; 8
     ; Restore e2
@@ -477,14 +476,14 @@ line_ends_on_screen:
         add hl, de ; 4
         add hl, de ; 4
         ; Add sx to x0
-        ld de, (iy + sx) ; 23
+        ld de, (iy + sx) ; 24
         add ix, de ; 8
         ; Put e2 into DE and sx into HL
         ex de, hl ; 4
         add hl, bc ; 4
         ld (iy + x0), hl ; 18
         ; Check if (the previous) x0 == x1
-        ld hl, (iy + x1) ; 23
+        ld hl, (iy + x1) ; 24
         or a, a ; 4
         sbc hl, bc ; 8
         ; If x0 == x1, jump out of the loop
@@ -494,7 +493,7 @@ line_ends_on_screen:
     dy_cont_on:
     ; Compare e2 to dx
     dec hl ; 4
-    ld de, (iy + dx) ; 23
+    ld de, (iy + dx) ; 24
     or a, a ; 4
     sbc hl, de ; 8
     ; Restore e2
@@ -508,14 +507,14 @@ line_ends_on_screen:
         ; Save e2 to the stack
         push hl ; 10
         ; Check if y0 == y1
-        ld hl, (iy + y1) ; 23
+        ld hl, (iy + y1) ; 24
         ld bc, (iy + y0) ; 24
         or a, a ; 4
         sbc hl, bc ; 8
         ; If y0 == y1, jump out of the loop
         jr z, real_end_on ; 8/9
         ; Add sy to y0
-        ld de, (iy + sy) ; 23
+        ld de, (iy + sy) ; 24
         add ix, de ; 8
         ex de, hl ; 4
         add hl, bc ; 4

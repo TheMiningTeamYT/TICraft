@@ -1,6 +1,6 @@
 obj/src/printString.c.bc: src/printString.c \
-  /home/loganius/Downloads/CEdev/include/graphx.h \
-  /home/loganius/Downloads/CEdev/include/stdint.h \
-  /home/loganius/Downloads/CEdev/include/cdefs.h \
-  /home/loganius/Downloads/CEdev/include/stdlib.h \
-  /home/loganius/Downloads/CEdev/include/stdbool.h
+  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/graphx.h \
+  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stdint.h \
+  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/cdefs.h \
+  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stdlib.h \
+  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stdbool.h

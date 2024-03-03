@@ -174,7 +174,7 @@ _drawTextureLineNewA_NoClip:
         ; If the texel is 255 (the transparency color), skip drawing the pixel
         jr c, fill_cont ; 8/9
             dec e ; 4
-            ld hl, (iy + x1) ; 23
+            ld hl, (iy + x1) ; 24
             sbc hl, bc ; 8
             ld c, e ; 4
             lea de, ix ; 12
@@ -198,7 +198,7 @@ _drawTextureLineNewA_NoClip:
         ; Grab e2 from the stack
         pop hl ; 16
         ; Compare e2 to dy
-        ld de, (iy + dy) ; 23
+        ld de, (iy + dy) ; 24
         or a, a ; 4
         sbc hl, de ; 8
         ; Restore e2
@@ -209,14 +209,14 @@ _drawTextureLineNewA_NoClip:
             add hl, de ; 4
             add hl, de ; 4
             ; Add sx to x0
-            ld de, (iy + sx) ; 23
+            ld de, (iy + sx) ; 24
             add ix, de ; 8
             ; Put e2 into DE and sx into HL
             ex de, hl ; 4
             add hl, bc ; 4
             ld (iy + x0), hl ; 18
             ; Check if (the previous) x0 == x1
-            ld hl, (iy + x1) ; 23
+            ld hl, (iy + x1) ; 24
             or a, a ; 4
             sbc hl, bc ; 8
             ; If x0 == x1, jump out of the loop
@@ -226,7 +226,7 @@ _drawTextureLineNewA_NoClip:
         dy_cont:
         ; Compare e2 to dx
         dec hl ; 4
-        ld de, (iy + dx) ; 23
+        ld de, (iy + dx) ; 24
         or a, a ; 4
         sbc hl, de ; 8
         ; Restore e2
@@ -240,14 +240,14 @@ _drawTextureLineNewA_NoClip:
             ; Save e2 to the stack
             push hl ; 10
             ; Check if y0 == y1
-            ld hl, (iy + y1) ; 23
+            ld hl, (iy + y1) ; 24
             ld bc, (iy + y0) ; 24
             or a, a ; 4
             sbc hl, bc ; 8
             ; If y0 == y1, jump out of the loop
             jr z, real_end ; 8/9
             ; Add sy to y0
-            ld de, (iy + sy) ; 23
+            ld de, (iy + sy) ; 24
             add ix, de ; 8
             ex de, hl ; 4
             add hl, bc ; 4
@@ -262,7 +262,6 @@ _drawTextureLineNewA_NoClip:
     real_end:
     ld sp, iy
     pop ix
-    ei
     ret
 section .text
 ; approximates the square root of hl

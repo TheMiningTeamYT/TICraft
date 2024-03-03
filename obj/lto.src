@@ -2902,16 +2902,20 @@ __Z11exitOverlayi:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	ld	iy, (ix + 6)
-	ld	hl, -3132938
+	ld	a, (_interruptOriginalValue)
+	ld	(-1048571), a
+	ld	iy, -3145600
+	call	_os_EnableAPD
 	xor	a, a
 	ld	(-3132938), a
+	ld	hl, -3132938
 	push	hl
 	pop	de
 	inc	de
 	ld	bc, 69089
 	ldir
-	push	iy
+	ld	hl, (ix + 6)
+	push	hl
 	call	_exit
 	pop	hl
 	section	.text,"ax",@progbits
@@ -2922,22 +2926,29 @@ _main:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 50
+	lea	hl, ix - 53
 	ld	sp, hl
+	sbc	hl, hl
+	ld	(ix - 25), hl
 	ld	bc, 3
 	ld	de, _objects
 	ld	iy, _zSortedObjects
 	push	bc
 	pop	hl
 	sbc	hl, de
-	ld	(ix - 29), hl
+	ld	(ix - 32), hl
 	lea	de, iy
 	push	bc
 	pop	hl
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 32), hl
+	ld	(ix - 35), hl
+	ld	a, (-1048571)
+	ld	(_interruptOriginalValue), a
+	ld	hl, -1048571
+	res	4, (hl)
 	ld	iy, -3145600
+	call	_os_DisableAPD
 	call	_os_ClrLCDFull
 	call	_os_HomeUp
 	call	_os_DrawStatusBar
@@ -2955,26 +2966,27 @@ _main:
 	ld	de, -8323581
 	or	a, a
 	sbc	hl, de
-	jr	nc, BB26_5
+	jr	nc, BB26_3
 	ld	hl, _.str.3
 	push	hl
 	call	_os_PutStrFull
 	pop	hl
-BB26_2:
-	call	_os_GetCSC
-	ld	l, a
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ld.sis	de, 5
 	or	a, a
-	jr	z, BB26_2
-	ld	a, l
-	cp	a, 9
-	jp	nz, BB26_213
+	sbc.sis	hl, de
+	jp	nz, BB26_223
 	ld	iy, -3145600
 	call	_os_ClrLCDFull
 	call	_os_HomeUp
 	call	_os_DrawStatusBar
-BB26_5:
+BB26_3:
 	lea	hl, ix - 10
-	ld	(ix - 22), hl
+	ld	(ix - 29), hl
 	ld	hl, (-3136121)
 	ld	(_cursorBackground), hl
 	call	__Z15texturePackMenuv
@@ -3018,22 +3030,22 @@ BB26_5:
 	add	hl, sp
 	ld	sp, hl
 	xor	a, a
-	ld	(ix - 23), a
-BB26_6:
-	ld	a, (ix - 23)
-	and	a, 1
 	ld	(ix - 26), a
-BB26_7:
+BB26_4:
+	ld	a, (ix - 26)
+	and	a, 1
+	ld	(ix - 22), a
+BB26_5:
 	ld	hl, 10
 	push	hl
-	ld	hl, (ix - 22)
+	ld	hl, (ix - 29)
 	push	hl
 	call	__Z8mainMenuPcj
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
 	bit	0, a
-	jp	z, BB26_212
+	jp	z, BB26_222
 	call	__Z8fillDirtv
 	ld	hl, 105
 	push	hl
@@ -3060,10 +3072,10 @@ BB26_7:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 35), hl
+	ld	(ix - 38), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 35)
+	ld	hl, (ix - 38)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3095,10 +3107,10 @@ BB26_7:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 35), hl
+	ld	(ix - 38), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 35)
+	ld	hl, (ix - 38)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3130,10 +3142,10 @@ BB26_7:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 35), hl
+	ld	(ix - 38), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 35)
+	ld	hl, (ix - 38)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3154,20 +3166,40 @@ BB26_7:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-BB26_9:
-	call	_os_GetCSC
-	cp	a, 15
-	jr	z, BB26_12
-	cp	a, 26
-	jr	z, BB26_13
-	cp	a, 34
-	jr	nz, BB26_9
-	jp	BB26_14
+BB26_7:
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ld	e, l
+	ld	d, h
+	ld.sis	bc, 9
+	or	a, a
+	sbc.sis	hl, bc
+	jr	z, BB26_10
+	ld	l, e
+	ld	h, d
+	ld.sis	bc, 143
+	or	a, a
+	sbc.sis	hl, bc
+	jr	z, BB26_11
+	ld	l, e
+	ld	h, d
+	ld.sis	de, 144
+	or	a, a
+	sbc.sis	hl, de
+	jr	nz, BB26_7
+	jr	BB26_12
+BB26_10:
+	bit	0, (ix - 22)
+	jp	z, BB26_5
+	jp	BB26_222
+BB26_11:
+	or	a, a
+	sbc	hl, hl
+	jp	BB26_13
 BB26_12:
-	bit	0, (ix - 26)
-	jp	nz, BB26_212
-	jp	BB26_7
-BB26_13:
 	ld	hl, _.str.110
 	push	hl
 	call	_gfx_GetStringWidth
@@ -3180,10 +3212,10 @@ BB26_13:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3215,10 +3247,10 @@ BB26_13:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3250,10 +3282,10 @@ BB26_13:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3285,10 +3317,10 @@ BB26_13:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3320,10 +3352,10 @@ BB26_13:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3355,10 +3387,10 @@ BB26_13:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3380,16 +3412,12 @@ BB26_13:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, 1
-	jr	BB26_15
-BB26_14:
-	or	a, a
-	sbc	hl, hl
-BB26_15:
+BB26_13:
 	push	hl
-	ld	hl, (ix - 22)
+	ld	hl, (ix - 29)
 	push	hl
 	call	__Z9checkSavePKcb
-	ld	(ix - 35), a
+	ld	(ix - 38), a
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
@@ -3399,7 +3427,7 @@ BB26_15:
 	pop	iy
 	ld	de, 6402
 	add	iy, de
-	ld	(ix - 26), iy
+	ld	(ix - 22), iy
 	ld	(hl), -96
 	ld	(iy), -96
 	ld	iy, (_cursorBackground)
@@ -3421,7 +3449,7 @@ BB26_15:
 	push	hl
 	ld	hl, 160
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_GetSprite
 	ld	hl, 9
@@ -3494,10 +3522,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3529,10 +3557,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3564,10 +3592,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3599,10 +3627,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3634,10 +3662,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3669,10 +3697,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3704,10 +3732,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3739,10 +3767,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3774,10 +3802,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3809,10 +3837,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3844,10 +3872,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3879,10 +3907,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3914,10 +3942,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3949,10 +3977,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -3984,10 +4012,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -4019,10 +4047,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -4054,10 +4082,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -4089,10 +4117,10 @@ BB26_15:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 38), hl
+	ld	(ix - 41), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -4113,13 +4141,12 @@ BB26_15:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	bit	0, (ix - 35)
-	jr	z, BB26_17
+	bit	0, (ix - 38)
+	jr	z, BB26_15
 	call	__Z4loadv
-	ld	bc, 0
 	xor	a, a
-	jp	BB26_22
-BB26_17:
+	jp	BB26_20
+BB26_15:
 	ld.sis	hl, 20
 	ld	e, l
 	ld	d, h
@@ -4162,22 +4189,20 @@ BB26_17:
 	ld	bc, 1000
 	or	a, a
 	sbc	hl, bc
-	ld	bc, 0
-	ld	a, b
-	jp	nc, BB26_22
-	push	bc
-	pop	de
-BB26_19:
+	ld	a, e
+	jp	nc, BB26_20
+	ld	de, 0
+BB26_17:
 	lea	hl, iy
 	ld	bc, 1000
 	or	a, a
 	sbc	hl, bc
-	jp	nc, BB26_21
+	jp	nc, BB26_19
 	ld	hl, 20
 	push	hl
 	push	de
 	pea	ix - 16
-	ld	(ix - 35), de
+	ld	(ix - 38), de
 	call	_div
 	ld	hl, 9
 	add	hl, sp
@@ -4191,7 +4216,7 @@ BB26_19:
 	pop	hl
 	ld	hl, (ix - 13)
 	ld	de, (ix - 16)
-	ld	(ix - 38), de
+	ld	(ix - 41), de
 	ld.sis	de, 0
 	ld	(iy + 4), e
 	ld	(iy + 5), d
@@ -4216,7 +4241,7 @@ BB26_19:
 	ld	(iy + 50), h
 	ld	(iy + 51), e
 	ld	(iy + 52), d
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	call	__smulu
 	ld	(iy + 53), l
 	ld	(iy + 54), h
@@ -4234,19 +4259,18 @@ BB26_19:
 	ld	(hl), iy
 	push	de
 	pop	iy
-	ld	de, (ix - 35)
+	ld	de, (ix - 38)
 	inc	iy
 	ld	(_numberOfObjects), iy
-BB26_21:
+BB26_19:
 	inc	de
 	push	de
 	pop	hl
 	ld	bc, 400
 	or	a, a
 	sbc	hl, bc
-	ld	bc, 0
-	jp	nz, BB26_19
-BB26_22:
+	jp	nz, BB26_17
+BB26_20:
 	ld	(_fineMovement), a
 	;APP
 	di
@@ -4256,34 +4280,35 @@ BB26_22:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	ld	hl, _objects
+	ld	hl, 0
 	push	hl
+	pop	bc
+	ld	de, _objects
+	push	de
 	pop	iy
-	jr	z, BB26_24
-BB26_23:
-	ld	(ix - 38), bc
-	ld	(ix - 35), iy
+	ex	de, hl
+	jr	z, BB26_22
+BB26_21:
+	ld	(ix - 41), de
+	ld	(ix - 38), iy
 	ld	hl, (iy)
 	push	hl
 	call	__ZN6object14generatePointsEv
-	ld	bc, (ix - 38)
-	ld	iy, (ix - 35)
+	ld	de, (ix - 41)
+	ld	iy, (ix - 38)
 	pop	hl
-	inc	bc
-	ld	de, (_numberOfObjects)
+	inc	de
+	ld	bc, (_numberOfObjects)
 	lea	iy, iy + 3
-	push	bc
+	push	de
 	pop	hl
 	or	a, a
-	sbc	hl, de
-	jr	c, BB26_23
-BB26_24:
-	;APP
-	ei
-	assume	adl = 1
-	;NO_APP
-	ld	hl, (_numberOfObjects)
-	ld	(ix - 35), hl
+	sbc	hl, bc
+	jr	c, BB26_21
+BB26_22:
+	ld	(ix - 38), bc
+	push	bc
+	pop	hl
 	ld	de, 3
 	push	de
 	pop	bc
@@ -4301,7 +4326,7 @@ BB26_24:
 	push	hl
 	ld	hl, 3
 	push	hl
-	ld	hl, (ix - 35)
+	ld	hl, (ix - 38)
 	push	hl
 	ld	hl, _objects
 	push	hl
@@ -4335,7 +4360,7 @@ BB26_24:
 	push	hl
 	ld	hl, 160
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_Sprite_NoClip
 	ld	hl, 9
@@ -4357,10 +4382,10 @@ BB26_24:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -4415,10 +4440,15 @@ BB26_24:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-BB26_25:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB26_25
+	;APP
+	ei
+	assume	adl = 1
+	;NO_APP
+	call	_os_GetKey
+	;APP
+	di
+	assume	adl = 1
+	;NO_APP
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -4433,26 +4463,26 @@ BB26_25:
 	push	hl
 	pop	de
 	inc	de
-	ld	(ix - 38), de
+	ld	(ix - 41), de
 	ld	bc, 153599
 	ldir
 	ld	hl, (_numberOfObjects)
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	z, BB26_29
+	jr	z, BB26_25
 	ld	hl, _zSortedObjects
 	push	hl
 	pop	iy
 	ld	bc, 0
-BB26_28:
-	ld	(ix - 35), bc
-	ld	(ix - 26), iy
+BB26_24:
+	ld	(ix - 38), bc
+	ld	(ix - 22), iy
 	ld	hl, (iy)
 	push	hl
 	call	__ZN6object16generatePolygonsEv
-	ld	bc, (ix - 35)
-	ld	iy, (ix - 26)
+	ld	bc, (ix - 38)
+	ld	iy, (ix - 22)
 	pop	hl
 	inc	bc
 	ld	de, (_numberOfObjects)
@@ -4461,8 +4491,8 @@ BB26_28:
 	pop	hl
 	or	a, a
 	sbc	hl, de
-	jr	c, BB26_28
-BB26_29:
+	jr	c, BB26_24
+BB26_25:
 	ld	hl, (_cursorBackground)
 	ld	de, (_playerCursorX)
 	ld	bc, (_playerCursorY)
@@ -4473,15 +4503,20 @@ BB26_29:
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	jr	BB26_34
-BB26_30:
+	call	__Z10drawCursorv
+	;APP
+	ei
+	assume	adl = 1
+	;NO_APP
+	jr	BB26_30
+BB26_26:
 	ld	hl, _playerCursor+49
 	push	hl
 	pop	iy
-BB26_31:
+BB26_27:
 	ld	hl, (iy)
 	ld.sis	de, -20
-BB26_32:
+BB26_28:
 	add.sis	hl, de
 	ld	(iy), l
 	ld	(iy + 1), h
@@ -4489,199 +4524,51 @@ BB26_32:
 	push	hl
 	pop	iy
 	ld	hl, (iy)
-BB26_33:
+BB26_29:
 	add.sis	hl, de
 	ld	(iy), l
 	ld	(iy + 1), h
-BB26_34:
 	call	__Z10drawCursorv
-BB26_35:
-	call	_os_GetCSC
-	dec	a
-	cp	a, 56
-	jr	nc, BB26_35
+BB26_30:
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ex	de, hl
+	ld	iyl, e
+	ld	iyh, d
+	ex	de, hl
+	ld.sis	de, 798
+	add.sis	hl, de
 	ld	de, 0
-	ld	e, a
-	ld	hl, JTI26_0
-	add	hl, de
-	add	hl, de
-	add	hl, de
-	ld	hl, (hl)
-	jp	(hl)
-BB26_37:
-	ld	a, (_fineMovement)
-	bit	0, a
-	ld	hl, 163840
-	ex	de, hl
-	jr	z, BB26_39
-	ld	hl, 40960
-	ex	de, hl
-BB26_39:
-	ld	(ix - 26), de
-	ld	hl, (_sy)
-	push	hl
+	ld	e, l
+	ld	d, h
 	push	de
-	call	_fp_mul
-	push	hl
-	pop	de
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (_cameraXYZ)
+	pop	hl
+	ld	bc, 26
 	or	a, a
-	sbc	hl, de
-	ld	(_cameraXYZ), hl
-	ld	hl, (_cy)
-	jr	BB26_46
-BB26_40:
-	ld	a, (_fineMovement)
-	bit	0, a
-	ld	hl, 163840
+	sbc	hl, bc
+	jp	c, BB26_35
 	ex	de, hl
-	jr	z, BB26_42
-	ld	hl, 40960
+	ld	e, iyl
+	ld	d, iyh
 	ex	de, hl
-BB26_42:
-	ld	(ix - 26), de
-	ld	hl, (_cy)
-	push	hl
-	push	de
-	call	_fp_mul
-	push	hl
-	pop	de
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (_cameraXYZ)
+	ld.sis	de, -502
 	or	a, a
-	sbc	hl, de
-	ld	(_cameraXYZ), hl
-	ld	hl, (_sy)
-	jp	BB26_50
-BB26_43:
-	ld	a, (_fineMovement)
-	bit	0, a
-	ld	hl, 163840
-	ex	de, hl
-	jr	z, BB26_45
-	ld	hl, 40960
-	ex	de, hl
-BB26_45:
-	ld	(ix - 26), de
-	ld	hl, (_cy)
-	push	hl
-	push	de
-	call	_fp_mul
-	push	hl
-	pop	de
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (_cameraXYZ)
-	add	hl, de
-	ld	(_cameraXYZ), hl
-	ld	hl, (_sy)
-BB26_46:
-	push	hl
-	ld	hl, (ix - 26)
-	push	hl
-	call	_fp_mul
-	push	hl
-	pop	de
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (_cameraXYZ+6)
-	jp	BB26_63
-BB26_47:
-	ld	a, (_fineMovement)
-	bit	0, a
-	ld	hl, 163840
-	ex	de, hl
-	jr	z, BB26_49
-	ld	hl, 40960
-	ex	de, hl
-BB26_49:
-	ld	(ix - 26), de
-	ld	hl, (_sy)
-	push	hl
-	push	de
-	call	_fp_mul
-	push	hl
-	pop	de
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (_cameraXYZ)
-	add	hl, de
-	ld	(_cameraXYZ), hl
-	ld	hl, (_cy)
-BB26_50:
-	push	hl
-	ld	hl, (ix - 26)
-	push	hl
-	call	_fp_mul
-	push	hl
-	pop	de
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (_cameraXYZ+6)
-	add	hl, de
-	jp	BB26_64
-BB26_51:
-	call	__Z11selectBlockv
-	jp	BB26_35
-BB26_52:
-	ld	a, (_fineMovement)
-	bit	0, a
-	jp	nz, BB26_70
-	ld	hl, 65
-	jp	BB26_77
-BB26_54:
-	ld	a, (_fineMovement)
-	ld	l, a
-	ld	bc, (_angleX)
-	ld	a, (_angleX+3)
-	bit	0, l
-	jp	nz, BB26_71
-	ld	hl, 2097152
-	ld	e, 65
-	jp	BB26_73
-BB26_56:
-	ld	a, (_fineMovement)
-	ld	l, a
-	ld	bc, (_angleX)
-	ld	a, (_angleX+3)
-	bit	0, l
-	jp	nz, BB26_72
-	ld	hl, 2097152
-	ld	e, -63
-	jp	BB26_73
-BB26_58:
-	ld	a, (_fineMovement)
-	bit	0, a
-	ld	hl, -81920
-	jp	z, BB26_69
-	ld	hl, -20480
-	jp	BB26_69
-BB26_60:
-	ld	a, (_fineMovement)
-	bit	0, a
-	jp	nz, BB26_76
-	ld	hl, -63
-	jp	BB26_77
-BB26_62:
+	sbc.sis	hl, de
+	jp	nz, BB26_44
+BB26_32:
 	ld	hl, _playerCursor+49
 	ld	de, (hl)
 	or	a, a
 	sbc	hl, hl
 	ld	l, e
 	ld	h, d
-	ld	(ix - 26), hl
-	ld	c, 12
+	ld	a, 12
+	ld	c, a
 	call	__ishl
-	ld	(ix - 35), hl
+	ld	(ix - 22), hl
 	ld	hl, (_sy)
 	push	hl
 	ld	hl, 347557
@@ -4692,32 +4579,29 @@ BB26_62:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 35)
+	ld	hl, (ix - 22)
 	or	a, a
 	sbc	hl, de
 	ld	(_cameraXYZ), hl
 	ld	hl, _playerCursor+51
-	ld	hl, (hl)
-	ld	iy, (ix - 26)
-	ex	de, hl
-	ld	iyl, e
-	ld	iyh, d
-	ex	de, hl
-	lea	hl, iy
+	ld	de, (hl)
+	or	a, a
+	sbc	hl, hl
+	ld	l, e
+	ld	h, d
 	ld	c, 12
 	call	__ishl
 	ld	de, 307200
 	add	hl, de
 	ld	(_cameraXYZ+3), hl
 	ld	hl, _playerCursor+53
-	ld	hl, (hl)
-	ex	de, hl
-	ld	iyl, e
-	ld	iyh, d
-	ex	de, hl
-	lea	hl, iy
+	ld	de, (hl)
+	or	a, a
+	sbc	hl, hl
+	ld	l, e
+	ld	h, d
 	call	__ishl
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	ld	hl, (_cy)
 	push	hl
 	ld	hl, 347557
@@ -4728,45 +4612,301 @@ BB26_62:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 26)
-BB26_63:
+	ld	hl, (ix - 22)
+BB26_33:
 	or	a, a
 	sbc	hl, de
-BB26_64:
+BB26_34:
 	ld	(_cameraXYZ+6), hl
 	call	__Z12redrawScreenv
-	jp	BB26_35
-BB26_65:
-	ld	a, (_fineMovement)
-	xor	a, 1
-	ld	(_fineMovement), a
-	jp	BB26_35
-BB26_66:
-	call	__Z14takeScreenshotv
-	jp	BB26_35
-BB26_67:
+	jp	BB26_30
+BB26_35:
+	ld	hl, JTI26_0
+	add	hl, de
+	add	hl, de
+	add	hl, de
+	ld	hl, (hl)
+	jp	(hl)
+BB26_36:
+	ld	hl, (_angleY)
+	ld	a, (_angleY+3)
+	ld	e, a
+	ld	bc, -7929856
+	ld	a, -62
+	call	__fcmp
+	jp	m, BB26_138
+	ld	bc, -4980736
+	ld	a, -63
+	call	__fcmp
+	jp	m, BB26_26
+	ld	a, 65
+	call	__fcmp
+	ld	iy, _playerCursor+49
+	jp	m, BB26_140
+	ld	bc, -7929856
+	ld	a, 66
+	call	__fcmp
+	jp	m, BB26_111
+	ld	bc, -2031616
+	call	__fcmp
+	jp	m, BB26_131
+	ld	bc, 1933312
+	ld	a, 67
+	call	__fcmp
+	jp	m, BB26_77
+	ld	bc, 4882432
+	call	__fcmp
+	jp	m, BB26_133
+	ld	bc, 7831552
+	call	__fcmp
+	jp	m, BB26_137
+	jp	BB26_138
+BB26_44:
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, -473
+	or	a, a
+	sbc.sis	hl, de
+	jr	nz, BB26_48
+BB26_45:
 	ld	a, (_fineMovement)
 	bit	0, a
 	ld	hl, 81920
-	jr	z, BB26_69
+	jr	z, BB26_47
 	ld	hl, 20480
-BB26_69:
+BB26_47:
 	ld	de, (_cameraXYZ+3)
 	add	hl, de
 	ld	(_cameraXYZ+3), hl
 	call	__Z12redrawScreenv
-	jp	BB26_35
-BB26_70:
-	ld	hl, 64
-	jp	BB26_77
-BB26_71:
+	jp	BB26_30
+BB26_48:
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	dec.sis	hl
+	ld	de, 0
+	ld	e, l
+	ld	d, h
+	push	de
+	pop	hl
+	ld	bc, 187
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB26_51
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, 6461
+	or	a, a
+	sbc.sis	hl, de
+	jp	nz, BB26_88
+BB26_50:
+	call	__Z14takeScreenshotv
+	jp	BB26_30
+BB26_51:
+	ld	hl, JTI26_1
+	add	hl, de
+	add	hl, de
+	add	hl, de
+	ld	hl, (hl)
+	jp	(hl)
+BB26_52:
+	ld	a, (_fineMovement)
+	bit	0, a
+	ld	hl, 163840
+	ex	de, hl
+	jr	z, BB26_54
+	ld	hl, 40960
+	ex	de, hl
+BB26_54:
+	ld	(ix - 22), de
+	ld	hl, (_cy)
+	push	hl
+	push	de
+	call	_fp_mul
+	push	hl
+	pop	de
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (_cameraXYZ)
+	add	hl, de
+	ld	(_cameraXYZ), hl
+	ld	hl, (_sy)
+	jp	BB26_162
+BB26_55:
+	ld	a, (_fineMovement)
+	ld	l, a
+	ld	bc, (_angleX)
+	ld	a, (_angleX+3)
+	bit	0, l
+	jp	nz, BB26_90
 	ld	hl, 2097152
-	ld	e, 64
-	jr	BB26_73
-BB26_72:
+	ld	e, -63
+	jp	BB26_91
+BB26_57:
+	ld	hl, _playerCursor+51
+	jp	BB26_139
+BB26_58:
+	ld	hl, _playerCursor+51
+	jp	BB26_132
+BB26_59:
+	ld	hl, (_angleY)
+	ld	a, (_angleY+3)
+	ld	e, a
+	ld	bc, -7929856
+	ld	a, -62
+	call	__fcmp
+	jp	p, BB26_94
+	ld	hl, _playerCursor+49
+	push	hl
+	pop	iy
+	jp	BB26_137
+BB26_61:
+	ld	hl, (_angleY)
+	ld	a, (_angleY+3)
+	ld	e, a
+	ld	bc, -7929856
+	ld	a, -62
+	call	__fcmp
+	jp	p, BB26_102
+	ld	hl, _playerCursor+49
+	jp	BB26_132
+BB26_63:
+	ld	hl, (_angleY)
+	ld	a, (_angleY+3)
+	ld	e, a
+	ld	bc, -7929856
+	ld	a, -62
+	call	__fcmp
+	jp	m, BB26_131
+	ld	bc, -4980736
+	ld	a, -63
+	call	__fcmp
+	jp	m, BB26_76
+	ld	a, 65
+	call	__fcmp
+	ld	iy, _playerCursor+49
+	jp	m, BB26_133
+	ld	bc, -7929856
+	ld	a, 66
+	call	__fcmp
+	jp	m, BB26_137
+	ld	bc, -2031616
+	call	__fcmp
+	jp	m, BB26_138
+	ld	bc, 1933312
+	ld	a, 67
+	call	__fcmp
+	jp	m, BB26_27
+	ld	bc, 4882432
+	call	__fcmp
+	jp	m, BB26_140
+	ld	bc, 7831552
+	call	__fcmp
+	jp	m, BB26_111
+	jp	BB26_131
+BB26_71:
+	ld	hl, (_angleY)
+	ld	a, (_angleY+3)
+	ld	e, a
+	ld	bc, -7929856
+	ld	a, -62
+	call	__fcmp
+	jp	p, BB26_110
+	ld	hl, _playerCursor+49
+	jp	BB26_139
+BB26_73:
+	ld	a, (_fineMovement)
+	bit	0, a
+	jp	nz, BB26_112
+	ld	hl, -63
+	jp	BB26_113
+BB26_75:
+	ld	hl, (_angleY)
+	ld	a, (_angleY+3)
+	ld	e, a
+	ld	bc, -7929856
+	ld	a, -62
+	call	__fcmp
+	jp	p, BB26_114
+BB26_76:
+	ld	hl, _playerCursor+49
+	push	hl
+	pop	iy
+BB26_77:
+	ld	hl, (iy)
+	ld.sis	de, 20
+	jp	BB26_28
+BB26_78:
+	ld	hl, (_angleY)
+	ld	a, (_angleY+3)
+	ld	e, a
+	ld	bc, -7929856
+	ld	a, -62
+	call	__fcmp
+	jp	m, BB26_26
+	ld	bc, -4980736
+	ld	a, -63
+	call	__fcmp
+	ld	iy, _playerCursor+49
+	jp	m, BB26_140
+	ld	a, 65
+	call	__fcmp
+	jp	m, BB26_111
+	ld	bc, -7929856
+	ld	a, 66
+	call	__fcmp
+	jp	m, BB26_131
+	ld	bc, -2031616
+	call	__fcmp
+	jp	m, BB26_77
+	ld	bc, 1933312
+	ld	a, 67
+	call	__fcmp
+	jp	m, BB26_133
+	ld	bc, 4882432
+	call	__fcmp
+	jp	m, BB26_137
+	ld	bc, 7831552
+	call	__fcmp
+	jp	p, BB26_27
+	jp	BB26_138
+BB26_86:
+	ld	hl, (_angleY)
+	ld	a, (_angleY+3)
+	ld	e, a
+	ld	bc, -7929856
+	ld	a, -62
+	call	__fcmp
+	jp	p, BB26_121
+	ld	hl, _playerCursor+49
+	push	hl
+	pop	iy
+	jp	BB26_111
+BB26_88:
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, 6973
+	or	a, a
+	sbc.sis	hl, de
+	jp	nz, BB26_129
+BB26_89:
+	ld	a, (_fineMovement)
+	xor	a, 1
+	ld	(_fineMovement), a
+	jp	BB26_30
+BB26_90:
 	ld	hl, 2097152
 	ld	e, -64
-BB26_73:
+BB26_91:
 	call	__fadd
 	push	bc
 	pop	iy
@@ -4776,13 +4916,13 @@ BB26_73:
 	ld	bc, -4980736
 	ld	a, -62
 	call	__fcmp
-	jp	m, BB26_35
+	jp	m, BB26_30
 	ld	hl, -4980736
 	ld	e, 66
 	lea	bc, iy
 	ld	a, d
 	call	__fcmp
-	jp	m, BB26_35
+	jp	m, BB26_30
 	ld	(_angleX), iy
 	ld	a, d
 	ld	(_angleX+3), a
@@ -4791,9 +4931,9 @@ BB26_73:
 	lea	hl, iy
 	ld	e, d
 	call	__fmul
-	ld	(ix - 26), bc
+	ld	(ix - 22), bc
 	ld	l, a
-	ld	(ix - 35), hl
+	ld	(ix - 38), hl
 	push	hl
 	push	bc
 	call	_cosf
@@ -4808,9 +4948,9 @@ BB26_73:
 	call	__fmul
 	call	__ftol
 	ld	(_cx), bc
-	ld	hl, (ix - 35)
+	ld	hl, (ix - 38)
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_sinf
 	push	hl
@@ -4825,10 +4965,115 @@ BB26_73:
 	call	__ftol
 	ld	(_sx), bc
 	call	__Z12redrawScreenv
-	jp	BB26_35
-BB26_76:
+	jp	BB26_30
+BB26_94:
+	ld	bc, -4980736
+	ld	a, -63
+	call	__fcmp
+	jp	m, BB26_138
+	ld	(ix - 22), hl
+	ld	a, 65
+	call	__fcmp
+	ld	iy, _playerCursor+49
+	jp	m, BB26_27
+	ld	hl, (ix - 22)
+	ld	bc, -7929856
+	ld	a, 66
+	call	__fcmp
+	jp	m, BB26_140
+	ld	hl, (ix - 22)
+	ld	bc, -2031616
+	call	__fcmp
+	jp	m, BB26_111
+	ld	hl, (ix - 22)
+	ld	bc, 1933312
+	ld	a, 67
+	call	__fcmp
+	jp	m, BB26_131
+	ld	hl, (ix - 22)
+	ld	bc, 4882432
+	call	__fcmp
+	jp	m, BB26_77
+	ld	iy, _playerCursor+49
+	ld	iy, (iy)
+	ld.sis	bc, 20
+	add.sis	iy, bc
+	ld	hl, _playerCursor+49
+	push	de
+	lea	de, iy
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+	pop	de
+	ld	hl, (ix - 22)
+	ld	bc, 7831552
+	call	__fcmp
+	jp	p, BB26_138
+	call	__Z10drawCursorv
+	jp	BB26_30
+BB26_102:
+	ld	(ix - 22), hl
+	ld	bc, -4980736
+	ld	a, -63
+	call	__fcmp
+	ld	iy, _playerCursor+49
+	jp	m, BB26_137
+	ld	hl, (ix - 22)
+	ld	a, 65
+	call	__fcmp
+	jp	m, BB26_138
+	ld	hl, (ix - 22)
+	ld	bc, -7929856
+	ld	a, 66
+	call	__fcmp
+	jp	m, BB26_27
+	ld	hl, (ix - 22)
+	ld	bc, -2031616
+	call	__fcmp
+	jp	m, BB26_140
+	ld	hl, (ix - 22)
+	ld	bc, 1933312
+	ld	a, 67
+	call	__fcmp
+	jp	m, BB26_111
+	ld	hl, (ix - 22)
+	ld	bc, 4882432
+	call	__fcmp
+	jp	m, BB26_131
+	ld	iy, _playerCursor+49
+	ld	iy, (iy)
+	ld.sis	bc, 20
+	add.sis	iy, bc
+	ld	hl, _playerCursor+49
+	push	de
+	lea	de, iy
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+	pop	de
+	ld	hl, (ix - 22)
+	ld	bc, 7831552
+	call	__fcmp
+	jp	m, BB26_131
+	call	__Z10drawCursorv
+	jp	BB26_30
+BB26_110:
+	ld	(ix - 22), hl
+	ld	bc, -4980736
+	ld	a, -63
+	call	__fcmp
+	ld	iy, _playerCursor+49
+	jp	p, BB26_130
+BB26_111:
+	ld	hl, (iy)
+	ld.sis	de, -20
+	add.sis	hl, de
+	ld	(iy), l
+	ld	(iy + 1), h
+	jp	BB26_131
+BB26_112:
 	ld	hl, -64
-BB26_77:
+BB26_113:
 	push	hl
 	ld	hl, 2097152
 	push	hl
@@ -4840,243 +5085,62 @@ BB26_77:
 	ld	hl, 12
 	add	hl, sp
 	ld	sp, hl
-	jp	BB26_35
-BB26_78:
-	ld	hl, _playerCursor+51
-	jp	BB26_166
-BB26_79:
-	ld	hl, _playerCursor+51
-	jp	BB26_145
-BB26_80:
-	ld	hl, (_angleY)
-	ld	a, (_angleY+3)
-	ld	e, a
-	ld	bc, -7929856
-	ld	a, -62
-	call	__fcmp
-	jp	m, BB26_90
+	jp	BB26_30
+BB26_114:
 	ld	bc, -4980736
 	ld	a, -63
 	call	__fcmp
 	ld	iy, _playerCursor+49
-	jp	m, BB26_146
+	jp	m, BB26_133
 	ld	a, 65
 	call	__fcmp
-	jp	m, BB26_164
+	jp	m, BB26_137
 	ld	bc, -7929856
 	ld	a, 66
 	call	__fcmp
-	jp	m, BB26_165
+	jp	m, BB26_138
 	ld	bc, -2031616
 	call	__fcmp
-	jp	m, BB26_31
+	jp	m, BB26_27
 	ld	bc, 1933312
 	ld	a, 67
 	call	__fcmp
-	jp	m, BB26_167
+	jp	m, BB26_140
 	ld	bc, 4882432
 	call	__fcmp
-	jp	m, BB26_143
+	jp	m, BB26_111
 	ld	bc, 7831552
 	call	__fcmp
-	jp	m, BB26_144
-	jr	BB26_91
-BB26_88:
-	ld	hl, (_angleY)
-	ld	a, (_angleY+3)
-	ld	e, a
-	ld	bc, -7929856
-	ld	a, -62
-	call	__fcmp
-	jp	m, BB26_144
+	jp	m, BB26_131
+	jp	BB26_77
+BB26_121:
 	ld	bc, -4980736
 	ld	a, -63
 	call	__fcmp
-	jp	p, BB26_154
-BB26_90:
-	ld	hl, _playerCursor+49
-	push	hl
-	pop	iy
-BB26_91:
-	ld	hl, (iy)
-	ld.sis	de, 20
-	jp	BB26_32
-BB26_92:
-	ld	hl, (_angleY)
-	ld	a, (_angleY+3)
-	ld	e, a
-	ld	bc, -7929856
-	ld	a, -62
-	call	__fcmp
-	jp	p, BB26_118
-	ld	hl, _playerCursor+49
-	push	hl
-	pop	iy
-	jp	BB26_143
-BB26_94:
-	ld	hl, (_angleY)
-	ld	a, (_angleY+3)
-	ld	e, a
-	ld	bc, -7929856
-	ld	a, -62
-	call	__fcmp
-	jp	p, BB26_125
-	ld	hl, _playerCursor+49
-	jp	BB26_145
-BB26_96:
-	ld	hl, _playerCursor
-	ld	(ix - 16), hl
-	ld	hl, (_numberOfObjects)
-	ld	de, __Z8xComparePKvS0_
-	push	de
-	ld	de, 3
-	push	de
-	push	hl
-	ld	hl, _objects
-	push	hl
-	pea	ix - 16
-	call	_bsearch
-	ld	(ix - 26), hl
-	ld	hl, 15
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (_cursorBackground)
-	ld	de, (_playerCursorX)
-	ld	bc, (_playerCursorY)
-	push	bc
-	push	de
-	push	hl
-	call	_gfx_Sprite
-	ld	hl, 9
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (ix - 26)
-	push	hl
-	pop	de
-	add	hl, bc
-	or	a, a
-	sbc	hl, bc
-	jp	nz, BB26_132
-	ld	de, (_numberOfObjects)
-	jp	BB26_141
-BB26_98:
-	ld	hl, (_angleY)
-	ld	a, (_angleY+3)
-	ld	e, a
-	ld	bc, -7929856
-	ld	a, -62
-	call	__fcmp
-	jp	p, BB26_142
-	ld	hl, _playerCursor+49
-	jp	BB26_166
-BB26_100:
-	ld	hl, (_angleY)
-	ld	a, (_angleY+3)
-	ld	e, a
-	ld	bc, -7929856
-	ld	a, -62
-	call	__fcmp
-	jp	p, BB26_147
-	ld	hl, _playerCursor+49
-	push	hl
-	pop	iy
-	jp	BB26_164
-BB26_102:
-	ld	hl, (_angleY)
-	ld	a, (_angleY+3)
-	ld	e, a
-	ld	bc, -7929856
-	ld	a, -62
-	call	__fcmp
-	jp	m, BB26_165
-	ld	bc, -4980736
-	ld	a, -63
-	call	__fcmp
-	jp	m, BB26_30
+	jp	m, BB26_131
+	ld	(ix - 22), hl
 	ld	a, 65
 	call	__fcmp
 	ld	iy, _playerCursor+49
-	jp	m, BB26_167
+	jp	m, BB26_77
+	ld	hl, (ix - 22)
 	ld	bc, -7929856
 	ld	a, 66
 	call	__fcmp
-	jp	m, BB26_143
+	jp	m, BB26_133
+	ld	hl, (ix - 22)
 	ld	bc, -2031616
 	call	__fcmp
-	jp	m, BB26_144
+	jp	m, BB26_137
+	ld	hl, (ix - 22)
 	ld	bc, 1933312
 	ld	a, 67
 	call	__fcmp
-	jp	m, BB26_91
+	jp	m, BB26_138
+	ld	hl, (ix - 22)
 	ld	bc, 4882432
 	call	__fcmp
-	jp	m, BB26_146
-	ld	bc, 7831552
-	call	__fcmp
-	jp	m, BB26_164
-	jp	BB26_165
-BB26_110:
-	ld	hl, (_angleY)
-	ld	a, (_angleY+3)
-	ld	e, a
-	ld	bc, -7929856
-	ld	a, -62
-	call	__fcmp
-	jp	m, BB26_30
-	ld	bc, -4980736
-	ld	a, -63
-	call	__fcmp
-	ld	iy, _playerCursor+49
-	jp	m, BB26_167
-	ld	a, 65
-	call	__fcmp
-	jp	m, BB26_143
-	ld	bc, -7929856
-	ld	a, 66
-	call	__fcmp
-	jp	m, BB26_144
-	ld	bc, -2031616
-	call	__fcmp
-	jp	m, BB26_91
-	ld	bc, 1933312
-	ld	a, 67
-	call	__fcmp
-	jp	m, BB26_146
-	ld	bc, 4882432
-	call	__fcmp
-	jp	m, BB26_164
-	ld	bc, 7831552
-	call	__fcmp
-	jp	p, BB26_31
-	jp	BB26_165
-BB26_118:
-	ld	bc, -4980736
-	ld	a, -63
-	call	__fcmp
-	jp	m, BB26_144
-	ld	(ix - 26), hl
-	ld	a, 65
-	call	__fcmp
-	ld	iy, _playerCursor+49
-	jp	m, BB26_91
-	ld	hl, (ix - 26)
-	ld	bc, -7929856
-	ld	a, 66
-	call	__fcmp
-	jp	m, BB26_146
-	ld	hl, (ix - 26)
-	ld	bc, -2031616
-	call	__fcmp
-	jp	m, BB26_164
-	ld	hl, (ix - 26)
-	ld	bc, 1933312
-	ld	a, 67
-	call	__fcmp
-	jp	m, BB26_165
-	ld	hl, (ix - 26)
-	ld	bc, 4882432
-	call	__fcmp
-	jp	m, BB26_31
+	jp	m, BB26_27
 	ld	iy, _playerCursor+49
 	ld	iy, (iy)
 	ld.sis	bc, -20
@@ -5088,294 +5152,138 @@ BB26_118:
 	inc	hl
 	ld	(hl), d
 	pop	de
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	ld	bc, 7831552
 	call	__fcmp
-	jp	m, BB26_34
-	jp	BB26_144
-BB26_125:
-	ld	(ix - 26), hl
-	ld	bc, -4980736
-	ld	a, -63
-	call	__fcmp
-	ld	iy, _playerCursor+49
-	jp	m, BB26_164
-	ld	hl, (ix - 26)
-	ld	a, 65
-	call	__fcmp
-	jp	m, BB26_165
-	ld	hl, (ix - 26)
-	ld	bc, -7929856
-	ld	a, 66
-	call	__fcmp
-	jp	m, BB26_31
-	ld	hl, (ix - 26)
-	ld	bc, -2031616
-	call	__fcmp
-	jp	m, BB26_167
-	ld	hl, (ix - 26)
-	ld	bc, 1933312
-	ld	a, 67
-	call	__fcmp
-	jp	m, BB26_143
-	ld	hl, (ix - 26)
-	ld	bc, 4882432
-	call	__fcmp
-	jp	m, BB26_144
-	ld	iy, _playerCursor+49
-	ld	iy, (iy)
-	ld.sis	bc, 20
-	add.sis	iy, bc
-	ld	hl, _playerCursor+49
-	push	de
-	lea	de, iy
-	ld	(hl), e
-	inc	hl
-	ld	(hl), d
-	pop	de
-	ld	hl, (ix - 26)
-	ld	bc, 7831552
-	call	__fcmp
-	jp	p, BB26_34
-	jp	BB26_144
-BB26_132:
-	ld	hl, _playerCursor+49
-	ld	hl, (hl)
-	ld	(ix - 41), hl
+	jp	p, BB26_131
+	call	__Z10drawCursorv
+	jp	BB26_30
+BB26_129:
 	ex	de, hl
-	push	hl
-	pop	iy
-	ld	de, (ix - 29)
-	add	iy, de
-BB26_133:
+	ld	e, iyl
+	ld	d, iyh
 	ex	de, hl
-	lea	bc, iy
-	ld	hl, _objects
-	ld	(ix - 35), de
-	or	a, a
-	sbc	hl, de
-	jp	nc, BB26_135
-	ld	iy, (ix - 35)
-	lea	hl, iy - 3
-	ld	(ix - 26), hl
-	ld	iy, (iy - 3)
-	ld	hl, (iy + 49)
-	push	bc
-	pop	iy
-	ld	de, -3
-	add	iy, de
-	ld	de, (ix - 41)
+	ld.sis	de, 7229
 	or	a, a
 	sbc.sis	hl, de
-	ld	hl, (ix - 26)
-	jp	z, BB26_133
-BB26_135:
-	ld	(ix - 26), bc
-	ld	de, (_numberOfObjects)
-	ld	bc, 3
-	push	de
-	pop	hl
-	call	__imulu
-	push	hl
-	pop	bc
-	ld	hl, _objects
-	add	hl, bc
-	push	hl
-	pop	bc
-	ld	iy, (ix - 35)
-	lea	hl, iy
-	ld	(ix - 44), bc
-	or	a, a
-	sbc	hl, bc
-	jp	nc, BB26_141
-	ld	hl, _playerCursor+51
-	ld	hl, (hl)
-	ld	(ix - 47), hl
+	jp	nz, BB26_30
+	jp	BB26_214
+BB26_130:
+	ld	hl, (ix - 22)
+	ld	a, 65
+	call	__fcmp
+	jp	p, BB26_134
+BB26_131:
 	ld	hl, _playerCursor+53
-	ld	hl, (hl)
-	ld	(ix - 50), hl
+BB26_132:
+	push	hl
+	pop	iy
+BB26_133:
+	ld	hl, (iy)
+	ld.sis	de, 20
+	jp	BB26_29
+BB26_134:
+	ld	hl, (ix - 22)
+	ld	bc, -7929856
+	ld	a, 66
+	call	__fcmp
+	jp	m, BB26_77
+	ld	hl, (ix - 22)
+	ld	bc, -2031616
+	call	__fcmp
+	jp	m, BB26_133
+	ld	hl, (ix - 22)
+	ld	bc, 1933312
+	ld	a, 67
+	call	__fcmp
+	jp	p, BB26_189
 BB26_137:
-	ld	(ix - 35), iy
-	ld	iy, (iy)
-	ld	hl, (iy + 49)
-	ld	bc, (ix - 41)
-	or	a, a
-	sbc.sis	hl, bc
-	jp	nz, BB26_141
-	ld	hl, (iy + 51)
-	ld	bc, (ix - 47)
-	or	a, a
-	sbc.sis	hl, bc
-	jp	nz, BB26_140
-	ld	hl, (iy + 53)
-	ld	bc, (ix - 50)
-	or	a, a
-	sbc.sis	hl, bc
-	jp	z, BB26_193
+	ld	hl, (iy)
+	ld.sis	de, 20
+	add.sis	hl, de
+	ld	(iy), l
+	ld	(iy + 1), h
+BB26_138:
+	ld	hl, _playerCursor+53
+BB26_139:
+	push	hl
+	pop	iy
 BB26_140:
-	ld	iy, (ix - 35)
-	lea	iy, iy + 3
-	ld	hl, (ix - 26)
-	ld	bc, 3
-	add	hl, bc
-	ld	(ix - 26), hl
-	lea	hl, iy
-	ld	bc, (ix - 44)
-	or	a, a
-	sbc	hl, bc
-	jp	c, BB26_137
+	ld	hl, (iy)
+	ld.sis	de, -20
+	jp	BB26_29
 BB26_141:
+	ld	a, (_fineMovement)
+	bit	0, a
+	ld	hl, 163840
 	ex	de, hl
-	ld	de, 1000
+	jr	z, BB26_143
+	ld	hl, 40960
+	ex	de, hl
+BB26_143:
+	ld	(ix - 22), de
+	ld	hl, (_cy)
+	push	hl
+	push	de
+	call	_fp_mul
+	push	hl
+	pop	de
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (_cameraXYZ)
 	or	a, a
 	sbc	hl, de
-	jp	nc, BB26_34
-	jp	BB26_180
-BB26_142:
-	ld	(ix - 26), hl
-	ld	bc, -4980736
-	ld	a, -63
-	call	__fcmp
-	ld	iy, _playerCursor+49
-	jp	p, BB26_160
-BB26_143:
-	ld	hl, (iy)
-	ld.sis	de, -20
-	add.sis	hl, de
-	ld	(iy), l
-	ld	(iy + 1), h
+	ld	(_cameraXYZ), hl
+	ld	hl, (_sy)
+	jr	BB26_147
 BB26_144:
-	ld	hl, _playerCursor+53
-BB26_145:
-	push	hl
-	pop	iy
+	ld	a, (_fineMovement)
+	bit	0, a
+	ld	hl, 163840
+	ex	de, hl
+	jr	z, BB26_146
+	ld	hl, 40960
+	ex	de, hl
 BB26_146:
-	ld	hl, (iy)
-	ld.sis	de, 20
-	jp	BB26_33
-BB26_147:
-	ld	bc, -4980736
-	ld	a, -63
-	call	__fcmp
-	jp	m, BB26_165
-	ld	(ix - 26), hl
-	ld	a, 65
-	call	__fcmp
-	ld	iy, _playerCursor+49
-	jp	m, BB26_31
-	ld	hl, (ix - 26)
-	ld	bc, -7929856
-	ld	a, 66
-	call	__fcmp
-	jp	m, BB26_167
-	ld	hl, (ix - 26)
-	ld	bc, -2031616
-	call	__fcmp
-	jp	m, BB26_143
-	ld	hl, (ix - 26)
-	ld	bc, 1933312
-	ld	a, 67
-	call	__fcmp
-	jp	m, BB26_144
-	ld	hl, (ix - 26)
-	ld	bc, 4882432
-	call	__fcmp
-	jp	m, BB26_91
-	ld	iy, _playerCursor+49
-	ld	iy, (iy)
-	ld.sis	bc, 20
-	add.sis	iy, bc
-	ld	hl, _playerCursor+49
-	push	de
-	lea	de, iy
-	ld	(hl), e
-	inc	hl
-	ld	(hl), d
-	pop	de
-	ld	hl, (ix - 26)
-	ld	bc, 7831552
-	call	__fcmp
-	jp	m, BB26_34
-	jp	BB26_165
-BB26_154:
-	ld	a, 65
-	call	__fcmp
-	ld	iy, _playerCursor+49
-	jp	m, BB26_146
-	ld	bc, -7929856
-	ld	a, 66
-	call	__fcmp
-	jp	m, BB26_164
-	ld	bc, -2031616
-	call	__fcmp
-	jp	m, BB26_165
-	ld	bc, 1933312
-	ld	a, 67
-	call	__fcmp
-	jp	m, BB26_31
-	ld	bc, 4882432
-	call	__fcmp
-	jp	m, BB26_167
-	ld	bc, 7831552
-	call	__fcmp
-	jp	m, BB26_143
-	jp	BB26_144
-BB26_160:
-	ld	hl, (ix - 26)
-	ld	a, 65
-	call	__fcmp
-	jp	m, BB26_144
-	ld	hl, (ix - 26)
-	ld	bc, -7929856
-	ld	a, 66
-	call	__fcmp
-	jp	m, BB26_91
-	ld	hl, (ix - 26)
-	ld	bc, -2031616
-	call	__fcmp
-	jp	m, BB26_146
-	ld	hl, (ix - 26)
-	ld	bc, 1933312
-	ld	a, 67
-	call	__fcmp
-	jp	p, BB26_168
-BB26_164:
-	ld	hl, (iy)
-	ld.sis	de, 20
-	add.sis	hl, de
-	ld	(iy), l
-	ld	(iy + 1), h
-BB26_165:
-	ld	hl, _playerCursor+53
-BB26_166:
+	ld	(ix - 22), de
+	ld	hl, (_sy)
 	push	hl
-	pop	iy
-BB26_167:
-	ld	hl, (iy)
-	ld.sis	de, -20
-	jp	BB26_33
-BB26_168:
-	ld	hl, (ix - 26)
-	ld	bc, 4882432
-	call	__fcmp
-	jp	m, BB26_165
-	ld	iy, _playerCursor+49
-	ld	iy, (iy)
-	ld.sis	bc, -20
-	add.sis	iy, bc
-	ld	hl, _playerCursor+49
 	push	de
-	lea	de, iy
-	ld	(hl), e
-	inc	hl
-	ld	(hl), d
+	call	_fp_mul
+	push	hl
 	pop	de
-	ld	hl, (ix - 26)
-	ld	bc, 7831552
-	call	__fcmp
-	jp	p, BB26_34
-	jr	BB26_165
-BB26_170:
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (_cameraXYZ)
+	add	hl, de
+	ld	(_cameraXYZ), hl
+	ld	hl, (_cy)
+BB26_147:
+	push	hl
+	ld	hl, (ix - 22)
+	push	hl
+	call	_fp_mul
+	push	hl
+	pop	de
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (_cameraXYZ+6)
+	add	hl, de
+	jp	BB26_34
+BB26_148:
+	call	__Z11selectBlockv
+	jp	BB26_30
+BB26_149:
+	ld	a, (_fineMovement)
+	bit	0, a
+	ld	hl, -81920
+	jp	z, BB26_47
+	ld	hl, -20480
+	jp	BB26_47
+BB26_151:
 	ld	hl, 1
 	push	hl
 	call	_gfx_SetDraw
@@ -5405,10 +5313,10 @@ BB26_170:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -5440,10 +5348,10 @@ BB26_170:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -5475,10 +5383,10 @@ BB26_170:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
@@ -5508,98 +5416,342 @@ BB26_170:
 	push	hl
 	call	_gfx_SetDraw
 	pop	hl
+BB26_152:
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ld	e, l
+	ld	d, h
+	ld.sis	bc, 68
+	or	a, a
+	sbc.sis	hl, bc
+	jp	z, BB26_169
+	ld	l, e
+	ld	h, d
+	ld.sis	bc, 143
+	or	a, a
+	sbc.sis	hl, bc
+	jp	z, BB26_221
+	ld	l, e
+	ld	h, d
+	ld.sis	de, 144
+	or	a, a
+	sbc.sis	hl, de
+	jp	z, BB26_215
+	jr	BB26_152
+BB26_155:
+	ld	a, (_fineMovement)
+	ld	l, a
+	ld	bc, (_angleX)
+	ld	a, (_angleX+3)
+	bit	0, l
+	jp	nz, BB26_173
+	ld	hl, 2097152
+	ld	e, 65
+	jp	BB26_91
+BB26_157:
+	ld	a, (_fineMovement)
+	bit	0, a
+	jp	nz, BB26_174
+	ld	hl, 65
+	jp	BB26_113
+BB26_159:
+	ld	a, (_fineMovement)
+	bit	0, a
+	ld	hl, 163840
+	ex	de, hl
+	jr	z, BB26_161
+	ld	hl, 40960
+	ex	de, hl
+BB26_161:
+	ld	(ix - 22), de
+	ld	hl, (_sy)
+	push	hl
+	push	de
+	call	_fp_mul
+	push	hl
+	pop	de
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (_cameraXYZ)
+	or	a, a
+	sbc	hl, de
+	ld	(_cameraXYZ), hl
+	ld	hl, (_cy)
+BB26_162:
+	push	hl
+	ld	hl, (ix - 22)
+	push	hl
+	call	_fp_mul
+	push	hl
+	pop	de
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (_cameraXYZ+6)
+	jp	BB26_33
+BB26_163:
+	;APP
+	di
+	assume	adl = 1
+	;NO_APP
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	a, -1
+	ld	(-2883584), a
+	ld	bc, 153599
+	ld	de, (ix - 41)
+	ld	hl, -2883584
+	ldir
+	ld	hl, (_numberOfObjects)
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jr	z, BB26_166
+	ld	hl, _zSortedObjects
+	push	hl
+	pop	iy
+	ld	bc, 0
+BB26_165:
+	ld	(ix - 38), bc
+	ld	(ix - 22), iy
+	ld	hl, (iy)
+	push	hl
+	call	__ZN6object16generatePolygonsEv
+	ld	bc, (ix - 38)
+	ld	iy, (ix - 22)
+	pop	hl
+	inc	bc
+	ld	de, (_numberOfObjects)
+	lea	iy, iy + 3
+	push	bc
+	pop	hl
+	or	a, a
+	sbc	hl, de
+	jr	c, BB26_165
+BB26_166:
+	ld	hl, (_cursorBackground)
+	ld	de, (_playerCursorX)
+	ld	bc, (_playerCursorY)
+	push	bc
+	push	de
+	push	hl
+	call	_gfx_GetSprite
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	call	__Z10drawCursorv
+	;APP
+	ei
+	assume	adl = 1
+	;NO_APP
+	jp	BB26_30
+BB26_167:
+	ld	hl, _playerCursor
+	ld	(ix - 16), hl
+	ld	hl, (_numberOfObjects)
+	ld	de, __Z8xComparePKvS0_
+	push	de
+	ld	de, 3
+	push	de
+	push	hl
+	ld	hl, _objects
+	push	hl
+	pea	ix - 16
+	call	_bsearch
+	ld	(ix - 22), hl
+	ld	hl, 15
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (_cursorBackground)
+	ld	de, (_playerCursorX)
+	ld	bc, (_playerCursorY)
+	push	bc
+	push	de
+	push	hl
+	call	_gfx_Sprite
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (ix - 22)
+	push	hl
+	pop	de
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jp	nz, BB26_175
+	ld	de, (_numberOfObjects)
+	jp	BB26_184
+BB26_169:
+	;APP
+	di
+	assume	adl = 1
+	;NO_APP
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	a, -1
+	ld	(-2883584), a
+	ld	bc, 153599
+	ld	de, (ix - 41)
+	ld	hl, -2883584
+	ldir
+	ld	hl, (_numberOfObjects)
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jr	z, BB26_172
+	ld	hl, _zSortedObjects
+	push	hl
+	pop	iy
+	ld	bc, 0
 BB26_171:
-	call	_os_GetCSC
-	cp	a, 26
-	jp	z, BB26_206
-	cp	a, 34
-	jp	z, BB26_205
-	cp	a, 49
-	jr	nz, BB26_171
+	ld	(ix - 38), bc
+	ld	(ix - 22), iy
+	ld	hl, (iy)
+	push	hl
+	call	__ZN6object16generatePolygonsEv
+	ld	bc, (ix - 38)
+	ld	iy, (ix - 22)
+	pop	hl
+	inc	bc
+	ld	de, (_numberOfObjects)
+	lea	iy, iy + 3
+	push	bc
+	pop	hl
 	or	a, a
-	sbc	hl, hl
+	sbc	hl, de
+	jr	c, BB26_171
+BB26_172:
+	ld	hl, (_cursorBackground)
+	ld	de, (_playerCursorX)
+	ld	bc, (_playerCursorY)
+	push	bc
+	push	de
 	push	hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
+	call	_gfx_GetSprite
+	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	a, -1
-	ld	(-2883584), a
-	ld	bc, 153599
-	ld	de, (ix - 38)
-	ld	hl, -2883584
-	ldir
-	ld	hl, (_numberOfObjects)
-	add	hl, bc
-	or	a, a
-	sbc	hl, bc
-	jp	z, BB26_29
-	ld	hl, _zSortedObjects
+	call	__Z10drawCursorv
+	;APP
+	ei
+	assume	adl = 1
+	;NO_APP
+	jp	BB26_30
+BB26_173:
+	ld	hl, 2097152
+	ld	e, 64
+	jp	BB26_91
+BB26_174:
+	ld	hl, 64
+	jp	BB26_113
+BB26_175:
+	ld	hl, _playerCursor+49
+	ld	hl, (hl)
+	ld	(ix - 44), hl
+	ex	de, hl
 	push	hl
 	pop	iy
-	ld	bc, 0
+	ld	de, (ix - 32)
+	add	iy, de
 BB26_176:
-	ld	(ix - 35), bc
-	ld	(ix - 26), iy
-	ld	hl, (iy)
-	push	hl
-	call	__ZN6object16generatePolygonsEv
-	ld	bc, (ix - 35)
-	ld	iy, (ix - 26)
-	pop	hl
-	inc	bc
-	ld	de, (_numberOfObjects)
-	lea	iy, iy + 3
-	push	bc
-	pop	hl
+	ex	de, hl
+	lea	bc, iy
+	ld	hl, _objects
+	ld	(ix - 38), de
 	or	a, a
 	sbc	hl, de
-	jr	c, BB26_176
-	jp	BB26_29
-BB26_177:
+	jp	nc, BB26_178
+	ld	iy, (ix - 38)
+	lea	hl, iy - 3
+	ld	(ix - 22), hl
+	ld	iy, (iy - 3)
+	ld	hl, (iy + 49)
+	push	bc
+	pop	iy
+	ld	de, -3
+	add	iy, de
+	ld	de, (ix - 44)
 	or	a, a
-	sbc	hl, hl
+	sbc.sis	hl, de
+	ld	hl, (ix - 22)
+	jp	z, BB26_176
+BB26_178:
+	ld	(ix - 22), bc
+	ld	de, (_numberOfObjects)
+	ld	bc, 3
+	push	de
+	pop	hl
+	call	__imulu
 	push	hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	a, -1
-	ld	(-2883584), a
-	ld	bc, 153599
-	ld	de, (ix - 38)
-	ld	hl, -2883584
-	ldir
-	ld	hl, (_numberOfObjects)
+	pop	bc
+	ld	hl, _objects
 	add	hl, bc
+	push	hl
+	pop	bc
+	ld	iy, (ix - 38)
+	lea	hl, iy
+	ld	(ix - 47), bc
 	or	a, a
 	sbc	hl, bc
-	jp	z, BB26_29
-	ld	hl, _zSortedObjects
-	push	hl
-	pop	iy
-	ld	bc, 0
-BB26_179:
-	ld	(ix - 35), bc
-	ld	(ix - 26), iy
-	ld	hl, (iy)
-	push	hl
-	call	__ZN6object16generatePolygonsEv
-	ld	bc, (ix - 35)
-	ld	iy, (ix - 26)
-	pop	hl
-	inc	bc
-	ld	de, (_numberOfObjects)
+	jp	nc, BB26_184
+	ld	hl, _playerCursor+51
+	ld	hl, (hl)
+	ld	(ix - 50), hl
+	ld	hl, _playerCursor+53
+	ld	hl, (hl)
+	ld	(ix - 53), hl
+BB26_180:
+	ld	(ix - 38), iy
+	ld	iy, (iy)
+	ld	hl, (iy + 49)
+	ld	bc, (ix - 44)
+	or	a, a
+	sbc.sis	hl, bc
+	jp	nz, BB26_184
+	ld	hl, (iy + 51)
+	ld	bc, (ix - 50)
+	or	a, a
+	sbc.sis	hl, bc
+	jp	nz, BB26_183
+	ld	hl, (iy + 53)
+	ld	bc, (ix - 53)
+	or	a, a
+	sbc.sis	hl, bc
+	jp	z, BB26_203
+BB26_183:
+	ld	iy, (ix - 38)
 	lea	iy, iy + 3
-	push	bc
-	pop	hl
+	ld	hl, (ix - 22)
+	ld	bc, 3
+	add	hl, bc
+	ld	(ix - 22), hl
+	lea	hl, iy
+	ld	bc, (ix - 47)
+	or	a, a
+	sbc	hl, bc
+	jp	c, BB26_180
+BB26_184:
+	ex	de, hl
+	ld	de, 1000
 	or	a, a
 	sbc	hl, de
-	jr	c, BB26_179
-	jp	BB26_29
-BB26_180:
+	jp	nc, BB26_202
 	ld	hl, 57
 	push	hl
 	call	__Znwj
@@ -5610,10 +5762,10 @@ BB26_180:
 	ld	bc, (hl)
 	ld	hl, _playerCursor+51
 	ld	hl, (hl)
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	ld	hl, _playerCursor+53
 	ld	hl, (hl)
-	ld	(ix - 35), hl
+	ld	(ix - 38), hl
 	ld	a, (_selectedObject)
 	push	de
 	pop	iy
@@ -5637,10 +5789,10 @@ BB26_180:
 	ld	(iy + 55), h
 	ld	(iy + 49), c
 	ld	(iy + 50), b
-	ld	hl, (ix - 26)
+	ld	hl, (ix - 22)
 	ld	(iy + 51), l
 	ld	(iy + 52), h
-	ld	hl, (ix - 35)
+	ld	hl, (ix - 38)
 	ld	(iy + 53), l
 	ld	(iy + 54), h
 	ld	(iy + 48), a
@@ -5650,7 +5802,7 @@ BB26_180:
 	di
 	assume	adl = 1
 	;NO_APP
-	ld	(ix - 26), de
+	ld	(ix - 22), de
 	push	de
 	call	__ZN6object14generatePointsEv
 	pop	hl
@@ -5678,19 +5830,19 @@ BB26_180:
 	inc	de
 	or	a, a
 	sbc	hl, de
-	jp	c, BB26_184
-	ld	(ix - 44), iy
+	jp	c, BB26_192
+	ld	(ix - 47), iy
 	ld	hl, _playerCursor+49
 	ld	de, (hl)
 	push	bc
 	pop	hl
 	ld	bc, 3
 	call	__imulu
-	ld	(ix - 41), hl
+	ld	(ix - 44), hl
 	ld	iy, _objects
-	ld	(ix - 47), de
-BB26_182:
-	ld	(ix - 35), iy
+	ld	(ix - 50), de
+BB26_187:
+	ld	(ix - 38), iy
 	ld	iy, (iy)
 	ld	hl, (iy + 49)
 	ld.sis	bc, -32768
@@ -5702,53 +5854,75 @@ BB26_182:
 	ld	b, iyh
 	or	a, a
 	sbc.sis	hl, bc
-	jr	nc, BB26_185
-	ld	iy, (ix - 35)
+	jr	nc, BB26_193
+	ld	iy, (ix - 38)
 	lea	iy, iy + 3
 	ld	bc, -3
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 44)
 	add	hl, bc
-	ld	(ix - 41), hl
+	ld	(ix - 44), hl
 	lea	hl, iy
-	ld	de, (ix - 44)
+	ld	de, (ix - 47)
 	or	a, a
 	sbc	hl, de
-	ld	de, (ix - 47)
-	jp	c, BB26_182
-	jr	BB26_186
-BB26_184:
-	ld	hl, (ix - 26)
+	ld	de, (ix - 50)
+	jp	c, BB26_187
+	jr	BB26_194
+BB26_189:
+	ld	hl, (ix - 22)
+	ld	bc, 4882432
+	call	__fcmp
+	jp	m, BB26_138
+	ld	iy, _playerCursor+49
+	ld	iy, (iy)
+	ld.sis	bc, -20
+	add.sis	iy, bc
+	ld	hl, _playerCursor+49
+	push	de
+	lea	de, iy
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+	pop	de
+	ld	hl, (ix - 22)
+	ld	bc, 7831552
+	call	__fcmp
+	jp	m, BB26_138
+	call	__Z10drawCursorv
+	jp	BB26_30
+BB26_192:
+	ld	hl, (ix - 22)
 	ld	(_objects), hl
 	ld	hl, _zSortedObjects
 	push	hl
 	pop	iy
-	jp	BB26_192
-BB26_185:
-	ld	hl, (ix - 41)
+	jp	BB26_200
+BB26_193:
+	ld	hl, (ix - 44)
 	push	hl
-	ld	iy, (ix - 35)
+	ld	iy, (ix - 38)
 	push	iy
 	pea	iy + 3
 	call	_memmove
-	ld	iy, (ix - 35)
+	ld	iy, (ix - 38)
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-BB26_186:
-	ld	hl, (ix - 26)
+BB26_194:
+	ld	hl, (ix - 22)
 	ld	(iy), hl
 	or	a, a
 	sbc	hl, hl
-	ld	(ix - 26), hl
+	ld	(ix - 22), hl
 	ld	hl, _zSortedObjects
-BB26_187:
-	ld	de, (ix - 26)
+BB26_195:
+	ld	de, (ix - 22)
 	add	hl, de
 	pea	ix - 19
-	ld	(ix - 35), hl
+	ld	(ix - 38), hl
 	push	hl
 	call	__Z15distanceComparePKvS0_
-	ld	(ix - 41), hl
+	ld	(ix - 44), hl
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
@@ -5764,13 +5938,13 @@ BB26_187:
 	ld	hl, -8388608
 	push	hl
 	pop	bc
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 44)
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	ld	(ix - 44), de
-	jr	nc, BB26_190
-	ld	hl, (ix - 26)
+	ld	(ix - 47), de
+	jr	nc, BB26_198
+	ld	hl, (ix - 22)
 	ld	bc, 3
 	add	hl, bc
 	push	hl
@@ -5778,46 +5952,59 @@ BB26_187:
 	ld	de, _zSortedObjects
 	push	de
 	pop	hl
-	ld	(ix - 26), bc
+	ld	(ix - 22), bc
 	add	hl, bc
 	lea	bc, iy
 	or	a, a
 	sbc	hl, bc
 	ex	de, hl
-	jr	c, BB26_187
+	jr	c, BB26_195
 	push	hl
 	pop	iy
-	ld	bc, (ix - 26)
+	ld	bc, (ix - 22)
 	add	iy, bc
-	jr	BB26_191
-BB26_190:
+	jr	BB26_199
+BB26_198:
 	ex	de, hl
 	ld	bc, 3
 	call	__imulu
-	ld	de, (ix - 26)
+	ld	de, (ix - 22)
 	or	a, a
 	sbc	hl, de
 	push	hl
-	ld	iy, (ix - 35)
+	ld	iy, (ix - 38)
 	push	iy
 	pea	iy + 3
 	call	_memmove
-	ld	iy, (ix - 35)
+	ld	iy, (ix - 38)
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-BB26_191:
-	ld	bc, (ix - 44)
-BB26_192:
+BB26_199:
+	ld	bc, (ix - 47)
+BB26_200:
 	ld	hl, (ix - 19)
 	ld	(iy), hl
 	inc	bc
 	ld	(_numberOfObjects), bc
 	push	hl
 	call	__ZN6object16generatePolygonsEv
+BB26_201:
 	pop	hl
-	jp	BB26_29
-BB26_193:
+	ld	hl, (_cursorBackground)
+	ld	de, (_playerCursorX)
+	ld	bc, (_playerCursorY)
+	push	bc
+	push	de
+	push	hl
+	call	_gfx_GetSprite
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+BB26_202:
+	call	__Z10drawCursorv
+	jp	BB26_30
+BB26_203:
 	ld	hl, __Z15distanceComparePKvS0_
 	push	hl
 	ld	hl, 3
@@ -5825,7 +6012,7 @@ BB26_193:
 	push	de
 	ld	hl, _zSortedObjects
 	push	hl
-	ld	hl, (ix - 35)
+	ld	hl, (ix - 38)
 	push	hl
 	call	_bsearch
 	ld	iy, 15
@@ -5833,25 +6020,25 @@ BB26_193:
 	ld	sp, iy
 	push	hl
 	pop	iy
-	ld	de, (ix - 32)
+	ld	de, (ix - 35)
 	add	iy, de
-BB26_194:
+BB26_204:
 	ex	de, hl
 	lea	bc, iy
 	ld	hl, _zSortedObjects
-	ld	(ix - 41), de
+	ld	(ix - 44), de
 	or	a, a
 	sbc	hl, de
-	jr	nc, BB26_196
-	ld	iy, (ix - 41)
+	jr	nc, BB26_206
+	ld	iy, (ix - 44)
 	lea	de, iy - 3
-	ld	(ix - 47), de
-	ld	hl, (ix - 35)
+	ld	(ix - 50), de
+	ld	hl, (ix - 38)
 	push	hl
 	push	de
-	ld	(ix - 44), bc
+	ld	(ix - 47), bc
 	call	__Z15distanceComparePKvS0_
-	ld	bc, (ix - 44)
+	ld	bc, (ix - 47)
 	ld	iy, 6
 	add	iy, sp
 	ld	sp, iy
@@ -5862,9 +6049,9 @@ BB26_194:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	ld	hl, (ix - 47)
-	jr	z, BB26_194
-BB26_196:
+	ld	hl, (ix - 50)
+	jr	z, BB26_204
+BB26_206:
 	push	bc
 	pop	iy
 	ld	hl, (_numberOfObjects)
@@ -5875,27 +6062,27 @@ BB26_196:
 	ld	hl, _zSortedObjects
 	add	hl, de
 	ex	de, hl
-	ld	bc, (ix - 41)
+	ld	bc, (ix - 44)
 	push	bc
 	pop	hl
 	or	a, a
 	sbc	hl, de
-	jp	nc, BB26_214
-	ld	(ix - 44), iy
-BB26_198:
-	ld	(ix - 41), bc
-	ld	hl, (ix - 35)
+	jp	nc, BB26_224
+	ld	(ix - 47), iy
+BB26_208:
+	ld	(ix - 44), bc
+	ld	hl, (ix - 38)
 	push	hl
 	push	bc
 	call	__Z15distanceComparePKvS0_
 	ld	iy, 6
 	add	iy, sp
 	ld	sp, iy
-	ld	iy, (ix - 41)
+	ld	iy, (ix - 44)
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jp	nz, BB26_214
+	jp	nz, BB26_224
 	ld	iy, (iy)
 	lea	bc, iy
 	ld	hl, (iy + 49)
@@ -5903,7 +6090,7 @@ BB26_198:
 	ld	de, (iy)
 	or	a, a
 	sbc.sis	hl, de
-	jp	nz, BB26_202
+	jp	nz, BB26_212
 	push	bc
 	pop	iy
 	ld	hl, (iy + 51)
@@ -5911,7 +6098,7 @@ BB26_198:
 	ld	de, (iy)
 	or	a, a
 	sbc.sis	hl, de
-	jp	nz, BB26_202
+	jp	nz, BB26_212
 	push	bc
 	pop	iy
 	ld	hl, (iy + 53)
@@ -5919,10 +6106,10 @@ BB26_198:
 	ld	de, (iy)
 	or	a, a
 	sbc.sis	hl, de
-	jr	z, BB26_203
-BB26_202:
+	jr	z, BB26_213
+BB26_212:
 	ld	bc, 3
-	ld	iy, (ix - 41)
+	ld	iy, (ix - 44)
 	lea	iy, iy + 3
 	lea	de, iy
 	ld	hl, (_numberOfObjects)
@@ -5931,44 +6118,44 @@ BB26_202:
 	pop	bc
 	ld	hl, _zSortedObjects
 	add	hl, bc
-	ld	(ix - 41), hl
-	ld	iy, (ix - 44)
+	ld	(ix - 44), hl
+	ld	iy, (ix - 47)
 	ld	bc, 3
 	add	iy, bc
 	push	de
 	pop	hl
-	ld	bc, (ix - 41)
+	ld	bc, (ix - 44)
 	or	a, a
 	sbc	hl, bc
-	ld	(ix - 44), iy
+	ld	(ix - 47), iy
 	push	de
 	pop	bc
-	jp	c, BB26_198
-	jp	BB26_214
-BB26_203:
+	jp	c, BB26_208
+	jp	BB26_224
+BB26_213:
 	ld	hl, (_numberOfObjects)
 	ld	de, 3
 	push	de
 	pop	bc
 	call	__imulu
-	ld	de, (ix - 44)
+	ld	de, (ix - 47)
 	or	a, a
 	sbc	hl, de
 	push	hl
-	ld	iy, (ix - 41)
+	ld	iy, (ix - 44)
 	pea	iy + 3
 	push	iy
 	call	_memmove
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	iy, (ix - 35)
+	ld	iy, (ix - 38)
 	ld	hl, (iy)
-	ld	(ix - 41), hl
+	ld	(ix - 44), hl
 	ld	hl, (_numberOfObjects)
 	ld	bc, 3
 	call	__imulu
-	ld	de, (ix - 26)
+	ld	de, (ix - 22)
 	or	a, a
 	sbc	hl, de
 	push	hl
@@ -5981,61 +6168,63 @@ BB26_203:
 	ld	hl, (_numberOfObjects)
 	dec	hl
 	ld	(_numberOfObjects), hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 44)
 	push	hl
 	call	__ZN6object12deleteObjectEv
-	pop	hl
-	jp	BB26_29
-BB26_204:
+	jp	BB26_201
+BB26_214:
 	ld	a, 1
-	ld	(ix - 23), a
-	jr	BB26_206
-BB26_205:
-	ld	hl, (ix - 22)
-	push	hl
-	call	__Z4savePKc
-	pop	hl
-BB26_206:
+	ld	(ix - 26), a
+BB26_215:
 	ld	de, (_numberOfObjects)
 	push	de
 	pop	hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	ld	bc, 0
 	ld	hl, _objects
-	jr	z, BB26_211
+	jr	z, BB26_220
 	push	hl
 	pop	iy
-	ld	(ix - 26), bc
-BB26_208:
+	ld	bc, 0
+BB26_217:
 	ld	hl, (iy)
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	z, BB26_210
+	jr	z, BB26_219
 	push	hl
-	ld	(ix - 35), iy
+	ld	(ix - 22), iy
+	ld	(ix - 38), bc
 	call	__ZdlPv
-	ld	iy, (ix - 35)
-	ld	bc, 0
+	ld	bc, (ix - 38)
+	ld	iy, (ix - 22)
 	pop	hl
 	ld	de, (_numberOfObjects)
-BB26_210:
-	ld	hl, (ix - 26)
-	inc	hl
+BB26_219:
+	inc	bc
 	lea	iy, iy + 3
-	ld	(ix - 26), hl
+	push	bc
+	pop	hl
 	or	a, a
 	sbc	hl, de
-	jr	c, BB26_208
-BB26_211:
-	ld	(_numberOfObjects), bc
-	ld	a, (ix - 23)
+	jr	c, BB26_217
+BB26_220:
+	or	a, a
+	sbc	hl, hl
+	ld	(_numberOfObjects), hl
+	ld	a, (ix - 26)
 	and	a, 1
 	bit	0, a
-	jp	z, BB26_6
-BB26_212:
+	jp	z, BB26_4
+	jr	BB26_222
+BB26_221:
+	ld	hl, (ix - 29)
+	push	hl
+	call	__Z4savePKc
+	pop	hl
+	jr	BB26_215
+BB26_222:
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -6046,6 +6235,10 @@ BB26_212:
 	call	_gfx_FillScreen
 	pop	hl
 	call	_gfx_End
+	ld	a, (_interruptOriginalValue)
+	ld	(-1048571), a
+	ld	iy, -3145600
+	call	_os_EnableAPD
 	xor	a, a
 	ld	(-3132938), a
 	ld	hl, -3132938
@@ -6054,22 +6247,26 @@ BB26_212:
 	inc	de
 	ld	bc, 69089
 	ldir
-	ld	iy, -3145600
 	call	_os_ClrLCDFull
 	call	_os_HomeUp
 	call	_os_DrawStatusBar
-	or	a, a
-	sbc	hl, hl
+	ld	hl, (ix - 25)
 	ld	sp, ix
 	pop	ix
 	ret
-BB26_213:
+BB26_223:
 	ld	hl, 1
+	ld	(ix - 25), hl
+	ld	hl, (ix - 25)
 	ld	sp, ix
 	pop	ix
 	ret
-BB26_214:
+BB26_224:
 	call	_gfx_End
+	ld	a, (_interruptOriginalValue)
+	ld	(-1048571), a
+	ld	iy, -3145600
+	call	_os_EnableAPD
 	xor	a, a
 	ld	(-3132938), a
 	ld	hl, -3132938
@@ -6086,62 +6283,221 @@ BB26_214:
 	section	.rodata,"a",@progbits
 	private	JTI26_0
 JTI26_0:
-	dl	BB26_37
-	dl	BB26_40
-	dl	BB26_43
-	dl	BB26_47
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_51
-	dl	BB26_35
+	dl	BB26_36
+	dl	BB26_30
+	dl	BB26_75
+	dl	BB26_63
+	dl	BB26_86
+	dl	BB26_57
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_55
+	dl	BB26_30
+	dl	BB26_73
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
 	dl	BB26_78
-	dl	BB26_79
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_204
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_80
-	dl	BB26_88
-	dl	BB26_92
-	dl	BB26_35
-	dl	BB26_52
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_94
-	dl	BB26_96
-	dl	BB26_98
-	dl	BB26_35
-	dl	BB26_54
-	dl	BB26_56
 	dl	BB26_58
-	dl	BB26_35
-	dl	BB26_100
-	dl	BB26_102
-	dl	BB26_110
-	dl	BB26_35
-	dl	BB26_60
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_62
-	dl	BB26_170
-	dl	BB26_65
-	dl	BB26_35
-	dl	BB26_66
-	dl	BB26_35
-	dl	BB26_35
-	dl	BB26_177
-	dl	BB26_67
+	dl	BB26_61
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_71
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_59
+	private	JTI26_1
+JTI26_1:
+	dl	BB26_52
+	dl	BB26_141
+	dl	BB26_144
+	dl	BB26_159
+	dl	BB26_148
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_214
+	dl	BB26_45
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_163
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_55
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_149
+	dl	BB26_32
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_151
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_151
+	dl	BB26_163
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_50
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_89
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_57
+	dl	BB26_58
+	dl	BB26_149
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_155
+	dl	BB26_30
+	dl	BB26_157
+	dl	BB26_30
+	dl	BB26_59
+	dl	BB26_61
+	dl	BB26_75
+	dl	BB26_36
+	dl	BB26_167
+	dl	BB26_63
+	dl	BB26_78
+	dl	BB26_71
+	dl	BB26_86
+	dl	BB26_30
+	dl	BB26_167
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_30
+	dl	BB26_73
+	dl	BB26_30
+	dl	BB26_155
+	dl	BB26_30
+	dl	BB26_157
 
 	section	.text,"ax",@progbits
 	public	__Z15texturePackMenuv
@@ -6149,7 +6505,7 @@ __Z15texturePackMenuv:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 81
+	lea	hl, ix - 80
 	ld	sp, hl
 	ld	hl, 0
 	ld	de, 0
@@ -6158,7 +6514,7 @@ __Z15texturePackMenuv:
 	ld	(ix - 35), hl
 	push	de
 	call	_malloc
-	ld	(ix - 47), hl
+	ld	(ix - 50), hl
 	pop	hl
 	ld	hl, _.str.36
 	push	hl
@@ -6178,12 +6534,12 @@ __Z15texturePackMenuv:
 	jp	z, BB27_6
 	ld	de, _.str.122
 	lea	hl, ix - 32
-	ld	(ix - 59), hl
+	ld	(ix - 65), hl
 	or	a, a
 	sbc	hl, hl
 	ld	(ix - 44), hl
 BB27_2:
-	ld	(ix - 50), bc
+	ld	(ix - 47), bc
 	push	de
 	push	bc
 	call	_ti_Open
@@ -6220,14 +6576,14 @@ BB27_2:
 	ld	bc, 3
 	call	__imulu
 	push	hl
-	ld	hl, (ix - 47)
+	ld	hl, (ix - 50)
 	push	hl
 	call	_realloc
-	ld	(ix - 47), hl
+	ld	(ix - 50), hl
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 50)
+	ld	hl, (ix - 47)
 	push	hl
 	call	_strlen
 	pop	de
@@ -6242,10 +6598,10 @@ BB27_2:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, (ix - 47)
+	ld	hl, (ix - 50)
 	add	hl, bc
 	ld	(hl), de
-	ld	hl, (ix - 50)
+	ld	hl, (ix - 47)
 	push	hl
 	push	de
 	call	_strcpy
@@ -6272,13 +6628,11 @@ BB27_4:
 	sbc	hl, bc
 	ld	de, _.str.122
 	jp	nz, BB27_2
-	ld	de, (ix - 44)
-	push	de
-	pop	hl
+	ld	hl, (ix - 44)
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	nz, BB27_9
+	jr	nz, BB27_8
 BB27_6:
 	call	_gfx_End
 	ld	iy, -3145600
@@ -6297,11 +6651,12 @@ BB27_6:
 	push	hl
 	call	_os_PutStrFull
 	pop	hl
+	call	_os_GetKey
 BB27_7:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB27_7
-BB27_8:
+	ld	a, (_interruptOriginalValue)
+	ld	(-1048571), a
+	ld	iy, -3145600
+	call	_os_EnableAPD
 	xor	a, a
 	ld	(-3132938), a
 	ld	hl, -3132938
@@ -6314,35 +6669,36 @@ BB27_8:
 	push	hl
 	call	_exit
 	pop	hl
-BB27_9:
-	push	de
-	pop	hl
+BB27_8:
+	push	hl
+	pop	de
 	ld	bc, 6
 	call	__imulu
 	push	hl
 	pop	bc
 	ld	iy, 2796203
+	ld	(ix - 44), de
 	ex	de, hl
 	lea	de, iy
 	or	a, a
 	sbc	hl, de
 	ld	hl, -1
-	jr	nc, BB27_11
+	jr	nc, BB27_10
 	push	bc
 	pop	hl
-BB27_11:
+BB27_10:
 	push	hl
 	call	__Znaj
 	pop	de
-	ld	bc, (ix - 47)
-	ld	(ix - 62), hl
+	ld	bc, (ix - 50)
+	ld	(ix - 68), hl
 	ld	(ix - 38), hl
 	ld	de, (ix - 44)
-BB27_12:
+BB27_11:
 	ld	(ix - 53), de
 	push	bc
 	pop	hl
-	ld	(ix - 50), hl
+	ld	(ix - 47), hl
 	ld	hl, (hl)
 	ld	de, _.str.122
 	push	de
@@ -6371,7 +6727,7 @@ BB27_12:
 	push	hl
 	call	_ti_Close
 	ld	de, (ix - 53)
-	ld	bc, (ix - 50)
+	ld	bc, (ix - 47)
 	pop	hl
 	dec	de
 	ld	iy, (ix - 38)
@@ -6386,14 +6742,14 @@ BB27_12:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	nz, BB27_12
+	jr	nz, BB27_11
 	ld	de, 1
 	ld	bc, (ix - 44)
 	push	bc
 	pop	hl
 	or	a, a
 	sbc	hl, de
-	jr	nz, BB27_15
+	jp	nz, BB27_19
 	ld	hl, -6
 	add	hl, sp
 	ld	sp, hl
@@ -6402,7 +6758,7 @@ BB27_12:
 	add	hl, sp
 	ex	de, hl
 	ld	bc, 6
-	ld	hl, (ix - 62)
+	ld	hl, (ix - 68)
 	ldir
 	call	__Z17verifyTexturePack9packEntry
 	ld	hl, 6
@@ -6410,32 +6766,115 @@ BB27_12:
 	ld	sp, hl
 	bit	0, a
 	ld	hl, 0
-	jp	z, BB27_8
-	jp	BB27_140
-BB27_15:
+	ld	(ix - 53), hl
+	jp	z, BB27_7
+BB27_14:
+	ld	bc, 3
+	ld	hl, (ix - 53)
+	call	__imulu
+	push	hl
+	pop	de
+	ld	hl, (ix - 50)
+	add	hl, de
+	ld	(ix - 38), hl
+	ld	de, (hl)
+	push	de
+	call	_strlen
+	pop	de
+	inc	hl
+	push	hl
+	call	__Znaj
+	pop	de
+	ld	(_texturePackName), hl
+	ld	iy, (ix - 38)
+	ld	de, (iy)
+	push	de
+	push	hl
+	call	_strcpy
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	de, 2
+	ld	bc, (ix - 44)
+	push	bc
+	pop	hl
+	or	a, a
+	sbc	hl, de
+	jr	nc, BB27_16
+	ld	bc, 1
+BB27_16:
+	ld	iy, (ix - 50)
+BB27_17:
+	ld	(ix - 44), bc
+	ld	(ix - 38), iy
+	ld	hl, (iy)
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	push	hl
+	call	nz, __ZdaPv
+	pop	hl
+	ld	bc, (ix - 44)
+	dec	bc
+	ld	iy, (ix - 38)
+	lea	iy, iy + 3
+	push	bc
+	pop	hl
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jr	nz, BB27_17
+	ld	hl, (ix - 50)
+	push	hl
+	call	_free
+	pop	hl
+	ld	hl, (ix - 68)
+	push	hl
+	call	__ZdaPv
+	ld	sp, ix
+	pop	ix
+	ret
+BB27_19:
 	ld	hl, 1
 	push	hl
-	ld	(ix - 44), bc
 	call	_os_FontSelect
 	pop	hl
 	ld	hl, (ix - 44)
 	ld	de, -6
 	add	hl, de
-	ld	(ix - 81), hl
+	ld	(ix - 80), hl
 	ld	hl, -2883584
 	inc	hl
-	ld	(ix - 72), hl
-	xor	a, a
-	ld	(ix - 69), a
-	sbc	hl, hl
+	ld	(ix - 77), hl
+	ld	bc, 0
+	ld	(ix - 62), bc
+	jr	BB27_21
+BB27_20:
+	ld	(ix - 41), hl
+	call	_gfx_End
+	ld	iy, -3145600
+	call	_os_ClrLCDFull
+	call	_os_HomeUp
+	call	_os_DrawStatusBar
+	ld	hl, _.str.34
 	push	hl
-	pop	bc
-BB27_16:
+	call	_os_PutStrFull
+	pop	hl
+	ld	hl, (ix - 41)
+	push	hl
+	call	_os_PutStrFull
+	pop	hl
+	ld	hl, _.str.35
+	push	hl
+	call	_os_PutStrFull
+	pop	hl
+	call	_os_GetKey
+	ld	bc, (ix - 38)
+BB27_21:
 	ld	(ix - 56), bc
-	ld	(ix - 50), hl
 	xor	a, a
 	ld	(-2883584), a
-	ld	de, (ix - 72)
+	ld	de, (ix - 77)
 	ld	hl, -2883584
 	ld	bc, 153599
 	ldir
@@ -6486,7 +6925,7 @@ BB27_16:
 	ld	hl, _.str.40
 	push	hl
 	call	_os_FontDrawText
-	ld	bc, (ix - 50)
+	ld	bc, (ix - 56)
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
@@ -6495,30 +6934,30 @@ BB27_16:
 	ld	de, (ix - 44)
 	or	a, a
 	sbc	hl, de
-	jp	nc, BB27_32
+	jp	nc, BB27_37
 	ld	hl, -2857984
-	ld	(ix - 65), hl
+	ld	(ix - 53), hl
 	ld	(ix - 38), bc
 	ld	iy, 0
-BB27_18:
-	ld	(ix - 53), iy
+BB27_23:
+	ld	(ix - 47), iy
 	ld	hl, (ix - 38)
 	ld	bc, 6
 	call	__imulu
 	push	hl
 	pop	de
-	ld	iy, (ix - 62)
+	ld	iy, (ix - 68)
 	add	iy, de
-	ld	bc, (ix - 53)
+	ld	bc, (ix - 47)
 	push	bc
 	pop	hl
-	ld	de, (ix - 56)
+	ld	de, (ix - 62)
 	or	a, a
 	sbc	hl, de
 	ld	a, -1
-	jr	z, BB27_20
+	jr	z, BB27_25
 	ld	a, 0
-BB27_20:
+BB27_25:
 	ld	hl, (iy)
 	ld	(ix - 38), hl
 	ld	l, a
@@ -6528,11 +6967,11 @@ BB27_20:
 	ld	d, h
 	bit	0, a
 	ld	hl, 65535
-	ld	iy, 0
-	jr	nz, BB27_22
-	lea	hl, iy
-BB27_22:
-	ld	(ix - 75), hl
+	jr	nz, BB27_27
+	or	a, a
+	sbc	hl, hl
+BB27_27:
+	ld	(ix - 71), hl
 	push	bc
 	pop	hl
 	ld	bc, 12800
@@ -6544,10 +6983,11 @@ BB27_22:
 	pop	bc
 	ld	hl, -2883584
 	add	hl, bc
-	ld	(ix - 78), hl
-BB27_23:
+	ld	(ix - 74), hl
+	ld	iy, 0
+BB27_28:
 	lea	bc, iy
-	ld	hl, (ix - 65)
+	ld	hl, (ix - 53)
 	add	hl, bc
 	ld	(hl), e
 	inc	hl
@@ -6558,8 +6998,8 @@ BB27_23:
 	ld	bc, 640
 	or	a, a
 	sbc	hl, bc
-	jr	nz, BB27_23
-	ld	hl, (ix - 53)
+	jr	nz, BB27_28
+	ld	hl, (ix - 47)
 	ld	bc, 40
 	call	__imulu
 	push	hl
@@ -6570,20 +7010,20 @@ BB27_23:
 	sbc	hl, de
 	push	hl
 	pop	bc
-	ld	(ix - 68), iy
+	ld	(ix - 59), iy
 	lea	hl, iy
 	ld	de, 160
 	or	a, a
 	sbc	hl, de
-	jr	nc, BB27_26
+	jr	nc, BB27_31
 	ld	bc, 38
-BB27_26:
+BB27_31:
 	inc	bc
 	ld	(ix - 41), bc
-	ld	hl, (ix - 78)
+	ld	hl, (ix - 74)
 	push	hl
 	pop	iy
-BB27_27:
+BB27_32:
 	ld	bc, 640
 	add	iy, bc
 	lea	de, iy
@@ -6595,26 +7035,26 @@ BB27_27:
 	or	a, a
 	sbc	hl, bc
 	lea	hl, iy
-	jr	nz, BB27_27
-	ld	hl, (ix - 53)
-	ld	de, (ix - 56)
+	jr	nz, BB27_32
+	ld	hl, (ix - 47)
+	ld	de, (ix - 62)
 	or	a, a
 	sbc	hl, de
 	ld	hl, 0
-	jr	z, BB27_30
+	jr	z, BB27_35
 	ld	hl, 65535
-BB27_30:
+BB27_35:
 	push	hl
 	call	_os_SetDrawFGColor
 	pop	hl
-	ld	hl, (ix - 75)
+	ld	hl, (ix - 71)
 	push	hl
 	call	_os_SetDrawBGColor
 	pop	hl
 	ld	de, 44
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ld	de, 640
 	push	de
 	pop	bc
@@ -6920,87 +7360,173 @@ BB27_30:
 	ld	hl, 32
 	push	hl
 	push	iy
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 65)
 	push	hl
 	call	_strncpy
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
 	ld	(ix - 1), 0
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	push	hl
 	ld	hl, 40
 	push	hl
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 65)
 	push	hl
 	call	_os_FontDrawText
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	iy, (ix - 53)
+	ld	iy, (ix - 47)
 	inc	iy
 	lea	hl, iy
-	ld	bc, (ix - 50)
+	ld	bc, (ix - 56)
 	add	hl, bc
 	ld	(ix - 38), hl
 	ld	de, 25600
-	ld	hl, (ix - 65)
-	add	hl, de
-	ld	(ix - 65), hl
 	ld	hl, (ix - 53)
+	add	hl, de
+	ld	(ix - 53), hl
+	ld	hl, (ix - 47)
 	ld	de, 4
 	or	a, a
 	sbc	hl, de
-	jr	nc, BB27_32
+	jr	nc, BB27_37
 	ld	hl, (ix - 38)
 	ld	de, (ix - 44)
 	or	a, a
 	sbc	hl, de
-	jp	c, BB27_18
-BB27_32:
+	jp	c, BB27_23
+BB27_37:
 	xor	a, a
-	ld	(ix - 38), a
-BB27_33:
-	ld	(ix - 50), bc
-BB27_34:
-	call	_os_GetCSC
-	cp	a, 50
-	jp	nc, BB27_130
+	ld	(ix - 41), a
+	push	bc
+	pop	hl
+BB27_38:
+	ld	(ix - 38), hl
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ex	de, hl
+	ld	iyl, e
+	ld	iyh, d
+	ex	de, hl
+	ld.sis	de, -1016
+	or	a, a
+	sbc.sis	hl, de
+	jp	z, BB27_141
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, 798
+	add.sis	hl, de
+	ld	bc, 0
+	push	bc
+	pop	de
+	ld	e, l
+	ld	d, h
+	push	de
+	pop	hl
+	ld	bc, 23
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB27_43
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	dec.sis	hl
 	ld	de, 0
-	ld	e, a
+	ld	e, l
+	ld	d, h
+	push	de
+	pop	hl
+	ld	bc, 68
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB27_44
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, -144
+	add.sis	hl, de
+	ld	de, 0
+	ld	e, l
+	ld	d, h
+	push	de
+	pop	hl
+	ld	bc, 7
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB27_45
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, 7229
+	or	a, a
+	sbc.sis	hl, de
+	ld	bc, (ix - 38)
+	jp	z, BB27_151
+	jp	BB27_139
+BB27_43:
 	ld	hl, JTI27_0
 	add	hl, de
 	add	hl, de
 	add	hl, de
 	ld	hl, (hl)
+	ld	bc, (ix - 38)
 	jp	(hl)
-BB27_36:
-	ld	bc, (ix - 50)
+BB27_44:
+	ld	hl, JTI27_1
+	add	hl, de
+	add	hl, de
+	add	hl, de
+	ld	hl, (hl)
+	ld	bc, (ix - 38)
+	jp	(hl)
+BB27_45:
+	ld	hl, JTI27_2
+	add	hl, de
+	add	hl, de
+	add	hl, de
+	ld	hl, (hl)
+	ld	bc, (ix - 38)
+	jp	(hl)
+BB27_46:
+	ld	bc, (ix - 38)
 	push	bc
 	pop	iy
-	ld	de, (ix - 56)
+	ld	de, (ix - 62)
 	add	iy, de
 	lea	hl, iy
 	inc	hl
 	ld	de, (ix - 44)
 	or	a, a
 	sbc	hl, de
-	jp	nc, BB27_81
-	ld	hl, (ix - 56)
+	jp	nc, BB27_139
+	ld	bc, (ix - 62)
+	push	bc
+	pop	hl
 	ld	de, 4
 	or	a, a
 	sbc	hl, de
-	jp	nc, BB27_81
+	jp	nc, BB27_140
 	lea	hl, iy
+	push	bc
+	pop	de
 	ld	bc, 6
 	call	__imulu
 	push	hl
-	pop	de
-	ld	hl, (ix - 62)
-	add	hl, de
+	pop	bc
+	ld	hl, (ix - 68)
+	add	hl, bc
 	ld	hl, (hl)
-	ld	(ix - 65), hl
-	ld	de, (ix - 56)
+	ld	(ix - 56), hl
 	push	de
 	pop	hl
 	ld	bc, 40
@@ -7031,7 +7557,7 @@ BB27_36:
 	push	bc
 	pop	hl
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
 	lea	hl, iy
 	ld	bc, 640
@@ -7039,303 +7565,303 @@ BB27_36:
 	lea	hl, iy
 	ld	de, 1280
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 1920
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 2560
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 3200
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 3840
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 4480
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 5120
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 5760
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 6400
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 7040
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 7680
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 8320
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 8960
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 9600
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 10240
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 10880
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 11520
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 12160
 	add	hl, de
-	ld	(ix - 75), hl
+	ld	(ix - 71), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 12800
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 75)
+	ld	hl, (ix - 71)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 13440
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 14080
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 14720
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 15360
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 16000
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 16640
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 17280
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 17920
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 18560
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 19200
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 19840
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 20480
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 21120
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 21760
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 22400
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 23040
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 23680
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ex	de, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
 	ld	de, 24320
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	ld	bc, 640
 	ldir
 	ld	de, 24960
 	add	iy, de
 	lea	de, iy
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	bc, 640
 	ldir
 	ld	hl, 65535
@@ -7351,45 +7877,45 @@ BB27_36:
 	lea	hl, iy
 	ld	de, 44
 	add	hl, de
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	lea	hl, iy
 	ld	de, -196
 	add	hl, de
 	ld	de, -272
 	or	a, a
 	sbc	hl, de
-	jp	c, BB27_50
+	jp	c, BB27_60
 	lea	hl, iy
 	ld	de, 76
 	add	hl, de
-	ld	(ix - 68), hl
-	ld	hl, (ix - 41)
+	ld	(ix - 59), hl
+	ld	hl, (ix - 47)
 	ld	de, -8388608
 	add	hl, de
 	ld	bc, -8388607
 	or	a, a
 	sbc	hl, bc
-	ld	bc, (ix - 41)
-	jr	nc, BB27_41
+	ld	bc, (ix - 47)
+	jr	nc, BB27_51
 	or	a, a
 	sbc	hl, hl
 	push	hl
 	pop	bc
-BB27_41:
+BB27_51:
 	add	iy, de
 	ld	(ix - 53), iy
 	lea	hl, iy
 	ld	de, 8388564
 	or	a, a
 	sbc	hl, de
-	ld	iy, (ix - 68)
-	jr	c, BB27_43
+	ld	iy, (ix - 59)
+	jr	c, BB27_53
 	ld	iy, 32
-BB27_43:
-	ld	(ix - 68), iy
+BB27_53:
+	ld	(ix - 59), iy
 	add	iy, bc
 	ld	hl, 240
-	ld	(ix - 75), bc
+	ld	(ix - 71), bc
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -7398,26 +7924,26 @@ BB27_43:
 	ld	bc, 240
 	or	a, a
 	sbc	hl, bc
-	jr	nc, BB27_45
-	ld	de, (ix - 68)
-BB27_45:
+	jr	nc, BB27_55
+	ld	de, (ix - 59)
+BB27_55:
 	ex	de, hl
 	ld	bc, 252
 	call	__iand
 	ld	a, l
 	or	a, a
 	ld	iy, (ix - 53)
-	jr	z, BB27_50
-	ld	(ix - 68), hl
-	ld	hl, (ix - 75)
+	jr	z, BB27_60
+	ld	(ix - 59), hl
+	ld	hl, (ix - 71)
 	ld	bc, 640
 	call	__imulu
 	push	hl
 	pop	de
 	ld	hl, -2883576
 	add	hl, de
-	ld	(ix - 75), hl
-	ld	hl, (ix - 41)
+	ld	(ix - 71), hl
+	ld	hl, (ix - 47)
 	ld	bc, -32
 	call	__imulu
 	push	hl
@@ -7426,86 +7952,87 @@ BB27_45:
 	ld	bc, 8388564
 	or	a, a
 	sbc	hl, bc
-	jr	c, BB27_48
+	jr	c, BB27_58
 	ld	de, 0
-BB27_48:
+BB27_58:
 	ex	de, hl
 	ld	c, 1
 	call	__ishl
 	push	hl
 	pop	de
-	ld	iy, (ix - 65)
+	ld	iy, (ix - 56)
 	add	iy, de
 	ld	de, 16405
 	add	iy, de
-	ld	hl, (ix - 68)
-	ld	de, (ix - 75)
-BB27_49:
-	ld	(ix - 68), hl
-	ld	(ix - 75), de
+	ld	hl, (ix - 59)
+	ld	de, (ix - 71)
+BB27_59:
+	ld	(ix - 59), hl
+	ld	(ix - 71), de
 	lea	hl, iy
 	ld	bc, 64
 	ldir
 	ld	de, 640
-	ld	hl, (ix - 75)
+	ld	hl, (ix - 71)
 	add	hl, de
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	lea	iy, iy + 64
 	dec	hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	nz, BB27_49
-BB27_50:
+	jr	nz, BB27_59
+BB27_60:
 	ld	de, 18453
-	ld	iy, (ix - 65)
+	ld	iy, (ix - 56)
 	add	iy, de
 	ld	hl, 32
 	push	hl
 	push	iy
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 65)
 	push	hl
 	call	_strncpy
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
 	ld	(ix - 1), 0
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	push	hl
 	ld	hl, 40
 	push	hl
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 65)
 	push	hl
 	call	_os_FontDrawText
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	iy, (ix - 56)
-	inc	iy
-	lea	hl, iy
-	ld	de, (ix - 50)
-	add	hl, de
+	ld	de, (ix - 62)
+	inc	de
+	ld	bc, (ix - 38)
+	push	de
+	pop	hl
+	add	hl, bc
 	ld	bc, 6
 	call	__imulu
 	push	hl
-	pop	de
-	ld	hl, (ix - 62)
-	add	hl, de
+	pop	bc
+	ld	hl, (ix - 68)
+	add	hl, bc
 	ld	hl, (hl)
 	ld	(ix - 56), hl
-	ld	(ix - 65), iy
-	lea	hl, iy
+	ld	(ix - 59), de
+	ex	de, hl
 	ld	bc, 40
 	call	__imulu
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ld	de, -200
 	add	hl, de
 	ld	de, -280
 	or	a, a
 	sbc	hl, de
-	jp	c, BB27_61
-	ld	bc, (ix - 41)
+	jp	c, BB27_71
+	ld	bc, (ix - 47)
 	push	bc
 	pop	hl
 	ld	de, 80
@@ -7521,30 +8048,30 @@ BB27_50:
 	sbc	hl, de
 	push	bc
 	pop	de
-	jr	nc, BB27_53
+	jr	nc, BB27_63
 	ld	de, -40
-BB27_53:
+BB27_63:
 	push	de
 	pop	hl
 	ld	bc, 40
 	add	hl, bc
-	ld	(ix - 68), hl
+	ld	(ix - 62), hl
 	lea	hl, iy
 	ld	bc, 8388568
 	or	a, a
 	sbc	hl, bc
 	ld	hl, (ix - 53)
-	jr	c, BB27_55
+	jr	c, BB27_65
 	ld	hl, 40
-BB27_55:
+BB27_65:
 	ld	(ix - 53), hl
-	ld	bc, (ix - 68)
+	ld	bc, (ix - 62)
 	add	hl, bc
-	ld	(ix - 78), hl
+	ld	(ix - 74), hl
 	ld	hl, 200
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 75), hl
+	ld	(ix - 71), hl
 	push	bc
 	pop	hl
 	ld	bc, 640
@@ -7557,18 +8084,18 @@ BB27_55:
 	lea	hl, iy
 	inc	hl
 	ex	de, hl
-	ld	(ix - 68), iy
+	ld	(ix - 62), iy
 	lea	hl, iy
 	dec	bc
 	ldir
-	ld	hl, (ix - 78)
+	ld	hl, (ix - 74)
 	ld	de, 240
 	or	a, a
 	sbc	hl, de
-	ld	hl, (ix - 75)
-	jr	nc, BB27_57
+	ld	hl, (ix - 71)
+	jr	nc, BB27_67
 	ld	hl, (ix - 53)
-BB27_57:
+BB27_67:
 	ld	bc, 255
 	add	hl, bc
 	call	__iand
@@ -7580,14 +8107,14 @@ BB27_57:
 	ld	de, 239
 	or	a, a
 	sbc	hl, de
-	jr	c, BB27_59
+	jr	c, BB27_69
 	ld	bc, 239
-BB27_59:
+BB27_69:
 	inc	bc
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 62)
 	push	hl
 	pop	iy
-BB27_60:
+BB27_70:
 	ld	(ix - 53), bc
 	ld	bc, 640
 	add	iy, bc
@@ -7601,8 +8128,8 @@ BB27_60:
 	or	a, a
 	sbc	hl, bc
 	lea	hl, iy
-	jr	nz, BB27_60
-BB27_61:
+	jr	nz, BB27_70
+BB27_71:
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -7612,7 +8139,7 @@ BB27_61:
 	push	hl
 	call	_os_SetDrawBGColor
 	pop	hl
-	ld	iy, (ix - 41)
+	ld	iy, (ix - 47)
 	lea	hl, iy
 	ld	de, 44
 	add	hl, de
@@ -7623,11 +8150,11 @@ BB27_61:
 	ld	de, -272
 	or	a, a
 	sbc	hl, de
-	jp	c, BB27_128
+	jp	c, BB27_137
 	lea	hl, iy
 	ld	de, 76
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 62), hl
 	ld	hl, (ix - 53)
 	ld	de, -8388608
 	add	hl, de
@@ -7635,26 +8162,26 @@ BB27_61:
 	or	a, a
 	sbc	hl, bc
 	ld	bc, (ix - 53)
-	jr	nc, BB27_64
+	jr	nc, BB27_74
 	or	a, a
 	sbc	hl, hl
 	push	hl
 	pop	bc
-BB27_64:
+BB27_74:
 	add	iy, de
-	ld	(ix - 41), iy
+	ld	(ix - 47), iy
 	lea	hl, iy
 	ld	de, 8388564
 	or	a, a
 	sbc	hl, de
-	ld	iy, (ix - 68)
-	jr	c, BB27_66
+	ld	iy, (ix - 62)
+	jr	c, BB27_76
 	ld	iy, 32
-BB27_66:
-	ld	(ix - 68), iy
+BB27_76:
+	ld	(ix - 62), iy
 	add	iy, bc
 	ld	hl, 240
-	ld	(ix - 75), bc
+	ld	(ix - 71), bc
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -7663,25 +8190,25 @@ BB27_66:
 	ld	bc, 240
 	or	a, a
 	sbc	hl, bc
-	jr	nc, BB27_68
-	ld	de, (ix - 68)
-BB27_68:
+	jr	nc, BB27_78
+	ld	de, (ix - 62)
+BB27_78:
 	ex	de, hl
 	ld	bc, 252
 	call	__iand
 	ld	a, l
 	or	a, a
-	ld	iy, (ix - 41)
-	jp	z, BB27_128
-	ld	(ix - 68), hl
-	ld	hl, (ix - 75)
+	ld	iy, (ix - 47)
+	jp	z, BB27_137
+	ld	(ix - 62), hl
+	ld	hl, (ix - 71)
 	ld	bc, 640
 	call	__imulu
 	push	hl
 	pop	de
 	ld	hl, -2883576
 	add	hl, de
-	ld	(ix - 75), hl
+	ld	(ix - 71), hl
 	ld	hl, (ix - 53)
 	ld	bc, -32
 	call	__imulu
@@ -7691,9 +8218,9 @@ BB27_68:
 	ld	bc, 8388564
 	or	a, a
 	sbc	hl, bc
-	jr	c, BB27_71
+	jr	c, BB27_81
 	ld	de, 0
-BB27_71:
+BB27_81:
 	ex	de, hl
 	ld	c, 1
 	call	__ishl
@@ -7703,51 +8230,28 @@ BB27_71:
 	add	iy, de
 	ld	de, 16405
 	add	iy, de
-	ld	hl, (ix - 68)
-	ld	de, (ix - 75)
-BB27_72:
-	ld	(ix - 68), hl
-	ld	(ix - 75), de
+	ld	hl, (ix - 62)
+	ld	de, (ix - 71)
+BB27_82:
+	ld	(ix - 62), hl
+	ld	(ix - 71), de
 	lea	hl, iy
 	ld	bc, 64
 	ldir
 	ld	de, 640
-	ld	hl, (ix - 75)
+	ld	hl, (ix - 71)
 	add	hl, de
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 62)
 	lea	iy, iy + 64
 	dec	hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	nz, BB27_72
-	jp	BB27_128
-BB27_73:
-	ld	bc, (ix - 50)
-	push	bc
-	pop	iy
-	ld	de, 5
-	add	iy, de
-	lea	hl, iy
-	ld	de, (ix - 44)
-	or	a, a
-	sbc	hl, de
-	jp	nc, BB27_81
+	jr	nz, BB27_82
 	jp	BB27_137
-BB27_74:
-	ld	de, (ix - 56)
-	push	de
-	pop	hl
-	add	hl, bc
-	or	a, a
-	sbc	hl, bc
-	jp	nz, BB27_82
-	or	a, a
-	sbc	hl, hl
-	jp	BB27_129
-BB27_76:
-	ld	bc, (ix - 50)
+BB27_83:
+	ld	bc, (ix - 38)
 	push	bc
 	pop	hl
 	ld	de, 5
@@ -7760,26 +8264,45 @@ BB27_76:
 	ld	de, -5
 	add	hl, de
 	bit	0, a
-	jr	nz, BB27_78
+	jr	nz, BB27_85
 	push	bc
 	pop	hl
-BB27_78:
+BB27_85:
 	bit	0, a
 	ld	a, 1
-	jr	nz, BB27_80
-	ld	a, (ix - 38)
-BB27_80:
+	jr	nz, BB27_87
+	ld	a, (ix - 41)
+BB27_87:
 	push	hl
 	pop	bc
-	ld	(ix - 38), a
-BB27_81:
-	ld	a, (ix - 38)
-	and	a, 1
-	bit	0, a
-	jp	z, BB27_33
-	jp	BB27_131
-BB27_82:
-	ld	hl, (ix - 50)
+	ld	(ix - 41), a
+	jp	BB27_139
+BB27_88:
+	ld	bc, (ix - 38)
+	push	bc
+	pop	iy
+	ld	de, 5
+	add	iy, de
+	lea	hl, iy
+	ld	de, (ix - 44)
+	or	a, a
+	sbc	hl, de
+	jp	c, BB27_148
+	jp	BB27_139
+BB27_89:
+	ld	de, (ix - 62)
+	push	de
+	pop	hl
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jr	nz, BB27_91
+	ld	bc, (ix - 38)
+	or	a, a
+	sbc	hl, hl
+	jp	BB27_138
+BB27_91:
+	ld	hl, (ix - 38)
 	add	hl, de
 	push	de
 	pop	iy
@@ -7787,21 +8310,21 @@ BB27_82:
 	call	__imulu
 	push	hl
 	pop	de
-	ld	hl, (ix - 62)
+	ld	hl, (ix - 68)
 	add	hl, de
 	ld	hl, (hl)
-	ld	(ix - 65), hl
+	ld	(ix - 56), hl
 	lea	hl, iy
 	ld	bc, 40
 	call	__imulu
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ld	de, -200
 	add	hl, de
 	ld	de, -280
 	or	a, a
 	sbc	hl, de
-	jp	c, BB27_93
-	ld	bc, (ix - 41)
+	jp	c, BB27_102
+	ld	bc, (ix - 47)
 	push	bc
 	pop	hl
 	ld	de, 80
@@ -7817,30 +8340,30 @@ BB27_82:
 	sbc	hl, de
 	push	bc
 	pop	de
-	jr	nc, BB27_85
+	jr	nc, BB27_94
 	ld	de, -40
-BB27_85:
+BB27_94:
 	push	de
 	pop	hl
 	ld	bc, 40
 	add	hl, bc
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	lea	hl, iy
 	ld	bc, 8388568
 	or	a, a
 	sbc	hl, bc
 	ld	hl, (ix - 53)
-	jr	c, BB27_87
+	jr	c, BB27_96
 	ld	hl, 40
-BB27_87:
+BB27_96:
 	ld	(ix - 53), hl
-	ld	bc, (ix - 68)
+	ld	bc, (ix - 59)
 	add	hl, bc
-	ld	(ix - 78), hl
+	ld	(ix - 74), hl
 	ld	hl, 200
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 75), hl
+	ld	(ix - 71), hl
 	push	bc
 	pop	hl
 	ld	bc, 640
@@ -7853,18 +8376,18 @@ BB27_87:
 	lea	hl, iy
 	inc	hl
 	ex	de, hl
-	ld	(ix - 68), iy
+	ld	(ix - 59), iy
 	lea	hl, iy
 	dec	bc
 	ldir
-	ld	hl, (ix - 78)
+	ld	hl, (ix - 74)
 	ld	de, 240
 	or	a, a
 	sbc	hl, de
-	ld	hl, (ix - 75)
-	jr	nc, BB27_89
+	ld	hl, (ix - 71)
+	jr	nc, BB27_98
 	ld	hl, (ix - 53)
-BB27_89:
+BB27_98:
 	ld	bc, 255
 	add	hl, bc
 	call	__iand
@@ -7876,14 +8399,14 @@ BB27_89:
 	ld	de, 239
 	or	a, a
 	sbc	hl, de
-	jr	c, BB27_91
+	jr	c, BB27_100
 	ld	bc, 239
-BB27_91:
+BB27_100:
 	inc	bc
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	push	hl
 	pop	iy
-BB27_92:
+BB27_101:
 	ld	(ix - 53), bc
 	ld	bc, 640
 	add	iy, bc
@@ -7897,8 +8420,8 @@ BB27_92:
 	or	a, a
 	sbc	hl, bc
 	lea	hl, iy
-	jr	nz, BB27_92
-BB27_93:
+	jr	nz, BB27_101
+BB27_102:
 	ld	hl, 65535
 	push	hl
 	call	_os_SetDrawFGColor
@@ -7908,7 +8431,7 @@ BB27_93:
 	push	hl
 	call	_os_SetDrawBGColor
 	pop	hl
-	ld	iy, (ix - 41)
+	ld	iy, (ix - 47)
 	lea	hl, iy
 	ld	de, 44
 	add	hl, de
@@ -7919,11 +8442,11 @@ BB27_93:
 	ld	de, -272
 	or	a, a
 	sbc	hl, de
-	jp	c, BB27_105
+	jp	c, BB27_114
 	lea	hl, iy
 	ld	de, 76
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 59), hl
 	ld	hl, (ix - 53)
 	ld	de, -8388608
 	add	hl, de
@@ -7931,26 +8454,26 @@ BB27_93:
 	or	a, a
 	sbc	hl, bc
 	ld	bc, (ix - 53)
-	jr	nc, BB27_96
+	jr	nc, BB27_105
 	or	a, a
 	sbc	hl, hl
 	push	hl
 	pop	bc
-BB27_96:
+BB27_105:
 	add	iy, de
-	ld	(ix - 41), iy
+	ld	(ix - 47), iy
 	lea	hl, iy
 	ld	de, 8388564
 	or	a, a
 	sbc	hl, de
-	ld	iy, (ix - 68)
-	jr	c, BB27_98
+	ld	iy, (ix - 59)
+	jr	c, BB27_107
 	ld	iy, 32
-BB27_98:
-	ld	(ix - 68), iy
+BB27_107:
+	ld	(ix - 59), iy
 	add	iy, bc
 	ld	hl, 240
-	ld	(ix - 75), bc
+	ld	(ix - 71), bc
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -7959,25 +8482,25 @@ BB27_98:
 	ld	bc, 240
 	or	a, a
 	sbc	hl, bc
-	jr	nc, BB27_100
-	ld	de, (ix - 68)
-BB27_100:
+	jr	nc, BB27_109
+	ld	de, (ix - 59)
+BB27_109:
 	ex	de, hl
 	ld	bc, 252
 	call	__iand
 	ld	a, l
 	or	a, a
-	ld	iy, (ix - 41)
-	jr	z, BB27_105
-	ld	(ix - 68), hl
-	ld	hl, (ix - 75)
+	ld	iy, (ix - 47)
+	jr	z, BB27_114
+	ld	(ix - 59), hl
+	ld	hl, (ix - 71)
 	ld	bc, 640
 	call	__imulu
 	push	hl
 	pop	de
 	ld	hl, -2883576
 	add	hl, de
-	ld	(ix - 75), hl
+	ld	(ix - 71), hl
 	ld	hl, (ix - 53)
 	ld	bc, -32
 	call	__imulu
@@ -7987,45 +8510,45 @@ BB27_100:
 	ld	bc, 8388564
 	or	a, a
 	sbc	hl, bc
-	jr	c, BB27_103
+	jr	c, BB27_112
 	ld	de, 0
-BB27_103:
+BB27_112:
 	ex	de, hl
 	ld	c, 1
 	call	__ishl
 	push	hl
 	pop	de
-	ld	iy, (ix - 65)
+	ld	iy, (ix - 56)
 	add	iy, de
 	ld	de, 16405
 	add	iy, de
-	ld	hl, (ix - 68)
-	ld	de, (ix - 75)
-BB27_104:
-	ld	(ix - 68), hl
-	ld	(ix - 75), de
+	ld	hl, (ix - 59)
+	ld	de, (ix - 71)
+BB27_113:
+	ld	(ix - 59), hl
+	ld	(ix - 71), de
 	lea	hl, iy
 	ld	bc, 64
 	ldir
 	ld	de, 640
-	ld	hl, (ix - 75)
+	ld	hl, (ix - 71)
 	add	hl, de
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 59)
 	lea	iy, iy + 64
 	dec	hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	nz, BB27_104
-BB27_105:
+	jr	nz, BB27_113
+BB27_114:
 	ld	de, 18453
-	ld	iy, (ix - 65)
+	ld	iy, (ix - 56)
 	add	iy, de
 	ld	hl, 32
 	push	hl
 	push	iy
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 65)
 	push	hl
 	call	_strncpy
 	ld	hl, 9
@@ -8036,37 +8559,38 @@ BB27_105:
 	push	hl
 	ld	hl, 40
 	push	hl
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 65)
 	push	hl
 	call	_os_FontDrawText
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	iy, (ix - 56)
-	dec	iy
-	lea	hl, iy
-	ld	de, (ix - 50)
-	add	hl, de
+	ld	de, (ix - 62)
+	dec	de
+	ld	bc, (ix - 38)
+	push	de
+	pop	hl
+	add	hl, bc
 	ld	bc, 6
 	call	__imulu
 	push	hl
-	pop	de
-	ld	hl, (ix - 62)
-	add	hl, de
+	pop	bc
+	ld	hl, (ix - 68)
+	add	hl, bc
 	ld	hl, (hl)
 	ld	(ix - 56), hl
-	ld	(ix - 65), iy
-	lea	hl, iy
+	ld	(ix - 59), de
+	ex	de, hl
 	ld	bc, 40
 	call	__imulu
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ld	de, -200
 	add	hl, de
 	ld	de, -280
 	or	a, a
 	sbc	hl, de
-	jp	c, BB27_116
-	ld	bc, (ix - 41)
+	jp	c, BB27_125
+	ld	bc, (ix - 47)
 	push	bc
 	pop	hl
 	ld	de, 80
@@ -8082,30 +8606,30 @@ BB27_105:
 	sbc	hl, de
 	push	bc
 	pop	de
-	jr	nc, BB27_108
+	jr	nc, BB27_117
 	ld	de, -40
-BB27_108:
+BB27_117:
 	push	de
 	pop	hl
 	ld	bc, 40
 	add	hl, bc
-	ld	(ix - 68), hl
+	ld	(ix - 62), hl
 	lea	hl, iy
 	ld	bc, 8388568
 	or	a, a
 	sbc	hl, bc
 	ld	hl, (ix - 53)
-	jr	c, BB27_110
+	jr	c, BB27_119
 	ld	hl, 40
-BB27_110:
+BB27_119:
 	ld	(ix - 53), hl
-	ld	bc, (ix - 68)
+	ld	bc, (ix - 62)
 	add	hl, bc
-	ld	(ix - 78), hl
+	ld	(ix - 74), hl
 	ld	hl, 200
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 75), hl
+	ld	(ix - 71), hl
 	push	bc
 	pop	hl
 	ld	bc, 640
@@ -8118,18 +8642,18 @@ BB27_110:
 	lea	hl, iy
 	inc	hl
 	ex	de, hl
-	ld	(ix - 68), iy
+	ld	(ix - 62), iy
 	lea	hl, iy
 	dec	bc
 	ldir
-	ld	hl, (ix - 78)
+	ld	hl, (ix - 74)
 	ld	de, 240
 	or	a, a
 	sbc	hl, de
-	ld	hl, (ix - 75)
-	jr	nc, BB27_112
+	ld	hl, (ix - 71)
+	jr	nc, BB27_121
 	ld	hl, (ix - 53)
-BB27_112:
+BB27_121:
 	ld	bc, 255
 	add	hl, bc
 	call	__iand
@@ -8141,14 +8665,14 @@ BB27_112:
 	ld	de, 239
 	or	a, a
 	sbc	hl, de
-	jr	c, BB27_114
+	jr	c, BB27_123
 	ld	bc, 239
-BB27_114:
+BB27_123:
 	inc	bc
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 62)
 	push	hl
 	pop	iy
-BB27_115:
+BB27_124:
 	ld	(ix - 53), bc
 	ld	bc, 640
 	add	iy, bc
@@ -8162,8 +8686,8 @@ BB27_115:
 	or	a, a
 	sbc	hl, bc
 	lea	hl, iy
-	jr	nz, BB27_115
-BB27_116:
+	jr	nz, BB27_124
+BB27_125:
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -8173,7 +8697,7 @@ BB27_116:
 	push	hl
 	call	_os_SetDrawBGColor
 	pop	hl
-	ld	iy, (ix - 41)
+	ld	iy, (ix - 47)
 	lea	hl, iy
 	ld	de, 44
 	add	hl, de
@@ -8184,11 +8708,11 @@ BB27_116:
 	ld	de, -272
 	or	a, a
 	sbc	hl, de
-	jp	c, BB27_128
+	jp	c, BB27_137
 	lea	hl, iy
 	ld	de, 76
 	add	hl, de
-	ld	(ix - 68), hl
+	ld	(ix - 62), hl
 	ld	hl, (ix - 53)
 	ld	de, -8388608
 	add	hl, de
@@ -8196,26 +8720,26 @@ BB27_116:
 	or	a, a
 	sbc	hl, bc
 	ld	bc, (ix - 53)
-	jr	nc, BB27_119
+	jr	nc, BB27_128
 	or	a, a
 	sbc	hl, hl
 	push	hl
 	pop	bc
-BB27_119:
+BB27_128:
 	add	iy, de
-	ld	(ix - 41), iy
+	ld	(ix - 47), iy
 	lea	hl, iy
 	ld	de, 8388564
 	or	a, a
 	sbc	hl, de
-	ld	iy, (ix - 68)
-	jr	c, BB27_121
+	ld	iy, (ix - 62)
+	jr	c, BB27_130
 	ld	iy, 32
-BB27_121:
-	ld	(ix - 68), iy
+BB27_130:
+	ld	(ix - 62), iy
 	add	iy, bc
 	ld	hl, 240
-	ld	(ix - 75), bc
+	ld	(ix - 71), bc
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -8224,25 +8748,25 @@ BB27_121:
 	ld	bc, 240
 	or	a, a
 	sbc	hl, bc
-	jr	nc, BB27_123
-	ld	de, (ix - 68)
-BB27_123:
+	jr	nc, BB27_132
+	ld	de, (ix - 62)
+BB27_132:
 	ex	de, hl
 	ld	bc, 252
 	call	__iand
 	ld	a, l
 	or	a, a
-	ld	iy, (ix - 41)
-	jr	z, BB27_128
-	ld	(ix - 68), hl
-	ld	hl, (ix - 75)
+	ld	iy, (ix - 47)
+	jr	z, BB27_137
+	ld	(ix - 62), hl
+	ld	hl, (ix - 71)
 	ld	bc, 640
 	call	__imulu
 	push	hl
 	pop	de
 	ld	hl, -2883576
 	add	hl, de
-	ld	(ix - 75), hl
+	ld	(ix - 71), hl
 	ld	hl, (ix - 53)
 	ld	bc, -32
 	call	__imulu
@@ -8252,9 +8776,9 @@ BB27_123:
 	ld	bc, 8388564
 	or	a, a
 	sbc	hl, bc
-	jr	c, BB27_126
+	jr	c, BB27_135
 	ld	de, 0
-BB27_126:
+BB27_135:
 	ex	de, hl
 	ld	c, 1
 	call	__ishl
@@ -8264,33 +8788,33 @@ BB27_126:
 	add	iy, de
 	ld	de, 16405
 	add	iy, de
-	ld	hl, (ix - 68)
-	ld	de, (ix - 75)
-BB27_127:
-	ld	(ix - 68), hl
-	ld	(ix - 75), de
+	ld	hl, (ix - 62)
+	ld	de, (ix - 71)
+BB27_136:
+	ld	(ix - 62), hl
+	ld	(ix - 71), de
 	lea	hl, iy
 	ld	bc, 64
 	ldir
 	ld	de, 640
-	ld	hl, (ix - 75)
+	ld	hl, (ix - 71)
 	add	hl, de
 	ex	de, hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 62)
 	lea	iy, iy + 64
 	dec	hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	nz, BB27_127
-BB27_128:
+	jr	nz, BB27_136
+BB27_137:
 	ld	de, 18453
 	ld	iy, (ix - 56)
 	add	iy, de
 	ld	hl, 32
 	push	hl
 	push	iy
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 65)
 	push	hl
 	call	_strncpy
 	ld	hl, 9
@@ -8301,149 +8825,179 @@ BB27_128:
 	push	hl
 	ld	hl, 40
 	push	hl
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 65)
 	push	hl
 	call	_os_FontDrawText
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 65)
-BB27_129:
-	ld	(ix - 56), hl
-BB27_130:
-	ld	bc, (ix - 50)
-	ld	a, (ix - 38)
+	ld	bc, (ix - 38)
+	ld	hl, (ix - 59)
+BB27_138:
+	ld	(ix - 62), hl
+BB27_139:
+	ld	a, (ix - 41)
 	and	a, 1
 	bit	0, a
-	jp	z, BB27_33
-BB27_131:
 	push	bc
-	pop	iy
-BB27_132:
-	ld	bc, (ix - 56)
-BB27_133:
-	ld	a, (ix - 69)
-	and	a, 1
-	bit	0, a
-	lea	hl, iy
-	jp	z, BB27_16
+	pop	hl
+	jp	nz, BB27_21
+	jp	BB27_38
+BB27_140:
+	ld	bc, (ix - 38)
 	jr	BB27_139
-BB27_134:
-	ld	hl, (ix - 50)
-	ld	de, (ix - 56)
+BB27_141:
+	ld	hl, (ix - 38)
+	ld	de, (ix - 62)
 	add	hl, de
+	ld	(ix - 53), hl
 	ld	bc, 6
 	call	__imulu
 	push	hl
 	pop	de
-	ld	hl, (ix - 62)
-	add	hl, de
-	ld	iy, -6
+	ld	iy, (ix - 68)
+	add	iy, de
+	ld	hl, (iy)
+	ld	(ix - 41), hl
+	ld	hl, (iy + 3)
+	ld	(ix - 47), hl
+	ld	iy, -3145600
+	call	_os_ClrLCDFull
+	call	_os_HomeUp
+	call	_os_DrawStatusBar
+	ld	hl, _.str.41
+	push	hl
+	call	_os_PutStrFull
+	pop	hl
+	ld	hl, _.str.36
+	push	hl
+	ld	hl, (ix - 41)
+	push	hl
+	call	_strcmp
+	ld	iy, 6
 	add	iy, sp
 	ld	sp, iy
-	ex	de, hl
-	ld	hl, 0
-	add	hl, sp
-	ex	de, hl
-	ldir
-	call	__Z17verifyTexturePack9packEntry
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	bit	0, a
-	ld	a, 1
-	jr	nz, BB27_136
-	ld	a, (ix - 69)
-BB27_136:
-	ld	(ix - 69), a
-	ld	iy, (ix - 50)
-	jr	BB27_132
-BB27_137:
-	lea	hl, iy
-	ld	de, (ix - 56)
-	add	hl, de
-	ex	de, hl
-	ld	hl, (ix - 81)
+	ld	iy, (ix - 41)
+	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	ld	(ix - 38), hl
-	ex	de, hl
-	ld	de, (ix - 44)
+	ld	hl, _.str.42
+	jp	nz, BB27_20
+	ld	hl, (iy + 17)
+	ld.sis	de, 3
 	or	a, a
-	sbc	hl, de
-	ld	bc, (ix - 56)
-	jr	c, BB27_133
-	ld	bc, (ix - 38)
-	jr	BB27_133
-BB27_139:
-	add	iy, bc
-	lea	hl, iy
-BB27_140:
-	ld	bc, 3
-	call	__imulu
-	push	hl
-	pop	de
+	sbc.sis	hl, de
+	ld	hl, _.str.43
+	jp	nz, BB27_20
 	ld	hl, (ix - 47)
+	push	hl
+	pop	de
+	add	iy, de
+	ld	bc, (iy - 4)
+	ld	a, (iy - 1)
+	push	hl
+	pop	iy
+	ld	de, -4
+	add	iy, de
+	lea	hl, iy
+	ld	de, -8388608
 	add	hl, de
-	ld	(ix - 38), hl
-	ld	de, (hl)
-	push	de
-	call	_strlen
-	pop	de
-	inc	hl
-	push	hl
-	call	__Znaj
-	pop	de
-	ld	(_texturePackName), hl
-	ld	iy, (ix - 38)
-	ld	de, (iy)
-	push	de
-	push	hl
-	call	_strcpy
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	de, 2
-	ld	bc, (ix - 44)
-	push	bc
-	pop	hl
+	inc	de
 	or	a, a
 	sbc	hl, de
+	ld	e, a
 	push	bc
 	pop	hl
-	jr	nc, BB27_142
-	ld	hl, 1
-BB27_142:
-	ld	iy, (ix - 47)
-BB27_143:
-	ld	(ix - 44), hl
-	ld	(ix - 38), iy
-	ld	hl, (iy)
-	add	hl, bc
-	or	a, a
-	sbc	hl, bc
-	push	hl
-	call	nz, __ZdaPv
-	pop	hl
-	ld	hl, (ix - 44)
-	dec	hl
-	ld	iy, (ix - 38)
-	lea	iy, iy + 3
-	add	hl, bc
-	or	a, a
-	sbc	hl, bc
-	ld	de, (ix - 47)
-	jr	nz, BB27_143
-	push	de
-	call	_free
-	pop	hl
-	ld	hl, (ix - 62)
-	push	hl
-	call	__ZdaPv
-	ld	sp, ix
-	pop	ix
-	ret
+	ld	bc, 0
+	ld	a, b
+	jp	c, BB27_147
+	ld	(ix - 74), e
+	ld	(ix - 71), hl
+	ld	bc, -1
+	ld	d, b
 BB27_145:
+	ld	(ix - 56), bc
+	ld	(ix - 47), iy
+	ld	iy, 0
+	ld	hl, (ix - 41)
+	push	af
+	ld	a, (hl)
+	ld	iyl, a
+	pop	af
+	push	bc
+	pop	hl
+	ld	e, d
+	ld	bc, 255
+	xor	a, a
+	call	__land
+	lea	bc, iy
+	call	__lxor
+	ld	c, 2
+	call	__ishl
+	push	hl
+	pop	bc
+	ld	iy, _crc32_tab
+	add	iy, bc
+	ld	hl, (iy)
+	ld	(ix - 59), hl
+	ld	e, (iy + 3)
+	ld	iy, (ix - 47)
+	ld	bc, (ix - 56)
+	ld	a, d
+	ld	l, 8
+	call	__lshru
+	ld	hl, (ix - 59)
+	call	__lxor
+	push	hl
+	pop	bc
+	ld	d, e
+	dec	iy
+	ld	hl, (ix - 41)
+	inc	hl
+	ld	(ix - 41), hl
+	lea	hl, iy
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jr	nz, BB27_145
+	push	bc
+	pop	hl
+	ld	e, d
+	call	__lnot
+	push	hl
+	pop	bc
+	ld	a, e
+	ld	hl, (ix - 71)
+	ld	e, (ix - 74)
+BB27_147:
+	call	__lcmpu
+	ld	hl, _.str.44
+	jp	z, BB27_14
+	jp	BB27_20
+BB27_148:
+	lea	hl, iy
+	ld	de, (ix - 62)
+	add	hl, de
+	ld	(ix - 41), hl
+	ld	hl, (ix - 80)
+	or	a, a
+	sbc	hl, bc
+	push	hl
+	pop	de
+	ld	hl, (ix - 41)
+	ld	bc, (ix - 44)
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB27_150
+	ld	(ix - 62), de
+BB27_150:
+	lea	bc, iy
+	jp	BB27_21
+BB27_151:
+	ld	a, (_interruptOriginalValue)
+	ld	(-1048571), a
+	ld	iy, -3145600
+	call	_os_EnableAPD
 	xor	a, a
 	ld	(-3132938), a
 	ld	hl, -3132938
@@ -8461,56 +9015,108 @@ BB27_145:
 	section	.rodata,"a",@progbits
 	private	JTI27_0
 JTI27_0:
-	dl	BB27_34
-	dl	BB27_36
-	dl	BB27_76
-	dl	BB27_73
-	dl	BB27_74
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_134
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_145
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_73
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_36
-	dl	BB27_134
-	dl	BB27_74
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_76
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_130
-	dl	BB27_145
+	dl	BB27_83
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_88
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_46
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_89
+	private	JTI27_1
+JTI27_1:
+	dl	BB27_88
+	dl	BB27_83
+	dl	BB27_89
+	dl	BB27_46
+	dl	BB27_141
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_151
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_139
+	dl	BB27_151
+	private	JTI27_2
+JTI27_2:
+	dl	BB27_46
+	dl	BB27_139
+	dl	BB27_83
+	dl	BB27_141
+	dl	BB27_88
+	dl	BB27_139
+	dl	BB27_89
 
 	section	.text,"ax",@progbits
 	public	__Z11selectBlockv
@@ -8521,13 +9127,13 @@ __Z11selectBlockv:
 	lea	hl, ix - 24
 	ld	sp, hl
 	ld	l, 24
-	ld	(ix - 3), hl
+	ld	(ix - 6), hl
 	xor	a, a
-	ld	(ix - 6), a
+	ld	(ix - 3), a
 	ld	l, 20
 	ld	(ix - 9), hl
 	ld	hl, _zSortedObjects
-	ld	(ix - 18), hl
+	ld	(ix - 24), hl
 	ld	hl, (_cursorBackground)
 	ld	de, (_playerCursorX)
 	ld	bc, (_playerCursorY)
@@ -8584,7 +9190,7 @@ BB28_1:
 	push	de
 	pop	bc
 	call	__imulu
-	ld	(ix - 21), hl
+	ld	(ix - 18), hl
 	push	hl
 	pop	iy
 	ld	bc, 80
@@ -8613,10 +9219,10 @@ BB28_3:
 	call	__iand
 	ld	bc, 20
 	call	__imulu
-	ld	(ix - 21), hl
+	ld	(ix - 18), hl
 BB28_4:
 	ld	iy, (_cursorBackground)
-	ld	(ix - 24), iy
+	ld	(ix - 21), iy
 	lea	de, iy + 2
 	ld	hl, (ix - 12)
 	ld	iy, (hl)
@@ -8624,21 +9230,21 @@ BB28_4:
 	ld	bc, 256
 	ldir
 	ld	de, 82
-	ld	iy, (ix - 21)
+	ld	iy, (ix - 18)
 	add	iy, de
-	ld	a, (ix - 6)
+	ld	a, (ix - 3)
 	ld	b, 3
 	call	__bshru
-	ld	hl, (ix - 3)
+	ld	hl, (ix - 6)
 	ld	h, a
-	ld	(ix - 3), hl
+	ld	(ix - 6), hl
 	mlt	hl
 	ld	a, l
 	add	a, 52
 	ld	l, a
 	push	hl
 	push	iy
-	ld	hl, (ix - 24)
+	ld	hl, (ix - 21)
 	push	hl
 	call	_gfx_Sprite_NoClip
 	ld	hl, 9
@@ -8649,9 +9255,9 @@ BB28_4:
 	ld	iy, (ix - 12)
 	lea	iy, iy + 3
 	ld	(ix - 12), iy
-	ld	a, (ix - 6)
+	ld	a, (ix - 3)
 	inc	a
-	ld	(ix - 6), a
+	ld	(ix - 3), a
 	push	bc
 	pop	hl
 	ld	de, 48
@@ -8702,7 +9308,7 @@ BB28_5:
 	add	hl, sp
 	ld	sp, hl
 	ld	iy, (_cursorBackground)
-	ld	(ix - 6), iy
+	ld	(ix - 3), iy
 	lea	de, iy + 2
 	ld	a, (_selectedObject)
 	or	a, a
@@ -8733,16 +9339,16 @@ BB28_5:
 	ld	e, 3
 	ld	b, e
 	call	__bshru
-	ld	de, (ix - 3)
+	ld	de, (ix - 6)
 	ld	d, a
-	ld	(ix - 3), de
+	ld	(ix - 6), de
 	mlt	de
 	ld	a, e
 	add	a, 52
 	ld	e, a
 	push	de
 	push	hl
-	ld	hl, (ix - 6)
+	ld	hl, (ix - 3)
 	push	hl
 	call	_gfx_Sprite_NoClip
 	ld	hl, 9
@@ -8763,7 +9369,7 @@ BB28_5:
 	ld	e, a
 	and	a, 7
 	ld	l, a
-	ld	(ix - 6), hl
+	ld	(ix - 3), hl
 	ld	bc, 20
 	call	__imulu
 	push	hl
@@ -8790,9 +9396,9 @@ BB28_5:
 	ld	(ix - 12), iy
 	lea	de, iy + 2
 	ld	a, (_selectedObject)
-	ld	hl, (ix - 6)
+	ld	hl, (ix - 3)
 	ld	l, a
-	ld	(ix - 6), hl
+	ld	(ix - 3), hl
 	ld	bc, 3
 	call	__imulu
 	push	hl
@@ -8809,7 +9415,7 @@ BB28_5:
 	ld	de, (ix - 9)
 	ld	l, e
 	mlt	hl
-	ld	iy, (ix - 6)
+	ld	iy, (ix - 3)
 	ex	de, hl
 	ld	iyl, e
 	ex	de, hl
@@ -8819,7 +9425,7 @@ BB28_5:
 	ld	b, 3
 	call	__bshru
 	ld	h, a
-	ld	de, (ix - 3)
+	ld	de, (ix - 6)
 	ld	l, e
 	mlt	hl
 	ld	a, l
@@ -8834,25 +9440,49 @@ BB28_5:
 	add	hl, sp
 	ld	sp, hl
 BB28_6:
-	call	_os_GetCSC
-	dec	a
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ex	de, hl
+	ld	iyl, e
+	ld	iyh, d
+	ex	de, hl
+	dec.sis	hl
 	ld	de, 0
-	cp	a, 35
+	ld	e, l
+	ld	d, h
+	push	de
+	pop	hl
+	ld	bc, 9
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB28_9
+	ld.sis	de, -144
+	add.sis	iy, de
+	ld	de, 0
+	ld	e, iyl
+	ld	d, iyh
+	push	de
+	pop	hl
+	ld	bc, 7
+	or	a, a
+	sbc	hl, bc
 	jr	nc, BB28_6
-	ld	e, a
+	ld	hl, JTI28_1
+	add	hl, de
+	add	hl, de
+	add	hl, de
+	ld	hl, (hl)
+	jp	(hl)
+BB28_9:
 	ld	hl, JTI28_0
 	add	hl, de
 	add	hl, de
 	add	hl, de
 	ld	hl, (hl)
 	jp	(hl)
-BB28_8:
-	ld	a, (_selectedObject)
-	cp	a, 40
-	ld	a, 8
-	jp	c, BB28_5
-	ld	a, -40
-	jp	BB28_5
 BB28_10:
 	ld	a, (_selectedObject)
 	ld	e, a
@@ -8866,19 +9496,26 @@ BB28_10:
 	jp	BB28_5
 BB28_12:
 	ld	a, (_selectedObject)
-	cp	a, 8
-	ld	a, 40
-	jp	c, BB28_5
-	ld	a, -8
-	jp	BB28_5
-BB28_14:
-	ld	a, (_selectedObject)
 	or	a, a
 	ld	a, 47
 	jp	z, BB28_5
 	ld	a, -1
 	jp	BB28_5
+BB28_14:
+	ld	a, (_selectedObject)
+	cp	a, 8
+	ld	a, 40
+	jp	c, BB28_5
+	ld	a, -8
+	jp	BB28_5
 BB28_16:
+	ld	a, (_selectedObject)
+	cp	a, 40
+	ld	a, 8
+	jp	c, BB28_5
+	ld	a, -40
+	jp	BB28_5
+BB28_18:
 	ld	hl, (_texPalette)
 	ld	de, 510
 	add	hl, de
@@ -8886,6 +9523,10 @@ BB28_16:
 	ld	iy, -1899522
 	ld	(iy), l
 	ld	(iy + 1), h
+	;APP
+	di
+	assume	adl = 1
+	;NO_APP
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -8907,9 +9548,9 @@ BB28_16:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	z, BB28_18
-BB28_17:
-	ld	hl, (ix - 18)
+	jr	z, BB28_20
+BB28_19:
+	ld	hl, (ix - 24)
 	ld	de, (hl)
 	push	de
 	call	__ZN6object16generatePolygonsEv
@@ -8917,14 +9558,14 @@ BB28_17:
 	ld	hl, (ix - 3)
 	inc	hl
 	ld	de, (_numberOfObjects)
-	ld	iy, (ix - 18)
+	ld	iy, (ix - 24)
 	lea	iy, iy + 3
-	ld	(ix - 18), iy
+	ld	(ix - 24), iy
 	ld	(ix - 3), hl
 	or	a, a
 	sbc	hl, de
-	jr	c, BB28_17
-BB28_18:
+	jr	c, BB28_19
+BB28_20:
 	ld	hl, (_cursorBackground)
 	ld	de, (_playerCursorX)
 	ld	bc, (_playerCursorY)
@@ -8932,46 +9573,37 @@ BB28_18:
 	push	de
 	push	hl
 	call	_gfx_GetSprite
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	call	__Z10drawCursorv
+	;APP
+	ei
+	assume	adl = 1
+	;NO_APP
 	ld	sp, ix
 	pop	ix
-	jp	__Z10drawCursorv
+	ret
 	section	.text,"ax",@progbits
 	section	.rodata,"a",@progbits
 	private	JTI28_0
 JTI28_0:
-	dl	BB28_8
+	dl	BB28_10
+	dl	BB28_12
 	dl	BB28_14
-	dl	BB28_10
-	dl	BB28_12
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
 	dl	BB28_16
+	dl	BB28_18
 	dl	BB28_6
 	dl	BB28_6
 	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
+	dl	BB28_18
+	private	JTI28_1
+JTI28_1:
 	dl	BB28_16
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_10
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_8
 	dl	BB28_6
 	dl	BB28_12
 	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
-	dl	BB28_6
+	dl	BB28_10
 	dl	BB28_6
 	dl	BB28_14
 
@@ -9155,8 +9787,10 @@ __Z17verifyTexturePack9packEntry:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 13
+	lea	hl, ix - 14
 	ld	sp, hl
+	xor	a, a
+	ld	(ix - 1), a
 	ld	iy, -3145600
 	call	_os_ClrLCDFull
 	call	_os_HomeUp
@@ -9177,48 +9811,51 @@ __Z17verifyTexturePack9packEntry:
 	or	a, a
 	sbc	hl, bc
 	jp	nz, BB30_8
-	xor	a, a
+	or	a, a
+	sbc	hl, hl
+	ld	(ix - 4), hl
 	ld	iy, (ix + 6)
 	ld	hl, (iy + 17)
 	ld.sis	de, 3
 	sbc.sis	hl, de
-	jp	nz, BB30_10
-	ld	bc, (ix + 9)
-	push	bc
-	pop	de
-	add	iy, de
-	ld	de, (iy - 4)
-	ld	l, (iy - 1)
-	push	bc
-	pop	iy
-	ld	(ix - 4), l
-	ld	bc, -4
+	jp	nz, BB30_9
+	ld	de, -4
+	ld	hl, (ix + 9)
+	push	hl
+	pop	bc
 	add	iy, bc
-	ld	bc, -8388608
+	ld	bc, (iy - 4)
+	ld	a, (iy - 1)
+	push	hl
+	pop	iy
+	ld	(ix - 5), a
+	add	iy, de
+	ld	de, -8388608
 	lea	hl, iy
-	add	hl, bc
-	inc	bc
+	add	hl, de
+	inc	de
 	or	a, a
-	sbc	hl, bc
-	jp	c, BB30_13
-	ld	(ix - 13), de
+	sbc	hl, de
+	ld	a, d
+	jr	c, BB30_6
+	ld	(ix - 14), bc
 	ld	d, -1
 	ld	bc, -1
-	ld	(ix - 3), iy
+	ld	(ix - 4), iy
 	ld	iy, (ix + 6)
 BB30_4:
-	ld	(ix - 7), bc
+	ld	(ix - 8), bc
 	or	a, a
 	sbc	hl, hl
 	ld	l, (iy)
-	ld	(ix - 10), hl
+	ld	(ix - 11), hl
 	push	bc
 	pop	hl
 	ld	e, d
 	ld	bc, 255
 	xor	a, a
 	call	__land
-	ld	bc, (ix - 10)
+	ld	bc, (ix - 11)
 	call	__lxor
 	ld	c, 2
 	call	__ishl
@@ -9228,23 +9865,23 @@ BB30_4:
 	ld	iy, _crc32_tab
 	add	iy, bc
 	ld	bc, (iy)
-	ld	(ix - 10), bc
+	ld	(ix - 11), bc
 	ld	e, (iy + 3)
 	push	hl
 	pop	iy
-	ld	bc, (ix - 7)
+	ld	bc, (ix - 8)
 	ld	a, d
 	ld	l, 8
 	call	__lshru
-	ld	hl, (ix - 10)
+	ld	hl, (ix - 11)
 	call	__lxor
 	push	hl
 	pop	bc
 	ld	d, e
-	ld	hl, (ix - 3)
+	ld	hl, (ix - 4)
 	dec	hl
 	inc	iy
-	ld	(ix - 3), hl
+	ld	(ix - 4), hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
@@ -9253,95 +9890,51 @@ BB30_4:
 	pop	hl
 	ld	e, d
 	call	__lnot
-	push	hl
-	pop	bc
+	ld	(ix - 4), hl
 	ld	a, e
-	ld	de, (ix - 13)
-	ex	de, hl
-	ld	e, (ix - 4)
-	call	__lcmpu
-	jp	z, BB30_14
+	ld	bc, (ix - 14)
 BB30_6:
-	call	_gfx_End
-	ld	iy, -3145600
-	call	_os_ClrLCDFull
-	call	_os_HomeUp
-	call	_os_DrawStatusBar
-	ld	hl, _.str.34
-	push	hl
-	call	_os_PutStrFull
+	push	bc
 	pop	hl
-	ld	hl, _.str.44
-	push	hl
-	call	_os_PutStrFull
-	pop	hl
-	ld	hl, _.str.35
-	push	hl
-	call	_os_PutStrFull
-	pop	hl
-BB30_7:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB30_7
-	jr	BB30_12
-BB30_8:
-	call	_gfx_End
-	ld	iy, -3145600
-	call	_os_ClrLCDFull
-	call	_os_HomeUp
-	call	_os_DrawStatusBar
-	ld	hl, _.str.34
-	push	hl
-	call	_os_PutStrFull
-	pop	hl
-	ld	hl, _.str.42
-	push	hl
-	call	_os_PutStrFull
-	pop	hl
-	ld	hl, _.str.35
-	push	hl
-	call	_os_PutStrFull
-	pop	hl
-BB30_9:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB30_9
-	jr	BB30_12
-BB30_10:
-	call	_gfx_End
-	ld	iy, -3145600
-	call	_os_ClrLCDFull
-	call	_os_HomeUp
-	call	_os_DrawStatusBar
-	ld	hl, _.str.34
-	push	hl
-	call	_os_PutStrFull
-	pop	hl
-	ld	hl, _.str.43
-	push	hl
-	call	_os_PutStrFull
-	pop	hl
-	ld	hl, _.str.35
-	push	hl
-	call	_os_PutStrFull
-	pop	hl
-BB30_11:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB30_11
-BB30_12:
-	xor	a, a
+	ld	e, (ix - 5)
+	ld	bc, (ix - 4)
+	call	__lcmpu
+	jr	nz, BB30_10
+	ld	a, 1
+	ld	(ix - 1), a
+	ld	a, (ix - 1)
 	ld	sp, ix
 	pop	ix
 	ret
-BB30_13:
-	ld	bc, 0
-	ex	de, hl
-	ld	e, (ix - 4)
-	call	__lcmpu
-	jp	nz, BB30_6
-BB30_14:
-	ld	a, 1
+BB30_8:
+	ld	hl, _.str.42
+	jr	BB30_11
+BB30_9:
+	ld	hl, _.str.43
+	jr	BB30_11
+BB30_10:
+	ld	hl, _.str.44
+BB30_11:
+	ld	(ix - 4), hl
+	call	_gfx_End
+	ld	iy, -3145600
+	call	_os_ClrLCDFull
+	call	_os_HomeUp
+	call	_os_DrawStatusBar
+	ld	hl, _.str.34
+	push	hl
+	call	_os_PutStrFull
+	pop	hl
+	ld	hl, (ix - 4)
+	push	hl
+	call	_os_PutStrFull
+	pop	hl
+	ld	hl, _.str.35
+	push	hl
+	call	_os_PutStrFull
+	pop	hl
+	call	_os_GetKey
+	ld	a, (ix - 1)
 	ld	sp, ix
 	pop	ix
 	ret
@@ -9353,6 +9946,9 @@ __Z16texturePackErrorPKc:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
+	push	hl
+	ld	hl, (ix + 6)
+	ld	(ix - 3), hl
 	call	_gfx_End
 	ld	iy, -3145600
 	call	_os_ClrLCDFull
@@ -9362,20 +9958,16 @@ __Z16texturePackErrorPKc:
 	push	hl
 	call	_os_PutStrFull
 	pop	hl
-	ld	hl, (ix + 6)
+	ld	hl, (ix - 3)
 	push	hl
 	call	_os_PutStrFull
 	pop	hl
 	ld	hl, _.str.35
 	push	hl
 	call	_os_PutStrFull
-	pop	hl
-BB31_1:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB31_1
+	ld	sp, ix
 	pop	ix
-	ret
+	jp	_os_GetKey
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -14575,6 +15167,10 @@ __Z12redrawScreenv:
 	add	ix, sp
 	lea	hl, ix - 6
 	ld	sp, hl
+	;APP
+	di
+	assume	adl = 1
+	;NO_APP
 	ld	hl, (_cursorBackground)
 	ld	de, (_playerCursorX)
 	ld	bc, (_playerCursorY)
@@ -14585,14 +15181,11 @@ __Z12redrawScreenv:
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	;APP
-	di
-	assume	adl = 1
-	;NO_APP
 	ld	hl, (_numberOfObjects)
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
+	ld	de, 0
 	jr	z, BB49_3
 	ld	iy, _objects
 	ld	bc, 0
@@ -14614,16 +15207,11 @@ BB49_2:
 	sbc	hl, de
 	jr	c, BB49_2
 BB49_3:
-	;APP
-	ei
-	assume	adl = 1
-	;NO_APP
-	ld	hl, (_numberOfObjects)
-	ld	de, __Z15distanceComparePKvS0_
-	push	de
-	ld	de, 3
-	push	de
+	ld	hl, __Z15distanceComparePKvS0_
 	push	hl
+	ld	hl, 3
+	push	hl
+	push	de
 	ld	hl, _zSortedObjects
 	push	hl
 	call	_qsort
@@ -14676,9 +15264,17 @@ BB49_5:
 	push	de
 	push	hl
 	call	_gfx_GetSprite
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	call	__Z10drawCursorv
+	;APP
+	ei
+	assume	adl = 1
+	;NO_APP
 	ld	sp, ix
 	pop	ix
-	jp	__Z10drawCursorv
+	ret
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -15229,16 +15825,9 @@ __Z12failedToSavev:
 	sbc	hl, hl
 	push	hl
 	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-BB53_1:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB53_1
 	ld	sp, ix
 	pop	ix
-	ret
+	jp	_os_GetKey
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -15315,16 +15904,9 @@ __Z16failedToLoadSavev:
 	sbc	hl, hl
 	push	hl
 	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-BB54_1:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB54_1
 	ld	sp, ix
 	pop	ix
-	ret
+	jp	_os_GetKey
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -15503,30 +16085,27 @@ BB55_4:
 	push	bc
 	pop	hl
 	ld	iyl, b
-	ld	e, iyl
-	jp	c, BB55_8
-	ld	a, -1
-	ld	de, -2806784
+	ld	a, iyl
+	ld	e, a
+	jr	c, BB55_8
+	ld	d, -1
+	ld	iy, -2806784
 	ld	bc, -1
 BB55_6:
 	ld	(ix - 47), bc
 	or	a, a
 	sbc	hl, hl
-	push	de
-	pop	iy
 	ld	(ix - 44), iy
 	ld	l, (iy)
-	ld	(ix - 50), hl
-	ld	iyl, 0
+	push	hl
+	pop	iy
 	push	bc
 	pop	hl
-	ld	e, a
+	ld	e, d
 	ld	bc, 255
-	ld	d, a
-	xor	a, a
 	call	__land
-	ld	bc, (ix - 50)
-	ld	a, iyl
+	lea	bc, iy
+	xor	a, a
 	call	__lxor
 	ld	c, 2
 	call	__ishl
@@ -15537,20 +16116,21 @@ BB55_6:
 	ld	hl, (iy)
 	ld	(ix - 50), hl
 	ld	e, (iy + 3)
-	ld	iyl, 0
+	ld	iyl, a
 	ld	bc, (ix - 47)
 	ld	a, d
 	ld	l, 8
 	call	__lshru
 	ld	hl, (ix - 50)
 	call	__lxor
+	ld	a, iyl
 	push	hl
 	pop	bc
-	ld	a, e
+	ld	d, e
 	ld	hl, (ix - 41)
 	dec	hl
-	ld	de, (ix - 44)
-	inc	de
+	ld	iy, (ix - 44)
+	inc	iy
 	ld	(ix - 41), hl
 	add	hl, bc
 	or	a, a
@@ -15558,23 +16138,21 @@ BB55_6:
 	jr	nz, BB55_6
 	push	bc
 	pop	hl
-	ld	e, a
+	ld	e, d
 	call	__lnot
-	ld	bc, 0
 BB55_8:
-	ld	a, iyl
 	ld	iy, (ix - 35)
 	ld	(iy + 27), hl
 	ld	(iy + 30), e
-	ld	iyl, a
-	ld	de, (_numberOfObjects)
-	push	de
+	ld	bc, (_numberOfObjects)
+	push	bc
 	pop	hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
+	ld	iy, 0
 	jr	z, BB55_13
-	ld	(ix - 41), bc
+	lea	de, iy
 BB55_10:
 	ld	hl, (ix - 38)
 	ld	hl, (hl)
@@ -15583,36 +16161,39 @@ BB55_10:
 	sbc	hl, bc
 	jr	z, BB55_12
 	push	hl
+	ld	(ix - 41), de
 	call	__ZdlPv
 	ld	iyl, 0
-	ld	bc, 0
-	pop	hl
-	ld	de, (_numberOfObjects)
-BB55_12:
-	ld	hl, (ix - 41)
-	inc	hl
 	ld	a, iyl
+	ld	de, (ix - 41)
+	ld	bc, 0
+	push	bc
+	pop	iy
+	pop	hl
+	ld	bc, (_numberOfObjects)
+BB55_12:
+	inc	de
+	lea	hl, iy
 	ld	iy, (ix - 38)
 	lea	iy, iy + 3
 	ld	(ix - 38), iy
-	ld	iyl, a
-	ld	(ix - 41), hl
+	push	hl
+	pop	iy
+	push	de
+	pop	hl
 	or	a, a
-	sbc	hl, de
+	sbc	hl, bc
 	jr	c, BB55_10
 BB55_13:
 	lea	hl, ix - 32
-	ld	(ix - 41), hl
-	ld	(_numberOfObjects), bc
+	ld	(ix - 44), hl
+	ld	(_numberOfObjects), iy
 	ld	de, 2806815
 	ld	hl, (ix - 35)
 	add	hl, de
-	ld	(ix - 44), hl
+	ld	(ix - 41), hl
 BB55_14:
-	push	af
-	ld	a, iyl
 	ld	(ix - 38), a
-	pop	af
 	call	__Z8fillDirtv
 	ld	hl, 105
 	push	hl
@@ -15729,145 +16310,29 @@ BB55_14:
 	add	hl, sp
 	ld	sp, hl
 BB55_15:
-	call	_os_GetCSC
-	cp	a, 15
-	jr	z, BB55_21
-	cp	a, 26
-	jp	z, BB55_24
-	cp	a, 34
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ld	e, l
+	ld	d, h
+	ld.sis	bc, 9
+	or	a, a
+	sbc.sis	hl, bc
+	jp	z, BB55_23
+	ld	l, e
+	ld	h, d
+	ld.sis	bc, 143
+	or	a, a
+	sbc.sis	hl, bc
+	jp	z, BB55_26
+	ld	l, e
+	ld	h, d
+	ld.sis	de, 144
+	or	a, a
+	sbc.sis	hl, de
 	jr	nz, BB55_15
-	ld	hl, _.str.108
-	push	hl
-	ld	hl, (ix + 6)
-	push	hl
-	call	_ti_Open
-	ld	e, a
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	or	a, a
-	jp	z, BB55_37
-	push	de
-	ld	hl, (ix - 44)
-	push	hl
-	ld	hl, 1
-	push	hl
-	ld	hl, -2806784
-	push	hl
-	ld	(ix - 35), de
-	call	_ti_Write
-	ld	iy, 12
-	add	iy, sp
-	ld	sp, iy
-	ld	de, (ix - 44)
-	or	a, a
-	sbc	hl, de
-	jp	nz, BB55_34
-	ld	hl, (ix - 35)
-	push	hl
-	ld	hl, 1
-	push	hl
-	call	_ti_SetArchiveStatus
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, (ix - 35)
-	push	hl
-	call	_ti_Close
-	pop	hl
-	ld	a, 1
-	ld	(ix - 38), a
-	jp	BB55_36
-BB55_21:
-	call	__Z8fillDirtv
-	ld	hl, 110
-	push	hl
-	or	a, a
-	sbc	hl, hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.119
-	push	hl
-	call	_gfx_GetStringWidth
-	pop	de
-	ld	a, 1
-	ld	c, a
-	call	__ishru
-	push	hl
-	pop	de
-	ld	hl, 160
-	or	a, a
-	sbc	hl, de
-	ld	(ix - 35), hl
-	call	_gfx_GetTextY
-	push	hl
-	ld	hl, (ix - 35)
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.119
-	push	hl
-	call	_gfx_PrintString
-	pop	hl
-	call	_gfx_GetTextY
-	ld	de, 10
-	add	hl, de
-	push	hl
-	or	a, a
-	sbc	hl, hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.120
-	push	hl
-	call	_gfx_GetStringWidth
-	pop	de
-	ld	c, 1
-	call	__ishru
-	push	hl
-	pop	de
-	ld	hl, 160
-	or	a, a
-	sbc	hl, de
-	ld	(ix - 35), hl
-	call	_gfx_GetTextY
-	push	hl
-	ld	hl, (ix - 35)
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.120
-	push	hl
-	call	_gfx_PrintString
-	pop	hl
-	call	_gfx_GetTextY
-	ld	de, 10
-	add	hl, de
-	push	hl
-	or	a, a
-	sbc	hl, hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-BB55_22:
-	call	_os_GetCSC
-	cp	a, 26
-	jp	z, BB55_37
-	cp	a, 34
-	jr	nz, BB55_22
-	jp	BB55_38
-BB55_24:
 	call	__Z8fillDirtv
 	ld	hl, 110
 	push	hl
@@ -15997,19 +16462,19 @@ BB55_24:
 	ld	sp, hl
 	ld	hl, (ix + 6)
 	push	hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 44)
 	push	hl
 	call	_strcpy
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 44)
 	push	hl
 	call	_strlen
 	push	hl
 	pop	de
 	pop	hl
-	ld	iy, (ix - 41)
+	ld	iy, (ix - 44)
 	lea	hl, iy
 	add	hl, de
 	ex	de, hl
@@ -16032,10 +16497,10 @@ BB55_24:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jp	z, BB55_31
+	jp	z, BB55_30
 	ld	hl, -2806784
 	push	hl
-	ld	hl, (ix - 44)
+	ld	hl, (ix - 41)
 	push	hl
 	push	de
 	ld	(ix - 35), de
@@ -16058,14 +16523,14 @@ BB55_24:
 	ld	de, 1796
 	add	hl, de
 	bit	0, (hl)
-	jr	z, BB55_28
+	jr	z, BB55_22
 	ld	de, 1027
 	add	iy, de
 	push	iy
 	call	_fat_Close
 	pop	hl
 	ld	iy, (_global)
-BB55_28:
+BB55_22:
 	lea	hl, iy
 	ld	de, 1795
 	add	iy, de
@@ -16077,8 +16542,152 @@ BB55_28:
 	pop	hl
 	call	_usb_Cleanup
 	bit	0, (ix - 47)
-	jp	nz, BB55_39
-	jp	BB55_37
+	jp	nz, BB55_37
+	jp	BB55_35
+BB55_23:
+	call	__Z8fillDirtv
+	ld	hl, 110
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.119
+	push	hl
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	a, 1
+	ld	c, a
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 35), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 35)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.119
+	push	hl
+	call	_gfx_PrintString
+	pop	hl
+	call	_gfx_GetTextY
+	ld	de, 10
+	add	hl, de
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.120
+	push	hl
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	c, 1
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 35), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 35)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.120
+	push	hl
+	call	_gfx_PrintString
+	pop	hl
+	call	_gfx_GetTextY
+	ld	de, 10
+	add	hl, de
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+BB55_24:
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ld	e, l
+	ld	d, h
+	ld.sis	bc, 143
+	or	a, a
+	sbc.sis	hl, bc
+	jp	z, BB55_36
+	ld	l, e
+	ld	h, d
+	ld.sis	de, 144
+	or	a, a
+	sbc.sis	hl, de
+	jr	nz, BB55_24
+	jp	BB55_35
+BB55_26:
+	ld	hl, _.str.108
+	push	hl
+	ld	hl, (ix + 6)
+	push	hl
+	call	_ti_Open
+	ld	e, a
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	or	a, a
+	jp	z, BB55_35
+	ld	(ix - 35), de
+	push	de
+	ld	hl, (ix - 41)
+	push	hl
+	ld	hl, 1
+	push	hl
+	ld	hl, -2806784
+	push	hl
+	call	_ti_Write
+	ld	iy, 12
+	add	iy, sp
+	ld	sp, iy
+	ld	de, (ix - 41)
+	or	a, a
+	sbc	hl, de
+	jp	nz, BB55_33
+	ld	hl, (ix - 35)
+	push	hl
+	ld	hl, 1
+	push	hl
+	call	_ti_SetArchiveStatus
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, (ix - 35)
+	push	hl
+	call	_ti_Close
+	pop	hl
+	ld	a, 1
+	ld	(ix - 38), a
+	jp	BB55_34
 BB55_29:
 	ld	hl, _.str.117
 	push	hl
@@ -16186,24 +16795,21 @@ BB55_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
+	call	_os_GetKey
 BB55_30:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB55_30
-BB55_31:
 	ld	iy, (_global)
 	lea	hl, iy
 	ld	de, 1796
 	add	hl, de
 	bit	0, (hl)
-	jr	z, BB55_33
+	jr	z, BB55_32
 	ld	de, 1027
 	add	iy, de
 	push	iy
 	call	_fat_Close
 	pop	hl
 	ld	iy, (_global)
-BB55_33:
+BB55_32:
 	lea	hl, iy
 	ld	de, 1795
 	add	iy, de
@@ -16214,8 +16820,8 @@ BB55_33:
 	call	nz, _msd_Close
 	pop	hl
 	call	_usb_Cleanup
-	jp	BB55_37
-BB55_34:
+	jp	BB55_35
+BB55_33:
 	ld	hl, (ix - 35)
 	push	hl
 	call	_ti_Close
@@ -16330,29 +16936,24 @@ BB55_34:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-BB55_35:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB55_35
-BB55_36:
+	call	_os_GetKey
+BB55_34:
 	ld	hl, (ix - 35)
 	push	hl
 	call	_ti_Close
 	pop	hl
-BB55_37:
-	push	af
-	ld	a, (ix - 38)
-	ld	iyl, a
-	pop	af
-	ld	a, iyl
+BB55_35:
+	ld	l, (ix - 38)
+	ld	a, l
 	and	a, 1
 	bit	0, a
+	ld	a, l
 	jp	z, BB55_14
-BB55_38:
+BB55_36:
 	ld	sp, ix
 	pop	ix
 	ret
-BB55_39:
+BB55_37:
 	ld	hl, _.str.118
 	push	hl
 	call	_printStringAndMoveDownCentered
@@ -16361,11 +16962,10 @@ BB55_39:
 	push	hl
 	call	_printStringAndMoveDownCentered
 	pop	hl
-BB55_40:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB55_40
-	jr	BB55_38
+	call	_os_GetKey
+	ld	sp, ix
+	pop	ix
+	ret
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -16707,7 +17307,7 @@ BB57_9:
 	add	hl, sp
 	ld	sp, hl
 	or	a, a
-	jp	z, BB57_32
+	jp	z, BB57_31
 	push	de
 	ld	(ix - 41), de
 	call	_ti_GetSize
@@ -16770,7 +17370,7 @@ BB57_15:
 	ld	a, (ix - 38)
 	bit	0, a
 	jp	nz, BB57_21
-	jp	BB57_32
+	jp	BB57_31
 BB57_16:
 	ld	l, 1
 BB57_17:
@@ -16822,7 +17422,7 @@ BB57_20:
 	call	_usb_Cleanup
 	ld	a, (ix - 38)
 	bit	0, a
-	jp	z, BB57_32
+	jp	z, BB57_31
 BB57_21:
 	ld	bc, 7
 	ld	iy, (ix - 35)
@@ -17033,11 +17633,8 @@ BB57_30:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
+	call	_os_GetKey
 BB57_31:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB57_31
-BB57_32:
 	xor	a, a
 	ld	sp, ix
 	pop	ix
@@ -17457,13 +18054,13 @@ __Z8mainMenuPcj:
 BB60_2:
 	ld	de, 1
 	ld	l, e
-	ld	bc, -145
+	ld	bc, -139
 	lea	iy, ix
 	add	iy, bc
 	ld	(iy), l
 	lea	hl, ix - 106
 	push	ix
-	ld	bc, -141
+	ld	bc, -142
 	add	ix, bc
 	ld	(ix), hl
 	pop	ix
@@ -17471,7 +18068,7 @@ BB60_2:
 	lea	hl, ix
 	add	hl, bc
 	push	ix
-	ld	bc, -151
+	ld	bc, -145
 	add	ix, bc
 	ld	(ix), hl
 	pop	ix
@@ -17484,19 +18081,96 @@ BB60_3:
 BB60_4:
 	call	__Z17redrawSaveOptionsv
 BB60_5:
-	call	_os_GetCSC
-	dec	a
-	cp	a, 56
-	jr	nc, BB60_5
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ex	de, hl
+	ld	iyl, e
+	ld	iyh, d
+	ex	de, hl
+	ld.sis	de, -1272
+	or	a, a
+	sbc.sis	hl, de
+	jp	z, BB60_40
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, 798
+	add.sis	hl, de
+	ld	bc, 0
+	push	bc
+	pop	de
+	ld	e, l
+	ld	d, h
+	push	de
+	pop	hl
+	ld	bc, 23
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB60_10
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	dec.sis	hl
 	ld	de, 0
-	ld	e, a
+	ld	e, l
+	ld	d, h
+	push	de
+	pop	hl
+	ld	bc, 68
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB60_11
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, -144
+	add.sis	hl, de
+	ld	de, 0
+	ld	e, l
+	ld	d, h
+	push	de
+	pop	hl
+	ld	bc, 7
+	or	a, a
+	sbc	hl, bc
+	jr	c, BB60_12
+	ex	de, hl
+	ld	e, iyl
+	ld	d, iyh
+	ex	de, hl
+	ld.sis	de, 7229
+	or	a, a
+	sbc.sis	hl, de
+	jp	nz, BB60_5
+	jp	BB60_42
+BB60_10:
 	ld	hl, JTI60_0
 	add	hl, de
 	add	hl, de
 	add	hl, de
 	ld	hl, (hl)
 	jp	(hl)
-BB60_7:
+BB60_11:
+	ld	hl, JTI60_1
+	add	hl, de
+	add	hl, de
+	add	hl, de
+	ld	hl, (hl)
+	jp	(hl)
+BB60_12:
+	ld	hl, JTI60_2
+	add	hl, de
+	add	hl, de
+	add	hl, de
+	ld	hl, (hl)
+	jp	(hl)
+BB60_13:
 	ld	a, (_selectedSave)
 	ld	iyl, a
 	or	a, a
@@ -17515,14 +18189,21 @@ BB60_7:
 	add	hl, bc
 	ld	hl, (hl)
 	push	ix
-	ld	bc, -148
+	ld	bc, -151
 	add	ix, bc
 	ld	(ix), hl
 	pop	ix
 	ex	de, hl
-	ld	bc, 57
+	ld	de, 57
+	push	de
+	pop	bc
 	call	__imulu
-	ld	de, 10
+	push	hl
+	pop	bc
+	ld	hl, 10
+	ex	de, hl
+	push	bc
+	pop	hl
 	add	hl, de
 	ld	a, iyl
 	and	a, 1
@@ -17540,7 +18221,7 @@ BB60_7:
 	push	bc
 	pop	hl
 	add	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
@@ -17558,8 +18239,9 @@ BB60_7:
 	push	hl
 	call	_gfx_SetTextFGColor
 	pop	hl
-	ld	de, 16
-	ld	bc, -144
+	ld	hl, 16
+	ex	de, hl
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -17567,14 +18249,15 @@ BB60_7:
 	lea	iy, ix
 	add	iy, bc
 	ld	(iy), hl
-	ld	bc, -148
+	ld	bc, -151
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
-	ld	c, 1
+	ld	a, 1
+	ld	c, a
 	call	__ishru
 	push	hl
 	pop	de
@@ -17582,13 +18265,13 @@ BB60_7:
 	or	a, a
 	sbc	hl, de
 	ld	(ix - 3), bc
-	ld	bc, -144
+	ld	bc, -148
 	lea	iy, ix
 	add	iy, bc
 	ld	de, (iy)
 	push	de
 	push	hl
-	ld	de, -148
+	ld	de, -151
 	lea	hl, ix
 	add	hl, de
 	ld	hl, (hl)
@@ -17602,13 +18285,13 @@ BB60_7:
 	ld	l, a
 	cp	a, 3
 	ld	a, 1
-	jr	c, BB60_9
+	jr	c, BB60_15
 	ld	a, -3
-BB60_9:
+BB60_15:
 	add	a, l
 	ld	e, a
-	jp	BB60_13
-BB60_10:
+	jp	BB60_19
+BB60_16:
 	ld	a, (_selectedSave)
 	ld	iyl, a
 	or	a, a
@@ -17627,14 +18310,21 @@ BB60_10:
 	add	hl, bc
 	ld	hl, (hl)
 	push	ix
-	ld	bc, -148
+	ld	bc, -151
 	add	ix, bc
 	ld	(ix), hl
 	pop	ix
 	ex	de, hl
-	ld	bc, 57
+	ld	de, 57
+	push	de
+	pop	bc
 	call	__imulu
-	ld	de, 10
+	push	hl
+	pop	bc
+	ld	hl, 10
+	ex	de, hl
+	push	bc
+	pop	hl
 	add	hl, de
 	ld	a, iyl
 	and	a, 1
@@ -17652,7 +18342,7 @@ BB60_10:
 	push	bc
 	pop	hl
 	add	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
@@ -17670,8 +18360,9 @@ BB60_10:
 	push	hl
 	call	_gfx_SetTextFGColor
 	pop	hl
-	ld	de, 16
-	ld	bc, -144
+	ld	hl, 16
+	ex	de, hl
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -17679,14 +18370,15 @@ BB60_10:
 	lea	iy, ix
 	add	iy, bc
 	ld	(iy), hl
-	ld	bc, -148
+	ld	bc, -151
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
-	ld	c, 1
+	ld	a, 1
+	ld	c, a
 	call	__ishru
 	push	hl
 	pop	de
@@ -17694,13 +18386,13 @@ BB60_10:
 	or	a, a
 	sbc	hl, de
 	ld	(ix - 3), bc
-	ld	bc, -144
+	ld	bc, -148
 	lea	iy, ix
 	add	iy, bc
 	ld	de, (iy)
 	push	de
 	push	hl
-	ld	de, -148
+	ld	de, -151
 	lea	hl, ix
 	add	hl, de
 	ld	hl, (hl)
@@ -17715,11 +18407,11 @@ BB60_10:
 	dec	l
 	or	a, a
 	ld	e, 3
-	jr	z, BB60_12
+	jr	z, BB60_18
 	ld	e, l
-BB60_12:
+BB60_18:
 	ld	a, e
-BB60_13:
+BB60_19:
 	ld	(_selectedSave), a
 	or	a, a
 	sbc	hl, hl
@@ -17740,7 +18432,7 @@ BB60_13:
 	add	hl, bc
 	ld	hl, (hl)
 	push	ix
-	ld	bc, -148
+	ld	bc, -151
 	add	ix, bc
 	ld	(ix), hl
 	pop	ix
@@ -17764,7 +18456,7 @@ BB60_13:
 	inc	de
 	add	iy, de
 	push	ix
-	ld	bc, -144
+	ld	bc, -148
 	add	ix, bc
 	ld	(ix), iy
 	pop	ix
@@ -17773,7 +18465,7 @@ BB60_13:
 	call	_gfx_SetTextFGColor
 	pop	hl
 	ld	hl, (_cursorBackground)
-	ld	bc, -144
+	ld	bc, -148
 	lea	iy, ix
 	add	iy, bc
 	ld	de, (iy)
@@ -17790,7 +18482,7 @@ BB60_13:
 	call	_gfx_SetColor
 	pop	hl
 	ld	de, 16
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -17798,7 +18490,7 @@ BB60_13:
 	lea	iy, ix
 	add	iy, bc
 	ld	(iy), hl
-	ld	bc, -148
+	ld	bc, -151
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -17813,13 +18505,13 @@ BB60_13:
 	or	a, a
 	sbc	hl, de
 	ld	(ix - 3), bc
-	ld	bc, -144
+	ld	bc, -148
 	lea	iy, ix
 	add	iy, bc
 	ld	de, (iy)
 	push	de
 	push	hl
-	ld	de, -148
+	ld	de, -151
 	lea	hl, ix
 	add	hl, de
 	ld	hl, (hl)
@@ -17834,13 +18526,32 @@ BB60_13:
 	call	_gfx_Blit
 	pop	hl
 	jp	BB60_5
-BB60_14:
+BB60_20:
+	ld	a, (_offset)
+	ld	l, a
+	cp	a, 4
+	ld	a, -4
+	jr	nc, BB60_24
+	ld	a, 96
+	jr	BB60_24
+BB60_22:
+	ld	a, (_offset)
+	ld	l, a
+	cp	a, 96
+	ld	a, 4
+	jr	c, BB60_24
+	ld	a, -96
+BB60_24:
+	add	a, l
+	ld	(_offset), a
+	jp	BB60_4
+BB60_25:
 	ld	hl, -2
 	push	hl
 	call	_gfx_SetTextFGColor
 	pop	hl
 	call	__Z8fillDirtv
-	ld	bc, -141
+	ld	bc, -142
 	lea	hl, ix
 	add	hl, bc
 	ld	de, (hl)
@@ -17864,7 +18575,7 @@ BB60_14:
 	add	hl, de
 	ld	hl, (hl)
 	push	hl
-	ld	de, -141
+	ld	de, -142
 	lea	hl, ix
 	add	hl, de
 	ld	hl, (hl)
@@ -17873,7 +18584,7 @@ BB60_14:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	bc, -141
+	ld	bc, -142
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -17883,7 +18594,7 @@ BB60_14:
 	pop	de
 	pop	hl
 	ld	(ix - 3), de
-	ld	de, -141
+	ld	de, -142
 	lea	hl, ix
 	add	hl, de
 	ld	bc, (hl)
@@ -17909,7 +18620,7 @@ BB60_14:
 	ld	de, 110
 	push	de
 	push	hl
-	ld	de, -141
+	ld	de, -142
 	lea	hl, ix
 	add	hl, de
 	ld	hl, (hl)
@@ -17942,18 +18653,32 @@ BB60_14:
 	push	hl
 	call	_gfx_Blit
 	pop	hl
-BB60_15:
-	call	_os_GetCSC
-	cp	a, 26
+BB60_26:
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ld	e, l
+	ld	d, h
+	ld.sis	bc, 143
+	or	a, a
+	sbc.sis	hl, bc
+	jr	z, BB60_28
+	ld	l, e
+	ld	h, d
+	ld.sis	de, 144
+	or	a, a
+	sbc.sis	hl, de
 	jp	z, BB60_4
-	cp	a, 34
-	jr	nz, BB60_15
+	jr	BB60_26
+BB60_28:
 	xor	a, a
-	ld	bc, -148
+	ld	bc, -151
 	lea	hl, ix
 	add	hl, bc
 	ld	(hl), a
-BB60_18:
+BB60_29:
 	call	__Z8fillDirtv
 	ld	hl, 100
 	push	hl
@@ -17976,13 +18701,13 @@ BB60_18:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18017,13 +18742,13 @@ BB60_18:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18058,13 +18783,13 @@ BB60_18:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18099,13 +18824,13 @@ BB60_18:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18133,19 +18858,29 @@ BB60_18:
 	push	hl
 	call	_gfx_Blit
 	pop	hl
-BB60_19:
-	call	_os_GetCSC
-	cp	a, 35
-	jp	nc, BB60_28
-	ld	de, 0
-	ld	e, a
-	ld	hl, JTI60_1
-	add	hl, de
-	add	hl, de
-	add	hl, de
-	ld	hl, (hl)
-	jp	(hl)
-BB60_21:
+	ld	hl, 4672
+	push	hl
+	call	_os_ResetFlagBits
+	pop	hl
+	call	_os_GetKey
+	ld	e, l
+	ld	d, h
+	ld.sis	bc, 9
+	or	a, a
+	sbc.sis	hl, bc
+	jp	z, BB60_4
+	ld	l, e
+	ld	h, d
+	ld.sis	bc, 143
+	or	a, a
+	sbc.sis	hl, bc
+	jp	z, BB60_39
+	ld	l, e
+	ld	h, d
+	ld.sis	de, 144
+	or	a, a
+	sbc.sis	hl, de
+	jp	nz, BB60_38
 	ld	hl, 110
 	push	hl
 	or	a, a
@@ -18167,13 +18902,13 @@ BB60_21:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18208,13 +18943,13 @@ BB60_21:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18244,7 +18979,7 @@ BB60_21:
 	pop	hl
 	call	_init_USB
 	bit	0, a
-	jp	z, BB60_23
+	jp	z, BB60_34
 	ld	hl, _.str.112
 	push	hl
 	call	_gfx_GetStringWidth
@@ -18256,13 +18991,13 @@ BB60_21:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18303,7 +19038,7 @@ BB60_21:
 	add	hl, de
 	ld	hl, (hl)
 	push	hl
-	ld	de, -151
+	ld	de, -145
 	lea	hl, ix
 	add	hl, de
 	ld	hl, (hl)
@@ -18312,7 +19047,7 @@ BB60_21:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	bc, -151
+	ld	bc, -145
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18321,7 +19056,7 @@ BB60_21:
 	push	hl
 	pop	de
 	pop	hl
-	ld	bc, -151
+	ld	bc, -145
 	lea	hl, ix
 	add	hl, bc
 	ld	iy, (hl)
@@ -18339,12 +19074,12 @@ BB60_21:
 	add	hl, sp
 	ld	sp, hl
 	ld	a, 1
-	ld	bc, -148
+	ld	bc, -151
 	lea	hl, ix
 	add	hl, bc
 	ld	(hl), a
-	jp	BB60_25
-BB60_23:
+	jp	BB60_35
+BB60_34:
 	ld	hl, _.str.117
 	push	hl
 	call	_gfx_GetStringWidth
@@ -18357,13 +19092,13 @@ BB60_23:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18398,13 +19133,13 @@ BB60_23:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	de, -144
+	ld	de, -148
 	lea	iy, ix
 	add	iy, de
 	ld	(iy), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	bc, -144
+	ld	bc, -148
 	lea	hl, ix
 	add	hl, bc
 	ld	hl, (hl)
@@ -18432,25 +19167,21 @@ BB60_23:
 	push	hl
 	call	_gfx_Blit
 	pop	hl
-	call	_os_GetCSC
-BB60_24:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB60_24
-BB60_25:
+	call	_os_GetKey
+BB60_35:
 	ld	iy, (_global)
 	lea	hl, iy
 	ld	de, 1796
 	add	hl, de
 	bit	0, (hl)
-	jr	z, BB60_27
+	jr	z, BB60_37
 	ld	de, 1027
 	add	iy, de
 	push	iy
 	call	_fat_Close
 	pop	hl
 	ld	iy, (_global)
-BB60_27:
+BB60_37:
 	lea	hl, iy
 	ld	de, 1795
 	add	iy, de
@@ -18461,35 +19192,16 @@ BB60_27:
 	call	nz, _msd_Close
 	pop	hl
 	call	_usb_Cleanup
-BB60_28:
-	ld	bc, -148
+BB60_38:
+	ld	bc, -151
 	lea	hl, ix
 	add	hl, bc
 	ld	a, (hl)
 	and	a, 1
 	bit	0, a
 	jp	nz, BB60_4
-	jp	BB60_18
-BB60_29:
-	ld	a, (_offset)
-	ld	l, a
-	cp	a, 4
-	ld	a, -4
-	jr	nc, BB60_33
-	ld	a, 96
-	jr	BB60_33
-BB60_31:
-	ld	a, (_offset)
-	ld	l, a
-	cp	a, 96
-	ld	a, 4
-	jr	c, BB60_33
-	ld	a, -96
-BB60_33:
-	add	a, l
-	ld	(_offset), a
-	jp	BB60_4
-BB60_34:
+	jp	BB60_29
+BB60_39:
 	ld	a, (_selectedSave)
 	or	a, a
 	sbc	hl, hl
@@ -18509,7 +19221,7 @@ BB60_34:
 	push	hl
 	call	_ti_Delete
 	jp	BB60_3
-BB60_35:
+BB60_40:
 	ld	a, (_selectedSave)
 	or	a, a
 	sbc	hl, hl
@@ -18534,64 +19246,35 @@ BB60_35:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	jr	BB60_37
-BB60_36:
-	xor	a, a
-	ld	bc, -145
-	lea	hl, ix
-	add	hl, bc
-	ld	(hl), a
-	ld	de, 0
-BB60_37:
+BB60_41:
 	push	de
 	call	_gfx_SetDraw
 	pop	hl
-	ld	bc, -145
+	ld	bc, -139
 	lea	hl, ix
 	add	hl, bc
 	ld	a, (hl)
 	ld	sp, ix
 	pop	ix
 	ret
+BB60_42:
+	xor	a, a
+	ld	bc, -139
+	lea	hl, ix
+	add	hl, bc
+	ld	(hl), a
+	or	a, a
+	sbc	hl, hl
+	ex	de, hl
+	jr	BB60_41
 	section	.text,"ax",@progbits
 	section	.rodata,"a",@progbits
 	private	JTI60_0
 JTI60_0:
-	dl	BB60_7
-	dl	BB60_29
-	dl	BB60_31
-	dl	BB60_10
+	dl	BB60_20
 	dl	BB60_5
 	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_35
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_36
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_31
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_7
-	dl	BB60_35
-	dl	BB60_10
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_29
+	dl	BB60_22
 	dl	BB60_5
 	dl	BB60_5
 	dl	BB60_5
@@ -18605,51 +19288,91 @@ JTI60_0:
 	dl	BB60_5
 	dl	BB60_5
 	dl	BB60_5
-	dl	BB60_36
+	dl	BB60_5
+	dl	BB60_13
 	dl	BB60_5
 	dl	BB60_5
 	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_5
-	dl	BB60_14
+	dl	BB60_16
 	private	JTI60_1
 JTI60_1:
-	dl	BB60_19
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_4
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_21
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_28
-	dl	BB60_34
+	dl	BB60_22
+	dl	BB60_20
+	dl	BB60_16
+	dl	BB60_13
+	dl	BB60_40
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_42
+	dl	BB60_25
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_42
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_5
+	dl	BB60_42
+	private	JTI60_2
+JTI60_2:
+	dl	BB60_13
+	dl	BB60_5
+	dl	BB60_20
+	dl	BB60_40
+	dl	BB60_22
+	dl	BB60_5
+	dl	BB60_16
 
 	section	.text,"ax",@progbits
 	public	__Z17redrawSaveOptionsv
@@ -19348,7 +20071,7 @@ BB63_4:
 	ld	de, 3
 	or	a, a
 	sbc	hl, de
-	jp	nz, BB63_18
+	jp	nz, BB63_16
 	ld	hl, _.str.134
 	push	hl
 	call	_gfx_GetStringWidth
@@ -19625,10 +20348,7 @@ BB63_13:
 	call	nz, _msd_Close
 	pop	hl
 	call	_usb_Cleanup
-BB63_14:
-	call	_os_GetCSC
-	or	a, a
-	jr	z, BB63_14
+	call	_os_GetKey
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -19650,8 +20370,8 @@ BB63_14:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	z, BB63_17
-BB63_16:
+	jr	z, BB63_15
+BB63_14:
 	ld	hl, (ix - 102)
 	ld	de, (hl)
 	push	de
@@ -19666,8 +20386,8 @@ BB63_16:
 	ld	(ix - 99), hl
 	or	a, a
 	sbc	hl, de
-	jr	c, BB63_16
-BB63_17:
+	jr	c, BB63_14
+BB63_15:
 	ld	hl, (_cursorBackground)
 	ld	de, (_playerCursorX)
 	ld	bc, (_playerCursorY)
@@ -19682,7 +20402,7 @@ BB63_17:
 	ld	sp, ix
 	pop	ix
 	ret
-BB63_18:
+BB63_16:
 	call	_usb_WaitForEvents
 	ld	hl, (ix - 99)
 	push	hl
@@ -20556,6 +21276,11 @@ _playerCursorY:
 	rb	3
 
 	section	.bss,"aw",@nobits
+	public	_interruptOriginalValue
+_interruptOriginalValue:
+	rb	1
+
+	section	.bss,"aw",@nobits
 	public	_fineMovement
 _fineMovement:
 	rb	1
@@ -20603,7 +21328,7 @@ _.str.10:
 	section	.rodata,"a",@progbits
 	private	_.str.11
 _.str.11:
-	db	"Welcome to TICraft v2.0.1! While you wait:", 0
+	db	"Welcome to TICraft v2.1.0! While you wait:", 0
 
 	section	.rodata,"a",@progbits
 	private	_.str.12
@@ -22068,6 +22793,7 @@ _.str.122:
 	extern	_realloc
 	extern	_time
 	extern	_fat_SetFileSize
+	extern	_os_DisableAPD
 	extern	_memmove
 	extern	_ti_Write
 	extern	__Znwj
@@ -22110,6 +22836,7 @@ _.str.122:
 	extern	_os_NewLine
 	extern	_strcat
 	extern	_ti_GetDataPtr
+	extern	_os_EnableAPD
 	extern	_os_ClrLCDFull
 	extern	_usb_Init
 	extern	__Unwind_SjLj_Register
@@ -22141,9 +22868,9 @@ _.str.122:
 	extern	_calloc
 	extern	_msd_Info
 	extern	__lcmpu
-	extern	_fp_to_int
 	extern	__fcmp
 	extern	_msd_Write
+	extern	_fp_to_int
 	extern	_msd_Read
 	extern	_ti_Close
 	extern	_shadeScreen
@@ -22165,9 +22892,11 @@ _.str.122:
 	extern	__lnot
 	extern	_approx_sqrt_a
 	extern	_div
+	extern	_os_GetKey
 	extern	_bsearch
 	extern	_gfx_SetDraw
 	extern	__Unwind_SjLj_Unregister
+	extern	_os_ResetFlagBits
 	extern	_gfx_SetColor
 	extern	__land
 	extern	__bshl
