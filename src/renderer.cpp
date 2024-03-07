@@ -31,7 +31,7 @@ unsigned int outOfBoundsPolygons = 0;
 unsigned int obscuredPolygons = 0;
 
 // Faces of a cube
-uint8_t face5points[] = {7, 6, 2, 3};
+uint8_t face5points[] = {3, 2, 6, 7};
 polygon face5 = {face5points, 5};
 uint8_t face4points[] = {5, 4, 7, 6};
 polygon face4 = {face4points, 4};
@@ -49,7 +49,7 @@ Array of the polygons that make up a cube
 Unwrapping order:
 top, front, left, right, back, bottom
 */ 
-polygon cubePolygons[] = {face0, face1, face2, face3, face4, face5};
+polygon cubePolygons[] = {face0, face5, face1, face2, face3, face4};
 
 // Position of the camera
 Fixed24 cameraXYZ[3] = {-100, 150, -100};
@@ -90,7 +90,8 @@ void object::generatePolygons() {
         polygon->z = z;
     }
     // Sort the polygons by distance from the camera, front to back
-    qsort(cubePolygons, 6, sizeof(polygon), zCompare);
+    // Takes around 40-50000 cycles
+    //qsort(cubePolygons, 6, sizeof(polygon), zCompare);
 
     // Prepare the polygons for rendering
     // It was pointed out to me that backface culling might result in some speed improvements here... maybe implement?
@@ -100,30 +101,35 @@ void object::generatePolygons() {
         polygon* polygon = &cubePolygons[polygonNum];
         // Normalized z (0-255)
         uint8_t normalizedZ = (polygon->z >> 5);
+        screenPoint polygonPoints[] = {renderedPoints[polygon->points[0]], renderedPoints[polygon->points[1]], renderedPoints[polygon->points[2]], renderedPoints[polygon->points[3]]};
 
         // Are we going to render the polygon?
         bool render = false;
-        if (outline) {
-            render = true;
-        } else {
-            // Get the average x & y of the polygon
-            int x = polygon->x;
-            int y = polygon->y;
+        // I feel like those multiplications make it slower than it has to be but online resources say this is a good idea and I don't have any of those right now
+        // online resources = http://www.faqs.org/faqs/graphics/algorithms-faq/
+        // And this is certainly faster than sorting
+        if (((polygonPoints[0].x-polygonPoints[1].x)*(polygonPoints[2].y-polygonPoints[1].y))-((polygonPoints[0].y-polygonPoints[1].y)*(polygonPoints[2].x-polygonPoints[1].x)) < 0) {
+            if (outline) {
+                render = true;
+            } else {
+                // Get the average x & y of the polygon
+                int x = polygon->x;
+                int y = polygon->y;
 
-            if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
-                if (normalizedZ < gfx_GetPixel(x, y)) {
-                    render = true;
-                    goto renderThePolygon;
-                }
-            }
-            for (uint8_t i = 0; i < 4; i++) {
-                screenPoint* point = &renderedPoints[polygon->points[i]];
-                int pointX = (point->x + point->x + point->x + point->x + point->x + point->x + point->x + x)>>3;
-                int pointY = (point->y + point->y + point->y + point->y + point->y + point->y + point->y + y)>>3;
-                if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
-                    if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
+                if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
+                    if (normalizedZ < gfx_GetPixel(x, y)) {
                         render = true;
-                        break;
+                        goto renderThePolygon;
+                    }
+                }
+                for (uint8_t i = 0; i < 4; i++) {
+                    int pointX = (polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + x)>>3;
+                    int pointY = (polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + y)>>3;
+                    if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
+                        if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
+                            render = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -218,7 +224,7 @@ void object::generatePoints() {
     Fixed24 sum1 = cyz1 + syx1;
     const Fixed24 nsxy1 = -sx*y1;
     Fixed24 dz = (cx*sum1) + nsxy1;
-    if (dz <= (Fixed24)20) {
+    if (dz <= (Fixed24)40) {
         return;
     }
 
@@ -433,13 +439,10 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t norma
     if (sourceObject->outline) {
         gfx_SetDrawScreen();
         gfx_SetColor(outlineColor);
-        for (uint8_t i = 0; i < 4; i++) {
-            uint8_t nextPoint = i + 1;
-            if (nextPoint > 3) {
-                nextPoint = 0;
-            }
-            gfx_Line(renderedPoints[i].x, renderedPoints[i].y, renderedPoints[nextPoint].x, renderedPoints[nextPoint].y);
-        }
+        // Not sure if this is faster or slower than what I was doing before
+        // But it does seem to be a little smaller and it really doesn't matter in this instance
+        int polygonPoints[] = {renderedPoints[0].x, renderedPoints[0].y, renderedPoints[1].x, renderedPoints[1].y, renderedPoints[2].x, renderedPoints[2].y, renderedPoints[3].x, renderedPoints[3].y};
+        gfx_Polygon(polygonPoints, 4);
     } else {
         bool clipLines = false;
         for (unsigned int i = 0; i < 4; i++) {

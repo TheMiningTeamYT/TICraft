@@ -1,45 +1,40 @@
 obj/src/saves.cpp.bc: src/saves.cpp \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/getkey.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stdint.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/cdefs.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/fatdrvce.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stdbool.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/usbdrvce.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stddef.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/graphx.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stdlib.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/fileioc.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stdio.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/stdarg.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/vars.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/real.h \
-  src/textures.hpp \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/c++/cstdint \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/c++/cstring \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/string.h \
-  src/renderer.hpp \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/c++/cstdio \
-  src/fixedpoint.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/tice.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/sys/basicusb.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/sys/lcd.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/sys/power.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/sys/rtc.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/sys/timers.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/sys/util.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/debug.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/error.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/flags.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/getcsc.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/graph.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/info.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/python.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/screen.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/ui.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/ti/tokens.h \
-  src/asmmath.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/math.h \
-  src/saves.hpp src/crc32.h src/cursor.hpp \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/time.h src/usb.h \
-  /mnt/389451FC9451BCD6/Linux/Downloads/CEdev/include/msddrvce.h \
-  src/printString.h
+  /home/loganius/Downloads/CEdev/include/ti/getkey.h \
+  /home/loganius/Downloads/CEdev/include/stdint.h \
+  /home/loganius/Downloads/CEdev/include/cdefs.h \
+  /home/loganius/Downloads/CEdev/include/fatdrvce.h \
+  /home/loganius/Downloads/CEdev/include/stdbool.h \
+  /home/loganius/Downloads/CEdev/include/usbdrvce.h \
+  /home/loganius/Downloads/CEdev/include/stddef.h \
+  /home/loganius/Downloads/CEdev/include/graphx.h \
+  /home/loganius/Downloads/CEdev/include/stdlib.h \
+  /home/loganius/Downloads/CEdev/include/fileioc.h \
+  /home/loganius/Downloads/CEdev/include/stdio.h \
+  /home/loganius/Downloads/CEdev/include/stdarg.h \
+  /home/loganius/Downloads/CEdev/include/ti/vars.h \
+  /home/loganius/Downloads/CEdev/include/ti/real.h src/textures.hpp \
+  /home/loganius/Downloads/CEdev/include/c++/cstdint \
+  /home/loganius/Downloads/CEdev/include/c++/cstring \
+  /home/loganius/Downloads/CEdev/include/string.h src/renderer.hpp \
+  /home/loganius/Downloads/CEdev/include/c++/cstdio src/fixedpoint.h \
+  /home/loganius/Downloads/CEdev/include/tice.h \
+  /home/loganius/Downloads/CEdev/include/sys/basicusb.h \
+  /home/loganius/Downloads/CEdev/include/sys/lcd.h \
+  /home/loganius/Downloads/CEdev/include/sys/power.h \
+  /home/loganius/Downloads/CEdev/include/sys/rtc.h \
+  /home/loganius/Downloads/CEdev/include/sys/timers.h \
+  /home/loganius/Downloads/CEdev/include/sys/util.h \
+  /home/loganius/Downloads/CEdev/include/ti/debug.h \
+  /home/loganius/Downloads/CEdev/include/ti/error.h \
+  /home/loganius/Downloads/CEdev/include/ti/flags.h \
+  /home/loganius/Downloads/CEdev/include/ti/getcsc.h \
+  /home/loganius/Downloads/CEdev/include/ti/graph.h \
+  /home/loganius/Downloads/CEdev/include/ti/info.h \
+  /home/loganius/Downloads/CEdev/include/ti/python.h \
+  /home/loganius/Downloads/CEdev/include/ti/screen.h \
+  /home/loganius/Downloads/CEdev/include/ti/ui.h \
+  /home/loganius/Downloads/CEdev/include/ti/tokens.h src/asmmath.h \
+  /home/loganius/Downloads/CEdev/include/math.h src/saves.hpp \
+  src/crc32.h src/cursor.hpp \
+  /home/loganius/Downloads/CEdev/include/time.h src/usb.h \
+  /home/loganius/Downloads/CEdev/include/msddrvce.h src/printString.h

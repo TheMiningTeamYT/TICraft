@@ -48,10 +48,13 @@ void texturePackMenu();
 void drawTexturePackSelection(texturePack* pack, int row, bool selected);
 bool verifyTexturePack(packEntry pack);
 void exitOverlay(int code) {
+    gfx_End();
     // Restore RTC interrupts
     *((uint8_t*)0xF00005) = interruptOriginalValue;
     os_EnableAPD();
+    // clear out pixel shadow
     memset((void*) 0xD031F6, 0, 69090);
+    os_ClrHomeFull();
     exit(code);
 };
 
@@ -140,7 +143,7 @@ int main() {
         printStringCentered("Loading...", 5);
         gfx_SetTextXY(0, 40);
         gfx_SetTextScale(1,1);
-        printStringAndMoveDownCentered("Welcome to TICraft v2.1.0! While you wait:");
+        printStringAndMoveDownCentered("Welcome to TICraft v2.1.1! While you wait:");
         printStringAndMoveDownCentered("Controls:");
         printStringAndMoveDownCentered("Graph/Clear: Exit/Emergency Exit");
         printStringAndMoveDownCentered("Cursor controls:");
@@ -494,6 +497,7 @@ int main() {
                                 userSelected = true;
                                 quit = true;
                                 break;
+                            case k_Quit:
                             case k_Graph:
                                 quit = false;
                                 userSelected = true;
@@ -627,16 +631,7 @@ int main() {
         }
         deleteEverything();
     }
-    gfx_SetDrawScreen();
-    gfx_FillScreen(254);
-    gfx_End();
-    // Restore RTC interrupts
-    *((uint8_t*)0xF00005) = interruptOriginalValue;
-    os_EnableAPD();
-    // clear out pixel shadow
-    memset((void*) 0xD031F6, 0, 69090);
-    os_ClrHomeFull();
-    return 0;
+    exitOverlay(0);
 }
 
 void selectBlock() {
