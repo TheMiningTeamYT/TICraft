@@ -1,3 +1,4 @@
+assume adl=1
 ; The majority of the cycle counts here are wrong
 ; because I wrote them before I realized how long instructions truely take
 ; on the TI 84 Plus CE.

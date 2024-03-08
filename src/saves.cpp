@@ -278,9 +278,13 @@ void load() {
             angleX = *((float*)saveData);
             angleY = *(((float*)saveData) + 1);
             cx = cosf(angleX*degRadRatio);
+            cxdy = cx*(Fixed24)-cubeSize;
             sx = sinf(angleX*degRadRatio);
+            nsxdy = sx*(Fixed24)cubeSize;
             cy = cosf(angleY*degRadRatio);
+            ncyd = cy*(Fixed24)-cubeSize;
             sy = sinf(angleY*degRadRatio);
+            syd = sy*(Fixed24)cubeSize;
         }
     }
     if (!saveGood && error) {

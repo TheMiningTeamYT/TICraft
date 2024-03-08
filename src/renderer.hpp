@@ -21,6 +21,11 @@ struct point {
     Fixed24 z;
 };
 
+struct squaredReturn {
+    int n1squared;
+    int n2squared;
+};
+
 /*
 A point in screen space (with distance to the camera)
 */
@@ -75,10 +80,7 @@ struct polygon {
     uint8_t polygonNum;
 
     // The distance from the polygon to the camera
-    unsigned int z;
-
-    int x;
-    int y;
+    uint8_t z;
 };
 
 /*
@@ -202,7 +204,7 @@ void deleteEverything();
 void drawScreen(bool fullRedraw);
 
 // Render a single transformed polygon
-void renderPolygon(object* sourceObject, polygon* preparedPolygon, uint8_t normalizedZ);
+void renderPolygon(object* sourceObject, polygon* preparedPolygon);
 
 // An array of all the objects in the world
 extern object* objects[maxNumberOfObjects];
@@ -223,6 +225,10 @@ extern Fixed24 cx;
 extern Fixed24 sx;
 extern Fixed24 cy;
 extern Fixed24 sy;
+extern Fixed24 cxdy;
+extern Fixed24 nsxdy;
+extern Fixed24 ncyd;
+extern Fixed24 syd;
 extern float angleX;
 extern float angleY;
 extern float degRadRatio;
@@ -243,5 +249,8 @@ extern "C" {
     void drawTextureLineNewA(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t polygonZ);
     void drawTextureLineNewA_NoClip(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t polygonZ);
     uint16_t approx_sqrt_a(unsigned int n);
+    uint8_t polygonZShift(unsigned int x);
+    struct squaredReturn findXZSquared(Fixed24 n);
+    struct squaredReturn findYSquared(Fixed24 n);
     void shadeScreen();
 }

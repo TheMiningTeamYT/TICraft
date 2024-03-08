@@ -157,7 +157,7 @@ int main() {
         printStringAndMoveDownCentered("Left/Right: Move left/right");
         printStringAndMoveDownCentered("Del/Stat: Move up/down");
         printStringAndMoveDownCentered("Prgm/Cos/Sin/Tan: Rotate up/down/left/right");
-        printStringAndMoveDownCentered("Alpha: Move to show the cursor");
+        printStringAndMoveDownCentered("Math: Move to show the cursor");
         printStringAndMoveDownCentered("Enter: Show the block selection menu");
         printStringAndMoveDownCentered("Mode: Perform a full re-render of the screen");
         printStringAndMoveDownCentered("Made by Logan C.");

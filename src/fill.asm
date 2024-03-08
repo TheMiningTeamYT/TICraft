@@ -1,3 +1,4 @@
+assume adl=1
 section .text
 ; Thanks Runer112 on Cemetech!
 ; Source: https://www.cemetech.net/forum/viewtopic.php?t=11178&start=0
@@ -458,6 +459,18 @@ _shadeScreen:
     inc hl
     ld (hl), b
     ret
+section .text
+public _polygonZShift
+; Shifts HL right by 5 and returns a uint8_t
+_polygonZShift:
+    pop de ; 16
+    ex (sp), hl ; 22
+    add hl, hl ; 4
+    add hl, hl ; 4
+    add hl, hl ; 4
+    ld a, h ; 4
+    ex de, hl ; 4
+    jp (hl) ; 6
 section .data
 private gfx_vram
 gfx_vram = $D40000
