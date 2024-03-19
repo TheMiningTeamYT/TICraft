@@ -4,11 +4,10 @@
 #include <cstdio>
 #include "fixedpoint.h"
 
-#define maxNumberOfPolygons 2000
-#define zCullingDistance 2000
-#define maxNumberOfObjects 1000
+// might be too close
+#define zCullingDistance 400
+#define maxNumberOfObjects 3000
 #define showDraw false
-#define outlineColor 0
 #define diagnostics false
 #define cubeSize 20
 
@@ -21,9 +20,9 @@ struct point {
     Fixed24 z;
 };
 
-struct squaredReturn {
-    int n1squared;
-    int n2squared;
+struct squaredPair {
+    int a;
+    int b;
 };
 
 /*
@@ -74,14 +73,14 @@ A raw polygon (really quadrilateral)
 */
 struct polygon {
     // The points of the polygon, represented as a list of indexes into an array of screenPoints
-    uint8_t* points;
+    uint8_t points[4];
 
     // The number of the polygon in the shape (cube) it is a part of
     uint8_t polygonNum;
-
-    // The distance from the polygon to the camera
-    uint8_t z;
 };
+
+// Get the distance from a point to the camera
+int getPointDistance(point point);
 
 /*
 3D Object (really a cube)
@@ -115,12 +114,8 @@ class object {
     void generatePolygons();
 
     void generatePoints();
-    
-    // Get the distance from the cube to the camera
-    int getDistance();
-    
-    // The position of each of the cubes points (verticies) in screen space, once rendered
-    screenPoint renderedPoints[8];
+
+    void findDistance();
 
     // An index into an array of pointers representing the texture of the cube
     uint8_t texture;
@@ -133,6 +128,9 @@ class object {
 
     // Z position of the cube
     int16_t z;
+
+    // The distance of the cube from the camera
+    uint16_t distance = 0;
 
     // Whether the cube is currently visible
     bool visible = false;
@@ -187,12 +185,6 @@ struct saveFile {
 };
 */
 
-// Get the distance from a point to the camera
-int getPointDistance(point point);
-
-// Used for sorting of polygons
-int zCompare(const void *arg1, const void *arg2);
-
 // Used for sorting of objects
 int distanceCompare(const void *arg1, const void *arg2);
 
@@ -201,14 +193,15 @@ int xCompare(const void *arg1, const void *arg2);
 void deleteEverything();
 
 // Render the 3D world
-void drawScreen(bool fullRedraw);
+void drawScreen();
 
 // Render a single transformed polygon
-void renderPolygon(object* sourceObject, polygon* preparedPolygon);
+void renderPolygon(object* sourceObject, screenPoint* polygonRenderedPoints, uint8_t polygonNum, uint8_t normalizedZ);
 
 // An array of all the objects in the world
 extern object* objects[maxNumberOfObjects];
 extern object* zSortedObjects[maxNumberOfObjects];
+extern screenPoint renderedPoints[8];
 
 // The number of objects in the world
 extern unsigned int numberOfObjects;
@@ -232,25 +225,22 @@ extern Fixed24 syd;
 extern float angleX;
 extern float angleY;
 extern float degRadRatio;
-void drawCursor();
-void getBuffer();
-
-#define xSort() qsort(objects, numberOfObjects, sizeof(object*), xCompare); qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
-
+extern uint8_t outlineColor;
+#define xSort() qsort(objects, numberOfObjects, sizeof(object*), xCompare); zSort();
 void rotateCamera(float x, float y);
-
 void resetCamera();
-
 void drawImage(int x, int y, int width, int height, uint16_t* dataPointer);
 void drawRectangle(int x, int y, int width, int height, uint16_t color);
 void redrawScreen();
+void zSort();
 
 extern "C" {
     void drawTextureLineNewA(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t polygonZ);
     void drawTextureLineNewA_NoClip(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t polygonZ);
     uint16_t approx_sqrt_a(unsigned int n);
     uint8_t polygonZShift(unsigned int x);
-    struct squaredReturn findXZSquared(Fixed24 n);
-    struct squaredReturn findYSquared(Fixed24 n);
+    struct squaredPair findXZSquared(Fixed24 n);
+    struct squaredPair findYSquared(Fixed24 n);
+    int polygonPointMultiply(int n);
     void shadeScreen();
 }

@@ -15,7 +15,9 @@ obj/src/main.cpp.bc: src/main.cpp \
   /home/loganius/Downloads/CEdev/include/sys/power.h \
   /home/loganius/Downloads/CEdev/include/c++/cstdint \
   /home/loganius/Downloads/CEdev/include/c++/cstdio \
-  /home/loganius/Downloads/CEdev/include/c++/cstdlib src/renderer.hpp \
+  /home/loganius/Downloads/CEdev/include/c++/cstdlib \
+  /home/loganius/Downloads/CEdev/include/c++/cctype \
+  /home/loganius/Downloads/CEdev/include/ctype.h src/renderer.hpp \
   /home/loganius/Downloads/CEdev/include/c++/cstring \
   /home/loganius/Downloads/CEdev/include/string.h src/fixedpoint.h \
   /home/loganius/Downloads/CEdev/include/tice.h \
@@ -34,4 +36,5 @@ obj/src/main.cpp.bc: src/main.cpp \
   /home/loganius/Downloads/CEdev/include/ti/ui.h \
   /home/loganius/Downloads/CEdev/include/ti/tokens.h src/asmmath.h \
   /home/loganius/Downloads/CEdev/include/math.h src/textures.hpp \
-  src/saves.hpp src/crc32.h src/cursor.hpp src/printString.h
+  src/saves.hpp src/crc32.h src/cursor.hpp src/version.hpp \
+  src/printString.h

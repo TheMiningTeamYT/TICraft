@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <cstring>
 #include <graphx.h>
-#define TICRAFTTexturePackVersion 3
+#define TICRAFTTexturePackVersion 4
 #define TICRAFTTexturePackMagic "TICRAFT_TEXTURES"
 struct texturePack {
     char magic[17];

@@ -29,20 +29,15 @@ unsigned int numberOfObjects = 0;
 unsigned int outOfBoundsPolygons = 0;
 
 unsigned int obscuredPolygons = 0;
+screenPoint renderedPoints[8];
 
 // Faces of a cube
-uint8_t face5points[] = {3, 2, 6, 7};
-polygon face5 = {face5points, 5};
-uint8_t face4points[] = {5, 4, 7, 6};
-polygon face4 = {face4points, 4};
-uint8_t face3points[] = {1, 5, 6, 2};
-polygon face3 = {face3points, 3};
-uint8_t face2Points[] = {0, 1, 2, 3};
-polygon face2 = {face2Points, 2};
-uint8_t face1Points[] = {4, 0, 3, 7};
-polygon face1 = {face1Points, 1};
-uint8_t face0Points[] = {4, 5, 1, 0};
-polygon face0 = {face0Points, 0};
+polygon face5 = {7, 3, 2, 6, 5};
+polygon face4 = {5, 4, 7, 6, 4};
+polygon face3 = {1, 5, 6, 2, 3};
+polygon face2 = {0, 1, 2, 3, 2};
+polygon face1 = {4, 0, 3, 7, 1};
+polygon face0 = {5, 1, 0, 4, 0};
 
 /*
 Array of the polygons that make up a cube
@@ -68,6 +63,8 @@ Fixed24 nsxdy = sx*(Fixed24)cubeSize;
 Fixed24 ncyd = cy*(Fixed24)-cubeSize;
 Fixed24 syd = sy*(Fixed24)cubeSize;
 
+uint8_t outlineColor = 0;
+
 /*
 clip:
 clip = 0 // not affected by clipping
@@ -75,16 +72,16 @@ clip = 1 // affected by clipping, no z buffer
 clip = 2 // affected by clipping, write to z buffer
 */
 void object::generatePolygons() {
+    generatePoints();
     if (!visible) {
         return;
     }
-    gfx_SetDrawBuffer();
     // Prepare the polygons for rendering
     for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
         // The polygon we are rendering
-        polygon* polygon = &cubePolygons[polygonNum];
-        screenPoint polygonPoints[] = {renderedPoints[polygon->points[0]], renderedPoints[polygon->points[1]], renderedPoints[polygon->points[2]], renderedPoints[polygon->points[3]]};
-
+        polygon polygon = cubePolygons[polygonNum];
+        screenPoint polygonPoints[] = {renderedPoints[polygon.points[0]], renderedPoints[polygon.points[1]], renderedPoints[polygon.points[2]], renderedPoints[polygon.points[3]]};
+        uint8_t normalizedZ;
         // Are we going to render the polygon?
         bool render = false;
         // I feel like those multiplications make it slower than it has to be but online resources say this is a good idea and I don't have any of those right now
@@ -106,19 +103,19 @@ void object::generatePolygons() {
                 x >>= 2;
                 y >>= 2;
                 // Normalized z (0-255)
-                polygon->z = polygonZShift(z);
+                normalizedZ = polygonZShift(z);
 
                 if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
-                    if (polygon->z < gfx_GetPixel(x, y)) {
+                    if (normalizedZ < gfx_GetPixel(x, y)) {
                         render = true;
                         goto renderThePolygon;
                     }
                 }
                 for (uint8_t i = 0; i < 4; i++) {
-                    int pointX = (polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + polygonPoints[i].x + x)>>3;
-                    int pointY = (polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + polygonPoints[i].y + y)>>3;
+                    int pointX = (polygonPointMultiply(polygonPoints[i].x) + x)>>3;
+                    int pointY = (polygonPointMultiply(polygonPoints[i].y) + y)>>3;
                     if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
-                        if (polygon->z < gfx_GetPixel(pointX, pointY)) {
+                        if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
                             render = true;
                             break;
                         }
@@ -129,7 +126,7 @@ void object::generatePolygons() {
         // Render this polygon
         renderThePolygon:
         if (render) {
-            renderPolygon(this, polygon);
+            renderPolygon(this, polygonPoints, polygon.polygonNum, normalizedZ);
         }
         #if diagnostics == true
         else {
@@ -137,7 +134,6 @@ void object::generatePolygons() {
         }
         #endif
     }
-    gfx_SetDrawScreen();
 }
 
 void object::deleteObject() {
@@ -168,9 +164,10 @@ void object::deleteObject() {
         gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             object* otherObject = zSortedObjects[i];
+            otherObject->generatePoints();
             if (otherObject != this) {
                 for (uint8_t pointNum = 0; pointNum < 8; pointNum++) {
-                    screenPoint point = otherObject->renderedPoints[pointNum];
+                    screenPoint point = renderedPoints[pointNum];
                     if (point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY) {
                         otherObject->generatePolygons();
                         break;
@@ -193,24 +190,16 @@ void object::generatePoints() {
     visible = false;
     
     const Fixed24 x1 = (Fixed24)x - cameraXYZ[0];
-    squaredReturn value = findXZSquared(x1);
-    const int x1squared = value.n1squared;
-    const int x2squared = value.n2squared;
+    squaredPair xSquared = findXZSquared(x1);
     const Fixed24 y1 = (Fixed24)y - cameraXYZ[1];
-    value = findYSquared(y1);
-    const int y1squared = value.n1squared;
-    const int y2squared = value.n2squared;
+    squaredPair ySquared = findYSquared(y1);
     const Fixed24 z1 = (Fixed24)z - cameraXYZ[2];
-    value = findXZSquared(z1);
-    const int z1squared = value.n1squared;
-    const int z2squared = value.n2squared;
-
+    squaredPair zSquared = findXZSquared(z1);
     if (angleX >= 45 && y1 > (Fixed24)0) {
         return;
     }
 
-    renderedPoints[0].z = approx_sqrt_a(x1squared + y1squared + z1squared);
-    if (renderedPoints[0].z > zCullingDistance) {
+    if (distance > zCullingDistance && !outline) {
         return;
     }
 
@@ -240,7 +229,7 @@ void object::generatePoints() {
         visible = true;
     }
     Fixed24 sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[0] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy))};
+    renderedPoints[0] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), distance};
 
     dy += cxdy;
     dz += nsxdy;
@@ -254,7 +243,7 @@ void object::generatePoints() {
         }
     }
     sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[3] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x1squared + y2squared + z1squared)};
+    renderedPoints[3] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.a + ySquared.b + zSquared.a)};
 
     dx += ncyd;
     sum1 += syd;
@@ -270,7 +259,7 @@ void object::generatePoints() {
         }
     }
     sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[1] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x2squared + y1squared + z1squared)};
+    renderedPoints[1] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.b + ySquared.a + zSquared.a)};
 
     dy += cxdy;
     dz += nsxdy;
@@ -284,7 +273,7 @@ void object::generatePoints() {
         }
     }
     sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[2] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z1squared)};
+    renderedPoints[2] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.b + ySquared.b + zSquared.a)};
     
     dx = ncyx1 + syz2;
     sum1 = cyz2 + syx1;
@@ -300,7 +289,7 @@ void object::generatePoints() {
         }
     }
     sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[4] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x1squared + y1squared + z2squared)};
+    renderedPoints[4] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.a + ySquared.a + zSquared.b)};
 
     dy += cxdy;
     dz += nsxdy;
@@ -314,7 +303,7 @@ void object::generatePoints() {
         }
     }
     sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[7] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x1squared + y2squared + z2squared)};
+    renderedPoints[7] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.a + ySquared.b + zSquared.b)};
 
     dx += ncyd;
     sum1 += syd;
@@ -330,7 +319,7 @@ void object::generatePoints() {
         }
     }
     sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[5] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x2squared + y1squared + z2squared)};
+    renderedPoints[5] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.b + ySquared.a + zSquared.b)};
 
     dy += cxdy;
     dz += nsxdy;
@@ -344,7 +333,7 @@ void object::generatePoints() {
         }
     }
     sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(x2squared + y2squared + z2squared)};
+    renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.b + ySquared.b + zSquared.b)};
 }
 
 void object::moveBy(int newX, int newY, int newZ) {
@@ -359,17 +348,8 @@ void object::moveTo(int newX, int newY, int newZ) {
     z = newZ;
 }
 
-int object::getDistance() {
-    if (renderedPoints[0].z == 0) {
-        renderedPoints[0].z = getPointDistance({x, y, z});
-    }
-    return renderedPoints[0].z;
-}
-
-int zCompare(const void *arg1, const void *arg2) {
-    polygon* polygon1 = (polygon *) arg1;
-    polygon* polygon2 = (polygon *) arg2;
-    return polygon1->z - polygon2->z;
+void object::findDistance() {
+    distance = getPointDistance({x, y, z});
 }
 
 int distanceCompare(const void *arg1, const void *arg2) {
@@ -383,7 +363,7 @@ int distanceCompare(const void *arg1, const void *arg2) {
     if (object2Transparent && !object1Transparent) {
         return -1;
     }
-    return object1->getDistance() - object2->getDistance();
+    return object1->distance - object2->distance;
 }
 
 int xCompare(const void *arg1, const void *arg2) {
@@ -401,18 +381,19 @@ void deleteEverything() {
     numberOfObjects = 0;
 }
 
-void drawScreen(bool fullRedraw) {
-    if (fullRedraw) {
-        gfx_SetTextXY(0, 0);
-        memset(gfx_vram, 255, 153600);
-    }
+void drawScreen() {
+    __asm__ ("di");
+    gfx_SetTextXY(0, 0);
+    memset(gfx_vram, 255, 153600);
     #if diagnostics == true
     outOfBoundsPolygons = 0;
     obscuredPolygons = 0;
     #endif
+    gfx_SetDrawBuffer();
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         zSortedObjects[i]->generatePolygons();
     }
+    gfx_SetDrawScreen();
 
     // Print some diagnostic information
     #if diagnostics == true
@@ -436,6 +417,8 @@ void drawScreen(bool fullRedraw) {
         gfx_SetTextXY(0, gfx_GetTextY() + 10);
     }
     #endif
+    getBuffer();
+    drawCursor();
 }
 
 // implementation of affine texture mapping (i think thats what you'd call this anyway)
@@ -443,45 +426,36 @@ void drawScreen(bool fullRedraw) {
 // but on quads, it looks pretty good at a fraction of the cost
 // idea: integrate this into generatePolygons instead of having it as a seperate function
 
-void renderPolygon(object* sourceObject, polygon* preparedPolygon) {
-    // Quick shorthand
-    #define points preparedPolygon->points
-    // Another useful shorthand
-    screenPoint renderedPoints[] = {sourceObject->renderedPoints[points[0]], sourceObject->renderedPoints[points[1]], sourceObject->renderedPoints[points[2]], sourceObject->renderedPoints[points[3]]};
+void renderPolygon(object* sourceObject, screenPoint* polygonRenderedPoints, uint8_t polygonNum, uint8_t normalizedZ) {
     // result of memory optimization
-    const uint8_t* texture = textures[sourceObject->texture][preparedPolygon->polygonNum];
+    const uint8_t* texture = textures[sourceObject->texture][polygonNum];
 
     // uint8_t* points = polygon.points;
     if (sourceObject->outline) {
-        gfx_SetDrawScreen();
         gfx_SetColor(outlineColor);
         // Not sure if this is faster or slower than what I was doing before
         // But it does seem to be a little smaller and it really doesn't matter in this instance
-        int polygonPoints[] = {renderedPoints[0].x, renderedPoints[0].y, renderedPoints[1].x, renderedPoints[1].y, renderedPoints[2].x, renderedPoints[2].y, renderedPoints[3].x, renderedPoints[3].y};
+        int polygonPoints[] = {polygonRenderedPoints[0].x, polygonRenderedPoints[0].y, polygonRenderedPoints[1].x, polygonRenderedPoints[1].y, polygonRenderedPoints[2].x, polygonRenderedPoints[2].y, polygonRenderedPoints[3].x, polygonRenderedPoints[3].y};
         gfx_Polygon(polygonPoints, 4);
-        gfx_SetDrawBuffer();
         return;
     }
     bool clipLines = false;
     for (unsigned int i = 0; i < 4; i++) {
-        if (renderedPoints[i].x < 0 || renderedPoints[i].x > GFX_LCD_WIDTH - 1 || renderedPoints[i].y < 0 || renderedPoints[i].y > GFX_LCD_HEIGHT) {
+        if (polygonRenderedPoints[i].x < 0 || polygonRenderedPoints[i].x > GFX_LCD_WIDTH - 1 || polygonRenderedPoints[i].y < 0 || polygonRenderedPoints[i].y > GFX_LCD_HEIGHT) {
             clipLines = true;
             break;
         }
     }
-    uint8_t colorOffset = 0;
-    if (preparedPolygon->polygonNum == 2 || preparedPolygon->polygonNum == 5) {
-        colorOffset = 126;
-    }
+    const uint8_t colorOffset = (polygonNum == 2 || polygonNum == 5) ? 126 : 0;
     // Generate the lines from the points of the polygon
-    int x0 = renderedPoints[0].x;
-    int y0 = renderedPoints[0].y;
-    int x1 = renderedPoints[1].x;
-    int y1 = renderedPoints[1].y;
-    int dx0 = renderedPoints[3].x - x0;
-    int dy0 = renderedPoints[3].y - y0;
-    int dx1 = renderedPoints[2].x - x1;
-    int dy1 = renderedPoints[2].y - y1;
+    int x0 = polygonRenderedPoints[0].x;
+    int y0 = polygonRenderedPoints[0].y;
+    int x1 = polygonRenderedPoints[1].x;
+    int y1 = polygonRenderedPoints[1].y;
+    int dx0 = polygonRenderedPoints[3].x - x0;
+    int dy0 = polygonRenderedPoints[3].y - y0;
+    int dx1 = polygonRenderedPoints[2].x - x1;
+    int dy1 = polygonRenderedPoints[2].y - y1;
     int sx0 = 1;
     int sy0 = 1;
     int sx1 = 1;
@@ -515,9 +489,9 @@ void renderPolygon(object* sourceObject, polygon* preparedPolygon) {
     for (int i = -2; i < length; i++) {
         if (clipLines) {
             if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT) && y1 > (GFX_LCD_HEIGHT))))
-                drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, preparedPolygon->z);
+                drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
         } else {
-            drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, preparedPolygon->z);
+            drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
         }
         while (errorX0 <= 0) {
             errorX0 += length;
@@ -555,14 +529,12 @@ int getPointDistance(point point) {
 }
 
 void rotateCamera(float x, float y) {
-    bool cameraRotated = false;
     if ((x != 0) && (angleX + x >= -90 && angleX + x <= 90)) {
         angleX += x;
         cx = cosf(angleX*degRadRatio);
         cxdy = cx*(Fixed24)-cubeSize;
         sx = sinf(angleX*degRadRatio);
         nsxdy = sx*(Fixed24)cubeSize;
-        cameraRotated = true;
     }
     if (y != 0) {
         angleY += y;
@@ -576,24 +548,24 @@ void rotateCamera(float x, float y) {
         ncyd = cy*(Fixed24)-cubeSize;
         sy = sinf(angleY*degRadRatio);
         syd = sy*(Fixed24)cubeSize;
-        cameraRotated = true;
     }
-    if (cameraRotated) {
-        redrawScreen();
-    }
+    drawBuffer();
+    drawScreen();
 }
 
 void redrawScreen() {
-    __asm__ ("di");
     drawBuffer();
+    zSort();
+    drawScreen();
+}
+
+void zSort() {
     for (unsigned int i = 0; i < numberOfObjects; i++) {
-        objects[i]->generatePoints();
+        objects[i]->findDistance();
     }
+    // This qsort must go for the sake of performance
+    // but how do you replace it?
     qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
-    drawScreen(true);
-    getBuffer();
-    drawCursor();
-    __asm__ ("ei");
 }
 
 void resetCamera() {
@@ -603,6 +575,10 @@ void resetCamera() {
     sx = 0.49999999999999994f;
     cy = 0.7071067811865476f;
     sy = 0.7071067811865476f;
+    cxdy = cx*(Fixed24)-cubeSize;
+    nsxdy = sx*(Fixed24)cubeSize;
+    ncyd = cy*(Fixed24)-cubeSize;
+    syd = sy*(Fixed24)cubeSize;
     cameraXYZ[0] = -100;
     cameraXYZ[1] = 150;
     cameraXYZ[2] = -100;

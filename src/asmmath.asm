@@ -351,9 +351,9 @@ _fp_to_int:
   ret nc ; 5/19 (117/131)
   inc hl ; 4
   ret ; 18 (142)
+
+
 section .text
-
-
 public _fp_to_int_floor
 _fp_to_int_floor:
   ld hl, 5 ; 16

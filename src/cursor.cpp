@@ -16,23 +16,22 @@ extern "C" {
 void drawCursor() {
     __asm__ ("di");
     playerCursor.generatePoints();
-    __asm__ ("ei");
     drawBuffer();
     if (playerCursor.visible) {
-        int minX = playerCursor.renderedPoints[0].x;
-        int minY = playerCursor.renderedPoints[0].y;
-        int maxX = playerCursor.renderedPoints[0].x;
-        int maxY = playerCursor.renderedPoints[0].y;
+        int minX = renderedPoints[0].x;
+        int minY = renderedPoints[0].y;
+        int maxX = renderedPoints[0].x;
+        int maxY = renderedPoints[0].y;
         for (uint8_t i = 1; i < 8; i++) {
-            if (playerCursor.renderedPoints[i].x < minX) {
-                minX = playerCursor.renderedPoints[i].x;
-            } else if (playerCursor.renderedPoints[i].x > maxX) {
-                maxX = playerCursor.renderedPoints[i].x;
+            if (renderedPoints[i].x < minX) {
+                minX = renderedPoints[i].x;
+            } else if (renderedPoints[i].x > maxX) {
+                maxX = renderedPoints[i].x;
             }
-            if (playerCursor.renderedPoints[i].y < minY) {
-                minY = playerCursor.renderedPoints[i].y;
-            } else if (playerCursor.renderedPoints[i].y > maxY) {
-                maxY = playerCursor.renderedPoints[i].y;
+            if (renderedPoints[i].y < minY) {
+                minY = renderedPoints[i].y;
+            } else if (renderedPoints[i].y > maxY) {
+                maxY = renderedPoints[i].y;
             }
         }
         minX--;

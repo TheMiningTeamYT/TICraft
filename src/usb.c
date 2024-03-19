@@ -97,7 +97,7 @@ fat_file_t* openFile(const char* sourcePath, const char* sourceName, bool create
     char* path = stringToUpper(sourcePath);
     char* name = stringToUpper(sourceName);
     fat_error_t faterr;
-    usb_WaitForEvents();
+    
     fat_file_t* file = calloc(1, sizeof(fat_file_t));
     char str[256];
     strncpy(str, path, 256);
@@ -136,7 +136,7 @@ fat_file_t* openFile(const char* sourcePath, const char* sourceName, bool create
 
 void closeFile(fat_file_t* file) {
     if (file != NULL) {
-        usb_WaitForEvents();
+        
         fat_CloseFile(file);
         free(file);
     }
@@ -186,7 +186,7 @@ bool createDirectory(const char* sourcePath, const char* sourceName) {
     fat_error_t faterr;
     char* path = stringToUpper(sourcePath);
     char* name = stringToUpper(sourceName);
-    usb_WaitForEvents();
+    
     faterr = fat_Create(&global->fat, path, name, FAT_DIR);
     free(path);
     free(name);
@@ -207,7 +207,7 @@ int24_t getSizeOf(fat_file_t* file) {
 void deleteFile(const char* sourcePath, const char* sourceName) {
     char* path = stringToUpper(sourcePath);
     char* name = stringToUpper(sourceName);
-    usb_WaitForEvents();
+    
     char str[256];
     strncpy(str, path, 256);
     str[255] = 0; 
@@ -225,6 +225,7 @@ void close_USB() {
         fat_Close(&global->fat);
     }
     if (global->storageInit == true) {
+        usb_WaitForEvents();
         msd_Close(&global->msd);
     }
     usb_Cleanup();

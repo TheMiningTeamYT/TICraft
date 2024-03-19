@@ -6,11 +6,13 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 #include "renderer.hpp"
 #include "textures.hpp"
 #include "saves.hpp"
 #include "crc32.h"
 #include "cursor.hpp"
+#include "version.hpp"
 #define freeMem 0xD02587
 
 extern "C" {
@@ -20,6 +22,7 @@ extern "C" {
 }
 
 // APD = Automatic Power Down (AFAIK)
+// The latest update has been resulting in a concerning number of NMI resets, so I need to figure out WTF is going on.
 
 /*
 Implement chunking
@@ -40,6 +43,7 @@ struct packEntry {
     texturePack* pack;
     unsigned int size;
 };
+
 uint8_t interruptOriginalValue;
 void selectBlock();
 void drawSelection(int offset);
@@ -143,7 +147,7 @@ int main() {
         printStringCentered("Loading...", 5);
         gfx_SetTextXY(0, 40);
         gfx_SetTextScale(1,1);
-        printStringAndMoveDownCentered("Welcome to TICraft v2.1.1! While you wait:");
+        printStringAndMoveDownCentered("Welcome to TICraft " TICRAFTversion "! While you wait:");
         printStringAndMoveDownCentered("Controls:");
         printStringAndMoveDownCentered("Graph/Clear: Exit/Emergency Exit");
         printStringAndMoveDownCentered("Cursor controls:");
@@ -178,10 +182,6 @@ int main() {
             load();
         }
         fineMovement = false;
-        __asm__ ("di");
-        for (unsigned int i = 0; i < numberOfObjects; i++) {
-            objects[i]->generatePoints();
-        }
         memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
         xSort();
         gfx_Sprite_NoClip(cursorBackground, 0, 0);
@@ -192,13 +192,8 @@ int main() {
         gfx_SetTextScale(4,4);
         printStringCentered("Loaded!", 5);
         gfx_SetTextScale(1,1);
-        __asm__ ("ei");
         os_GetKey();
-        __asm__ ("di");
-        drawScreen(true);
-        getBuffer();
-        drawCursor();
-        __asm__ ("ei");
+        drawScreen();
         quit = false;
         while (!quit) {
             os_ResetFlag(SHIFT, ALPHALOCK);
@@ -434,13 +429,10 @@ int main() {
                         memmove(matchingObject, matchingObject + 1, sizeof(object*) * (size_t)(objects + numberOfObjects - matchingObject - 1));
                         numberOfObjects--;
                         matchingObjectReference->deleteObject();
-                        getBuffer();
                     } else {
                         if (numberOfObjects < maxNumberOfObjects) {
                             object* newObject = new object(playerCursor.x, playerCursor.y, playerCursor.z, selectedObject, false);
-                            __asm__ ("di");
-                            newObject->generatePoints();
-                            __asm__ ("ei");
+                            newObject->findDistance();
                             matchingObject = objects;
                             while (matchingObject < objects + numberOfObjects) {
                                 if ((*matchingObject)->x >= playerCursor.x) {
@@ -460,20 +452,18 @@ int main() {
                             }
                             *matchingObject = newObject;
                             numberOfObjects++;
+                            gfx_SetDrawBuffer();
                             newObject->generatePolygons();
-                            getBuffer();
+                            gfx_SetDrawScreen();
                         }
                     }
+                    getBuffer();
                     drawCursor();
                     break;
                 }
                 case 0x21:
                 case k_Mode:
-                    __asm__ ("di");
-                    drawScreen(true);
-                    getBuffer();
-                    drawCursor();
-                    __asm__ ("ei");
+                    drawScreen();
                     break;
                 // exit
                 case k_Quit:
@@ -501,11 +491,7 @@ int main() {
                             case k_Graph:
                                 quit = false;
                                 userSelected = true;
-                                __asm__ ("di");
-                                drawScreen(true);
-                                getBuffer();
-                                drawCursor();
-                                __asm__ ("ei");
+                                drawScreen();
                                 break;
                             default:
                                 break;
@@ -624,6 +610,12 @@ int main() {
                 case 0x1B3D:
                 case k_Trace:
                     fineMovement = !fineMovement;
+                    if (fineMovement) {
+                        outlineColor = 252;
+                    } else {
+                        outlineColor = 0;
+                    }
+                    drawCursor();
                     break;
                 default:
                     break;
@@ -696,11 +688,7 @@ void selectBlock() {
         }
     }
     gfx_palette[255] = texPalette[255];
-    __asm__ ("di");
-    drawScreen(true);
-    getBuffer();
-    drawCursor();
-    __asm__ ("ei");
+    drawScreen();
 }
 
 void drawSelection(int offset) {
@@ -726,6 +714,17 @@ void texturePackError(const char* message) {
 
 void fontPrintString(const char* string, uint16_t row) {
     os_FontDrawText(string, (LCD_WIDTH - os_FontGetWidth(string))>>1, row);
+}
+
+int texturePackCompare(const void *arg1, const void *arg2) {
+    const char* name1 = ((packEntry*) arg1)->pack->metadata;
+    const char* name2 = ((packEntry*) arg2)->pack->metadata;
+    for (unsigned int i = 0; name1[i] && name2[i]; i++) {
+        if (toupper(name1[i]) != toupper(name2[i])) {
+            return toupper(name1[i]) - toupper(name2[i]);
+        }
+    }
+    return strlen(name1) - strlen(name2);
 }
 
 void texturePackMenu() {
@@ -766,6 +765,7 @@ void texturePackMenu() {
         }
         exitOverlay(1);
     }
+    qsort(packs, numberOfTexturePacks, sizeof(packEntry), texturePackCompare);
     // here we make the actual menu
     os_FontSelect(os_LargeFont);
     while (!quit) {
@@ -844,7 +844,6 @@ void texturePackMenu() {
     }
     free(texturePackNames);
     delete[] packs;
-    return;
 }
 
 void drawTexturePackSelection(texturePack* pack, int row, bool selected) {

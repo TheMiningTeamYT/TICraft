@@ -96,7 +96,7 @@ async function processFile() {
     indexedImageBuffer.writeStringNT("TICRAFT_TEXTURES");
     // TICRAFT texture pack version number
     // not to be confused with the version number *of* the texture pack
-    indexedImageBuffer.writeUInt16LE(3);
+    indexedImageBuffer.writeUInt16LE(4);
     for (var i = 0; i < palette.length; i++) {
         let color = rgb888to555full(palette[i]);
         indexedImageBuffer.writeUInt16LE(color);
@@ -111,7 +111,7 @@ async function processFile() {
     while (indexedImageBuffer.length < 522) {
         indexedImageBuffer.writeUInt16LE(0);
     }
-    indexedImageBuffer.writeUInt16LE(23254);
+    indexedImageBuffer.writeUInt16LE(rgb888to555full([181, 0, 0]));
     indexedImageBuffer.writeUInt16LE(13741);
     indexedImageBuffer.writeUInt16LE(32767);
     let sky = [106, 186, 252];

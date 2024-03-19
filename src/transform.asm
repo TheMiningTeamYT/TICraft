@@ -5,10 +5,10 @@ section .text
 ; returns: (N^2) and (N^2 + 40N + 400)
 public _findXZSquared
 _findXZSquared:
-    ; Save the return address to IY
-    pop iy
-    ; Save the location of the return struct to DE
+    ; Save the return address to DE
     pop de
+    ; Save the location of the return struct to IY
+    pop iy
     ; Convert n (in place) to an interger
     call _fp_to_int
     ; Put the interger form of N into BC
@@ -22,20 +22,19 @@ _findXZSquared:
     add hl, hl
     add hl, hl
     add hl, hl
-    ; Save the location of the return struct to the stack
+    ; Save the return address to the stack
+    push de
     push de
     ; We need to save this value for later
     push hl
     ; Now square N
-    ; Restore HL to BC
+    ; Restore HL from BC
     or a, a
     sbc hl, hl
     add hl, bc
     call __imulu_fast
     ; Put the value from before into DE
     pop de
-    ; Save the return address to the stack and grab the location of the return struct from the stack
-    ex (sp), iy
     ; Save n squared to iy
     ld (iy), hl
     ; Find (n+20) squared
@@ -46,16 +45,15 @@ _findXZSquared:
     ld (iy + 3), hl
     ; Set HL to IY
     lea hl, iy
-    ; Grab the return address from the stack
-    ex (sp), iy
-    jp (iy)
+    ; Return
+    ret
 section .text
 public _findYSquared
 _findYSquared:
-    ; Save the return address to IY
-    pop iy
-    ; Save the location of the return struct to DE
+    ; Save the return address to DE
     pop de
+    ; Save the location of the return struct to IY
+    pop iy
     ; Convert n (in place) to an interger
     call _fp_to_int
     ; Put the interger form of N into BC
@@ -69,20 +67,19 @@ _findYSquared:
     add hl, hl
     add hl, hl
     add hl, hl
-    ; Save the location of the return struct to the stack
+    ; Save the return address to the stack
+    push de
     push de
     ; We need to save this value for later
     push hl
     ; Now square N
-    ; Restore HL to BC
+    ; Restore HL from BC
     or a, a
     sbc hl, hl
     add hl, bc
     call __imulu_fast
     ; Put the value from before into DE
     pop de
-    ; Save the return address to the stack and grab the location of the return struct from the stack
-    ex (sp), iy
     ; Save n squared to iy
     ld (iy), hl
     ; Find (n-20) squared
@@ -90,13 +87,12 @@ _findYSquared:
     sbc hl, de
     ld de, 400
     add hl, de
-    ; Save (n+20) squared to iy + 3
+    ; Save (n-20) squared to iy + 3
     ld (iy + 3), hl
     ; Set HL to IY
     lea hl, iy
-    ; Grab the return address from the stack
-    ex (sp), iy
-    jp (iy)
+    ; Return
+    ret
 section .data
 extern _fp_to_int
 extern __imulu_fast

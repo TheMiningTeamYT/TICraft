@@ -110,8 +110,8 @@ _drawTextureLineNewA_NoClip:
     mlt hl ; 12
     add hl, hl ; 4
     ld (iy + y1), hl ; 18
-    ; Init A
-    ld a, (iy + polygonZ) ; 16
+    ; Init D
+    ld d, (iy + polygonZ) ; 16
     ; Init the alternate register set
     exx
         pop bc
@@ -136,7 +136,7 @@ _drawTextureLineNewA_NoClip:
         inc c
         ld hl, (iy + texture)
         ld b, (hl)
-    exx
+        jr new_fillLoop_entry_point
     ; At this point, all our registers/variables should be initialized
     ; a': texture error
     ; b': texel value
@@ -144,13 +144,17 @@ _drawTextureLineNewA_NoClip:
     ; d': shifted texture length
     ; e': shifted length of the textured line being drawn
     ; hl': texture pointer
-    ; a: polygonZ
+    ; d: polygonZ
     ; 75-208 cycles per pixel
+    dx_cont:
+        ; Push e2 back onto the stack
+        push de ; 10
     new_fillLoop:
         ; Save polygonZ to D
         ld d, a ; 4
         ; Load the texel value and advance the texture pointer
         exx ; 1
+        new_fillLoop_entry_point:
             ; Load the texel value
             ld a, b ; 4
             ; Add the color offset to the pixel
@@ -195,19 +199,20 @@ _drawTextureLineNewA_NoClip:
                 ld (hl), c ; 6
             left_fill_cont:
             ld c, (iy + x0) ; 16
+            scf ; 4
         fill_cont:
         ; Grab e2 from the stack
-        pop hl ; 16
+        pop de ; 16
         ; Compare e2 to dy
-        ld de, (iy + dy) ; 24
-        or a, a ; 4
+        ld hl, (iy + dy) ; 24
         sbc hl, de ; 8
-        ; Restore e2
-        add hl, de ; 4
         ; If dy > e2, move on
-        jp m, dy_cont ; 16/17
-            ; Add dy to e2
+        jp p, dy_cont ; 16/17
+            ; Restore dy
+            inc hl ; 4
             add hl, de ; 4
+            ; Add dy to e2
+            add hl, hl ; 4
             add hl, de ; 4
             ; Add sx to x0
             ld de, (iy + sx) ; 24
@@ -222,52 +227,41 @@ _drawTextureLineNewA_NoClip:
             sbc hl, bc ; 8
             ; If x0 == x1, jump out of the loop
             jr z, real_end ; 8/9
-            ; Restore e2 from DE
-            ex de, hl ; 4
+            or a, a ; 4
         dy_cont:
         ; Compare e2 to dx
-        dec hl ; 4
-        ld de, (iy + dx) ; 24
-        or a, a ; 4
+        ld hl, (iy + dx) ; 24
         sbc hl, de ; 8
-        ; Restore e2
-        inc hl ; 4
-        add hl, de ; 4
-        ; If e2 > dx, move on
-        jp p, dx_cont ; 16/17
+        ; If e2 > dx, move on (Effectively jump to the beginning of the loop)
+        jp m, dx_cont ; 16/17
+            ; Restore dx
+            add hl, de ; 4
             ; Add dx to e2
+            add hl, hl ; 4
             add hl, de ; 4
-            add hl, de ; 4
-            ; Save e2 to the stack
+            ; Push e2 to the stack
             push hl ; 10
-            ; Check if y0 == y1
-            ld hl, (iy + y1) ; 24
-            ld bc, (iy + y0) ; 24
-            or a, a ; 4
-            sbc hl, bc ; 8
-            ; If y0 == y1, jump out of the loop
-            jr z, real_end ; 8/9
             ; Add sy to y0
+            ld bc, (iy + y0) ; 24
             ld de, (iy + sy) ; 24
             add ix, de ; 8
             ex de, hl ; 4
             add hl, bc ; 4
             ld (iy + y0), hl ; 18
-            ; Jump to the beginning of the loop
-            jr new_fillLoop ; 9
-        dx_cont:
-        ; Push e2 back onto the stack
-        push hl ; 10
-        ; Jump to the beginning of the loop
-        jp new_fillLoop ; 17
+            ; Check if (the previous) y0 == y1
+            ld hl, (iy + y1) ; 24
+            or a, a ; 4
+            sbc hl, bc ; 8
+            ; If y0 != y1, jump to the beginning of the loop
+            jr nz, new_fillLoop ; 8/9
     real_end:
     ld sp, iy
     pop ix
     ret
 section .text
-; approximates the square root of hl
-; 2^(floor((floor(log2(hl))+1)/2)-1) + (hl)/(2^(floor((floor(log2(hl))+1)/2)+1))
-; Seems to be consistently within 10% of the real answer
+; approximates the square root of num
+; 2^(floor((floor(log2(num))+1)/2)-1) + (num)/(2^(floor((floor(log2(num))+1)/2)+1))
+; Seems to be consistently within ±6% of the real answer
 public _approx_sqrt_a
 _approx_sqrt_a:
     ; Set hl to 3
@@ -277,14 +271,14 @@ _approx_sqrt_a:
     sbc hl, sp
     sbc hl, de
     ex de, hl
+    ; If the number is greater than 3, move on
     jr c, threeCont
-    ; Jf the number is greater than 3, move on
     ; Else, if the number is 1 or 0, return HL
     bit 1, l
     ret z
     ; Else, return HL - 1
     dec hl
-    ret nc
+    ret
 threeCont:
     ; Save the original number for later
     push hl
@@ -372,16 +366,17 @@ threeCont:
     ; Because the carry flag is always set by the time we get here, this gives -1
     sbc hl, hl
     add hl, sp
-    ; Shift the guess left by 1 to start
-    ld a, e
+    ; Shift the original number right by 1 to start
     srl (hl)
-    rr d
-    rra
     ; Start our guess at 2
     ld hl, 2
     dec b
     ; If the log is 1, return
     ret z
+    ; Finish shifting the original number right
+    ld a, e
+    rr d
+    rra
     dec b
     jr z, guess_cont
     ; 1 << b
@@ -461,7 +456,7 @@ _shadeScreen:
     ret
 section .text
 public _polygonZShift
-; Shifts HL right by 5 and returns a uint8_t
+; Shifts HL right by 5 and return a uint8_t
 _polygonZShift:
     pop de ; 16
     ex (sp), hl ; 22
@@ -471,6 +466,21 @@ _polygonZShift:
     ld a, h ; 4
     ex de, hl ; 4
     jp (hl) ; 6
+section .text
+public _polygonPointMultiply
+; Takes a number and multiplies it by 7
+_polygonPointMultiply:
+    ld hl, 3 ; 16
+    add hl, sp ; 4
+    ld de, (hl) ; 20
+    sbc hl, hl ; 8
+    add hl, de ; 4
+    ; thx calc84maniac on discord!
+    add hl, hl ; 4
+    add hl, de ; 4
+    add hl, hl ; 4
+    add hl, de ; 4
+    ret ; 18
 section .data
 private gfx_vram
 gfx_vram = $D40000

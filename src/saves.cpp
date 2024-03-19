@@ -492,7 +492,6 @@ void takeScreenshot() {
     for (uint8_t i = 0; i < 240; i++) {
         memcpy(gfx_vram + (LCD_WIDTH*LCD_HEIGHT) + (LCD_WIDTH*((LCD_HEIGHT-1)-i)), gfx_vram + (LCD_WIDTH*i), LCD_WIDTH);
     }
-    gfx_SetDrawScreen();
     fillDirt();
     gfx_SetTextFGColor(254);
     gfx_SetTextXY(0, 105);
@@ -545,7 +544,5 @@ void takeScreenshot() {
     printStringAndMoveDownCentered("Press any key to continue.");
     close_USB();
     os_GetKey();
-    drawScreen(true);
-    getBuffer();
-    drawCursor();
+    drawScreen();
 }
