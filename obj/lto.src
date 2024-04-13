@@ -20693,7 +20693,7 @@ _.str.10:
 	section	.rodata,"a",@progbits
 	private	_.str.11
 _.str.11:
-	db	"Welcome to TICraft v2.1.2! While you wait:", 0
+	db	"Welcome to TICraft v2.1.3! While you wait:", 0
 
 	section	.rodata,"a",@progbits
 	private	_.str.12
