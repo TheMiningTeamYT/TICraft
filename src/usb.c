@@ -54,7 +54,7 @@ usb_error_t handleUsbEvent(usb_event_t event, void *event_data, usb_callback_dat
 }
 
 bool init_USB() {
-    global = ((global_t*)(cursorBackground->data));
+    global = (global_t*)(cursorBackground->data);
     usb_error_t usberr;
     msd_error_t msderr;
     fat_error_t faterr;

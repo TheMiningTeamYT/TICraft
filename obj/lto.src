@@ -1615,7 +1615,7 @@ BB12_6:
 	ld	a, (iy - 1)
 	cp	a, 47
 	jr	z, BB12_8
-	ld	bc, _.str.113
+	ld	bc, _.str.13.73
 	ld	hl, 256
 	or	a, a
 	sbc	hl, de
@@ -3071,7 +3071,7 @@ BB26_5:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.106
+	ld	hl, _.str.6.66
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -3091,7 +3091,7 @@ BB26_5:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.106
+	ld	hl, _.str.6.66
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -3106,7 +3106,7 @@ BB26_5:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.107
+	ld	hl, _.str.7.67
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -3126,7 +3126,7 @@ BB26_5:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.107
+	ld	hl, _.str.7.67
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -3175,7 +3175,7 @@ BB26_11:
 	sbc	hl, hl
 	jp	BB26_13
 BB26_12:
-	ld	hl, _.str.110
+	ld	hl, _.str.10.70
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -3196,7 +3196,7 @@ BB26_12:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.110
+	ld	hl, _.str.10.70
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -3392,7 +3392,7 @@ BB26_13:
 	ld	hl, (ix - 23)
 	push	hl
 	call	__Z9checkSavePKcb
-	ld	(ix - 19), a
+	ld	(ix - 29), a
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
@@ -3402,12 +3402,17 @@ BB26_13:
 	pop	iy
 	ld	de, 6402
 	add	iy, de
-	ld	(ix - 29), iy
+	ld	(ix - 19), iy
 	ld	(hl), -96
-	ld	(iy), -96
+	push	hl
+	pop	bc
 	ld	iy, (_cursorBackground)
 	ld	(iy + 1), 40
+	ld	hl, (ix - 19)
+	ld	(hl), -96
 	inc	de
+	push	bc
+	pop	hl
 	add	hl, de
 	ld	(hl), 40
 	ld	hl, (_cursorBackground)
@@ -3424,7 +3429,7 @@ BB26_13:
 	push	hl
 	ld	hl, 160
 	push	hl
-	ld	hl, (ix - 29)
+	ld	hl, (ix - 19)
 	push	hl
 	call	_gfx_GetSprite
 	ld	hl, 9
@@ -4156,7 +4161,7 @@ BB26_13:
 	ld	de, 614400
 	ld	(_cameraXYZ+3), de
 	ld	(_cameraXYZ+6), hl
-	bit	0, (ix - 19)
+	bit	0, (ix - 29)
 	jr	z, BB26_15
 	call	__Z4loadv
 	ld	iy, (_numberOfObjects)
@@ -4217,7 +4222,7 @@ BB26_16:
 	ld	(iy), 10
 	ld	(iy + 10), b
 	ld	hl, (_numberOfObjects)
-	ld	(ix - 19), hl
+	ld	(ix - 29), hl
 	ld	bc, 3
 	call	__imulu
 	ld	bc, (ix - 32)
@@ -4226,7 +4231,7 @@ BB26_16:
 	ld	de, (ix - 35)
 	add	hl, de
 	ld	(hl), iy
-	ld	iy, (ix - 19)
+	ld	iy, (ix - 29)
 	inc	iy
 	ld	(_numberOfObjects), iy
 	inc	bc
@@ -4237,7 +4242,7 @@ BB26_16:
 	sbc	hl, de
 	jp	nz, BB26_16
 BB26_17:
-	ld	(ix - 19), iy
+	ld	(ix - 29), iy
 	xor	a, a
 	ld	(_fineMovement), a
 	ld	(_outlineColor), a
@@ -4259,7 +4264,7 @@ BB26_17:
 	push	hl
 	ld	hl, 3
 	push	hl
-	ld	hl, (ix - 19)
+	ld	hl, (ix - 29)
 	push	hl
 	ld	hl, _objects
 	push	hl
@@ -4282,7 +4287,7 @@ BB26_17:
 	push	hl
 	ld	hl, 160
 	push	hl
-	ld	hl, (ix - 29)
+	ld	hl, (ix - 19)
 	push	hl
 	call	_gfx_Sprite_NoClip
 	ld	hl, 9
@@ -5909,7 +5914,7 @@ BB26_220:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.120
+	ld	hl, _.str.20.80
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -5929,7 +5934,7 @@ BB26_220:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.120
+	ld	hl, _.str.20.80
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -6344,20 +6349,28 @@ __Z15texturePackMenuv:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 77
+	lea	hl, ix - 74
 	ld	sp, hl
+	ld	hl, -2883584
+	xor	a, a
+	ld	iy, 0
+	lea	de, ix - 35
+	ld	(ix - 41), de
+	ld	(-2883584), a
+	push	hl
+	pop	de
+	inc	de
+	ld	bc, 153599
+	ldir
 	ld	hl, 0
-	ld	de, 0
-	lea	bc, ix - 35
-	ld	(ix - 38), bc
 	ld	(ix - 35), hl
-	push	de
+	push	iy
 	call	_malloc
-	ld	(ix - 50), hl
+	ld	(ix - 38), hl
 	pop	hl
 	ld	hl, _.str.36
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_ti_Detect
 	push	hl
@@ -6378,12 +6391,12 @@ __Z15texturePackMenuv:
 	sbc	hl, hl
 	ld	(ix - 44), hl
 BB27_2:
-	ld	(ix - 47), bc
+	ld	(ix - 50), bc
 	push	de
 	push	bc
 	call	_ti_Open
 	ld	e, a
-	ld	(ix - 41), de
+	ld	(ix - 47), de
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
@@ -6394,12 +6407,12 @@ BB27_2:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	push	hl
 	call	_ti_GetDataPtr
 	ld	(ix - 53), hl
 	pop	hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	push	hl
 	call	_ti_Close
 	pop	hl
@@ -6411,18 +6424,18 @@ BB27_2:
 	jr	nz, BB27_4
 	ld	hl, (ix - 44)
 	inc	hl
-	ld	(ix - 41), hl
+	ld	(ix - 47), hl
 	ld	bc, 3
 	call	__imulu
 	push	hl
-	ld	hl, (ix - 50)
+	ld	hl, (ix - 38)
 	push	hl
 	call	_realloc
-	ld	(ix - 50), hl
+	ld	(ix - 38), hl
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 47)
+	ld	hl, (ix - 50)
 	push	hl
 	call	_strlen
 	pop	de
@@ -6437,22 +6450,22 @@ BB27_2:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, (ix - 50)
+	ld	hl, (ix - 38)
 	add	hl, bc
 	ld	(hl), de
-	ld	hl, (ix - 47)
+	ld	hl, (ix - 50)
 	push	hl
 	push	de
 	call	_strcpy
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 47)
 	ld	(ix - 44), hl
 BB27_4:
 	ld	hl, _.str.36
 	push	hl
-	ld	hl, (ix - 38)
+	ld	hl, (ix - 41)
 	push	hl
 	call	_ti_Detect
 	push	hl
@@ -6515,11 +6528,11 @@ BB27_7:
 BB27_8:
 	push	hl
 	pop	de
-	ld	bc, 6
+	ld	bc, 9
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	iy, 2796203
+	ld	iy, 1864136
 	ld	(ix - 44), de
 	ex	de, hl
 	lea	de, iy
@@ -6532,10 +6545,13 @@ BB27_8:
 BB27_10:
 	push	hl
 	call	__Znaj
-	pop	de
-	ld	bc, (ix - 50)
-	ld	(ix - 68), hl
-	ld	(ix - 38), hl
+	push	hl
+	pop	iy
+	pop	hl
+	ld	(ix - 62), iy
+	lea	hl, iy + 3
+	ld	(ix - 41), hl
+	ld	bc, (ix - 38)
 	ld	de, (ix - 44)
 BB27_11:
 	ld	(ix - 53), de
@@ -6548,34 +6564,37 @@ BB27_11:
 	push	hl
 	call	_ti_Open
 	ld	e, a
-	ld	(ix - 41), de
+	ld	(ix - 50), de
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
 	push	de
 	call	_ti_GetDataPtr
 	pop	de
-	ld	iy, (ix - 38)
+	ld	iy, (ix - 41)
+	ld	(iy - 3), hl
+	ld	hl, (ix - 47)
+	ld	hl, (hl)
 	ld	(iy), hl
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 50)
 	push	hl
 	call	_ti_GetSize
 	pop	de
 	ld	de, 0
 	ld	e, l
 	ld	d, h
-	ld	iy, (ix - 38)
+	ld	iy, (ix - 41)
 	ld	(iy + 3), de
-	ld	hl, (ix - 41)
+	ld	hl, (ix - 50)
 	push	hl
 	call	_ti_Close
 	ld	de, (ix - 53)
 	ld	bc, (ix - 47)
 	pop	hl
 	dec	de
-	ld	iy, (ix - 38)
-	lea	iy, iy + 6
-	ld	(ix - 38), iy
+	ld	iy, (ix - 41)
+	lea	iy, iy + 9
+	ld	(ix - 41), iy
 	push	bc
 	pop	iy
 	lea	iy, iy + 3
@@ -6586,6 +6605,10 @@ BB27_11:
 	or	a, a
 	sbc	hl, bc
 	jr	nz, BB27_11
+	ld	hl, (ix - 38)
+	push	hl
+	call	_free
+	pop	hl
 	ld	de, 1
 	ld	bc, (ix - 44)
 	push	bc
@@ -6593,35 +6616,35 @@ BB27_11:
 	or	a, a
 	sbc	hl, de
 	jp	nz, BB27_19
-	ld	hl, -6
+	ld	hl, -9
 	add	hl, sp
 	ld	sp, hl
 	ex	de, hl
 	ld	hl, 0
 	add	hl, sp
 	ex	de, hl
-	ld	bc, 6
-	ld	hl, (ix - 68)
+	ld	bc, 9
+	ld	hl, (ix - 62)
 	ldir
 	call	__Z17verifyTexturePack9packEntry
-	ld	hl, 6
+	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
 	bit	0, a
 	ld	hl, 0
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	jp	z, BB27_7
 BB27_14:
-	ld	bc, 3
-	ld	hl, (ix - 53)
+	ld	bc, 9
+	ld	hl, (ix - 50)
 	call	__imulu
 	push	hl
 	pop	de
-	ld	hl, (ix - 50)
-	add	hl, de
-	ld	(ix - 38), hl
-	ld	de, (hl)
-	push	de
+	ld	iy, (ix - 62)
+	add	iy, de
+	ld	(ix - 38), iy
+	ld	hl, (iy + 3)
+	push	hl
 	call	_strlen
 	pop	de
 	inc	hl
@@ -6630,7 +6653,7 @@ BB27_14:
 	pop	de
 	ld	(_texturePackName), hl
 	ld	iy, (ix - 38)
-	ld	de, (iy)
+	ld	de, (iy + 3)
 	push	de
 	push	hl
 	call	_strcpy
@@ -6646,10 +6669,13 @@ BB27_14:
 	jr	nc, BB27_16
 	ld	bc, 1
 BB27_16:
-	ld	iy, (ix - 50)
+	ld	iy, 3
 BB27_17:
 	ld	(ix - 44), bc
 	ld	(ix - 38), iy
+	lea	de, iy
+	ld	iy, (ix - 62)
+	add	iy, de
 	ld	hl, (iy)
 	add	hl, bc
 	or	a, a
@@ -6660,18 +6686,15 @@ BB27_17:
 	ld	bc, (ix - 44)
 	dec	bc
 	ld	iy, (ix - 38)
-	lea	iy, iy + 3
+	ld	de, 9
+	add	iy, de
 	push	bc
 	pop	hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
 	jr	nz, BB27_17
-	ld	hl, (ix - 50)
-	push	hl
-	call	_free
-	pop	hl
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 62)
 	push	hl
 	call	__ZdaPv
 	ld	sp, ix
@@ -6680,10 +6703,10 @@ BB27_17:
 BB27_19:
 	ld	hl, __Z18texturePackComparePKvS0_
 	push	hl
-	ld	hl, 6
+	ld	hl, 9
 	push	hl
 	push	bc
-	ld	hl, (ix - 68)
+	ld	hl, (ix - 62)
 	push	hl
 	call	_qsort
 	ld	hl, 12
@@ -6696,9 +6719,9 @@ BB27_19:
 	ld	hl, (ix - 44)
 	ld	de, -6
 	add	hl, de
-	ld	(ix - 77), hl
+	ld	(ix - 74), hl
 	ld	bc, 0
-	ld	(ix - 62), bc
+	ld	(ix - 53), bc
 	jr	BB27_21
 BB27_20:
 	ld	(ix - 41), hl
@@ -6723,15 +6746,6 @@ BB27_20:
 	ld	bc, (ix - 38)
 BB27_21:
 	ld	(ix - 56), bc
-	xor	a, a
-	ld	(-2883584), a
-	ld	hl, -2883584
-	push	hl
-	pop	iy
-	inc	iy
-	lea	de, iy
-	ld	bc, 153599
-	ldir
 	ld	hl, 65535
 	push	hl
 	call	_os_SetDrawFGColor
@@ -6790,22 +6804,22 @@ BB27_21:
 	sbc	hl, de
 	jp	nc, BB27_37
 	ld	hl, -2857984
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	ld	(ix - 38), bc
 	ld	iy, 0
 BB27_23:
 	ld	(ix - 47), iy
 	ld	hl, (ix - 38)
-	ld	bc, 6
+	ld	bc, 9
 	call	__imulu
 	push	hl
 	pop	de
-	ld	iy, (ix - 68)
+	ld	iy, (ix - 62)
 	add	iy, de
 	ld	bc, (ix - 47)
 	push	bc
 	pop	hl
-	ld	de, (ix - 62)
+	ld	de, (ix - 53)
 	or	a, a
 	sbc	hl, de
 	ld	a, -1
@@ -6825,7 +6839,7 @@ BB27_25:
 	or	a, a
 	sbc	hl, hl
 BB27_27:
-	ld	(ix - 71), hl
+	ld	(ix - 68), hl
 	push	bc
 	pop	hl
 	ld	bc, 12800
@@ -6837,11 +6851,11 @@ BB27_27:
 	pop	bc
 	ld	hl, -2883584
 	add	hl, bc
-	ld	(ix - 74), hl
+	ld	(ix - 71), hl
 	ld	iy, 0
 BB27_28:
 	lea	bc, iy
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 	add	hl, bc
 	ld	(hl), e
 	inc	hl
@@ -6874,7 +6888,7 @@ BB27_28:
 BB27_31:
 	inc	bc
 	ld	(ix - 41), bc
-	ld	hl, (ix - 74)
+	ld	hl, (ix - 71)
 	push	hl
 	pop	iy
 BB27_32:
@@ -6891,7 +6905,7 @@ BB27_32:
 	lea	hl, iy
 	jr	nz, BB27_32
 	ld	hl, (ix - 47)
-	ld	de, (ix - 62)
+	ld	de, (ix - 53)
 	or	a, a
 	sbc	hl, de
 	ld	hl, 0
@@ -6901,7 +6915,7 @@ BB27_35:
 	push	hl
 	call	_os_SetDrawFGColor
 	pop	hl
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	push	hl
 	call	_os_SetDrawBGColor
 	pop	hl
@@ -7238,9 +7252,9 @@ BB27_35:
 	add	hl, bc
 	ld	(ix - 38), hl
 	ld	de, 25600
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 	add	hl, de
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	ld	hl, (ix - 47)
 	ld	de, 4
 	or	a, a
@@ -7355,7 +7369,7 @@ BB27_46:
 	ld	bc, (ix - 38)
 	push	bc
 	pop	iy
-	ld	de, (ix - 62)
+	ld	de, (ix - 53)
 	add	iy, de
 	lea	hl, iy
 	inc	hl
@@ -7363,7 +7377,7 @@ BB27_46:
 	or	a, a
 	sbc	hl, de
 	jp	nc, BB27_139
-	ld	bc, (ix - 62)
+	ld	bc, (ix - 53)
 	push	bc
 	pop	hl
 	ld	de, 4
@@ -7373,19 +7387,19 @@ BB27_46:
 	lea	hl, iy
 	push	bc
 	pop	de
-	ld	bc, 6
+	ld	bc, 9
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, (ix - 68)
-	add	hl, bc
-	ld	hl, (hl)
+	ld	iy, (ix - 62)
+	add	iy, bc
+	ld	hl, (iy)
 	ld	(ix - 56), hl
 	push	de
 	pop	hl
 	ld	bc, 40
 	call	__imulu
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	ex	de, hl
 	ld	de, 12800
 	push	de
@@ -7555,7 +7569,7 @@ BB27_46:
 	lea	hl, iy
 	ld	de, 12160
 	add	hl, de
-	ld	(ix - 71), hl
+	ld	(ix - 68), hl
 	ex	de, hl
 	ld	hl, (ix - 59)
 	ld	bc, 640
@@ -7565,7 +7579,7 @@ BB27_46:
 	add	hl, de
 	ld	(ix - 47), hl
 	ex	de, hl
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	ld	bc, 640
 	ldir
 	lea	hl, iy
@@ -7726,7 +7740,7 @@ BB27_46:
 	sbc	hl, hl
 	push	hl
 	call	_os_SetDrawBGColor
-	ld	iy, (ix - 53)
+	ld	iy, (ix - 50)
 	pop	hl
 	lea	hl, iy
 	ld	de, 44
@@ -7757,7 +7771,7 @@ BB27_46:
 	pop	bc
 BB27_51:
 	add	iy, de
-	ld	(ix - 53), iy
+	ld	(ix - 50), iy
 	lea	hl, iy
 	ld	de, 8388564
 	or	a, a
@@ -7769,7 +7783,7 @@ BB27_53:
 	ld	(ix - 59), iy
 	add	iy, bc
 	ld	hl, 240
-	ld	(ix - 71), bc
+	ld	(ix - 68), bc
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -7786,17 +7800,17 @@ BB27_55:
 	call	__iand
 	ld	a, l
 	or	a, a
-	ld	iy, (ix - 53)
+	ld	iy, (ix - 50)
 	jr	z, BB27_60
 	ld	(ix - 59), hl
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	ld	bc, 640
 	call	__imulu
 	push	hl
 	pop	de
 	ld	hl, -2883576
 	add	hl, de
-	ld	(ix - 71), hl
+	ld	(ix - 68), hl
 	ld	hl, (ix - 47)
 	ld	bc, -32
 	call	__imulu
@@ -7819,15 +7833,15 @@ BB27_58:
 	ld	de, 16405
 	add	iy, de
 	ld	hl, (ix - 59)
-	ld	de, (ix - 71)
+	ld	de, (ix - 68)
 BB27_59:
 	ld	(ix - 59), hl
-	ld	(ix - 71), de
+	ld	(ix - 68), de
 	lea	hl, iy
 	ld	bc, 64
 	ldir
 	ld	de, 640
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	add	hl, de
 	ex	de, hl
 	ld	hl, (ix - 59)
@@ -7861,21 +7875,21 @@ BB27_60:
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	de, (ix - 62)
+	ld	de, (ix - 53)
 	inc	de
 	ld	bc, (ix - 38)
 	push	de
 	pop	hl
 	add	hl, bc
-	ld	bc, 6
+	ld	bc, 9
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, (ix - 68)
-	add	hl, bc
-	ld	hl, (hl)
-	ld	(ix - 56), hl
-	ld	(ix - 59), de
+	ld	iy, (ix - 62)
+	add	iy, bc
+	ld	hl, (iy)
+	ld	(ix - 53), hl
+	ld	(ix - 56), de
 	ex	de, hl
 	ld	bc, 40
 	call	__imulu
@@ -7891,7 +7905,7 @@ BB27_60:
 	pop	hl
 	ld	de, 80
 	add	hl, de
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	push	bc
 	pop	iy
 	ld	de, -8388608
@@ -7909,23 +7923,23 @@ BB27_63:
 	pop	hl
 	ld	bc, 40
 	add	hl, bc
-	ld	(ix - 62), hl
+	ld	(ix - 59), hl
 	lea	hl, iy
 	ld	bc, 8388568
 	or	a, a
 	sbc	hl, bc
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 	jr	c, BB27_65
 	ld	hl, 40
 BB27_65:
-	ld	(ix - 53), hl
-	ld	bc, (ix - 62)
+	ld	(ix - 50), hl
+	ld	bc, (ix - 59)
 	add	hl, bc
-	ld	(ix - 74), hl
+	ld	(ix - 71), hl
 	ld	hl, 200
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 71), hl
+	ld	(ix - 68), hl
 	push	bc
 	pop	hl
 	ld	bc, 640
@@ -7938,17 +7952,17 @@ BB27_65:
 	lea	hl, iy
 	inc	hl
 	ex	de, hl
-	ld	(ix - 62), iy
+	ld	(ix - 59), iy
 	lea	hl, iy
 	dec	bc
 	ldir
-	ld	hl, (ix - 74)
+	ld	hl, (ix - 71)
 	ld	de, 240
 	or	a, a
 	sbc	hl, de
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	jr	nc, BB27_67
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 BB27_67:
 	ld	bc, 255
 	add	hl, bc
@@ -7965,16 +7979,16 @@ BB27_67:
 	ld	bc, 239
 BB27_69:
 	inc	bc
-	ld	hl, (ix - 62)
+	ld	hl, (ix - 59)
 	push	hl
 	pop	iy
 BB27_70:
-	ld	(ix - 53), bc
+	ld	(ix - 50), bc
 	ld	bc, 640
 	add	iy, bc
 	lea	de, iy
 	ldir
-	ld	bc, (ix - 53)
+	ld	bc, (ix - 50)
 	dec	bc
 	push	bc
 	pop	hl
@@ -7997,7 +8011,7 @@ BB27_71:
 	lea	hl, iy
 	ld	de, 44
 	add	hl, de
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	lea	hl, iy
 	ld	de, -196
 	add	hl, de
@@ -8008,14 +8022,14 @@ BB27_71:
 	lea	hl, iy
 	ld	de, 76
 	add	hl, de
-	ld	(ix - 62), hl
-	ld	hl, (ix - 53)
+	ld	(ix - 59), hl
+	ld	hl, (ix - 50)
 	ld	de, -8388608
 	add	hl, de
 	ld	bc, -8388607
 	or	a, a
 	sbc	hl, bc
-	ld	bc, (ix - 53)
+	ld	bc, (ix - 50)
 	jr	nc, BB27_74
 	or	a, a
 	sbc	hl, hl
@@ -8028,14 +8042,14 @@ BB27_74:
 	ld	de, 8388564
 	or	a, a
 	sbc	hl, de
-	ld	iy, (ix - 62)
+	ld	iy, (ix - 59)
 	jr	c, BB27_76
 	ld	iy, 32
 BB27_76:
-	ld	(ix - 62), iy
+	ld	(ix - 59), iy
 	add	iy, bc
 	ld	hl, 240
-	ld	(ix - 71), bc
+	ld	(ix - 68), bc
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -8045,7 +8059,7 @@ BB27_76:
 	or	a, a
 	sbc	hl, bc
 	jr	nc, BB27_78
-	ld	de, (ix - 62)
+	ld	de, (ix - 59)
 BB27_78:
 	ex	de, hl
 	ld	bc, 252
@@ -8054,16 +8068,16 @@ BB27_78:
 	or	a, a
 	ld	iy, (ix - 47)
 	jp	z, BB27_137
-	ld	(ix - 62), hl
-	ld	hl, (ix - 71)
+	ld	(ix - 59), hl
+	ld	hl, (ix - 68)
 	ld	bc, 640
 	call	__imulu
 	push	hl
 	pop	de
 	ld	hl, -2883576
 	add	hl, de
-	ld	(ix - 71), hl
-	ld	hl, (ix - 53)
+	ld	(ix - 68), hl
+	ld	hl, (ix - 50)
 	ld	bc, -32
 	call	__imulu
 	push	hl
@@ -8080,23 +8094,23 @@ BB27_81:
 	call	__ishl
 	push	hl
 	pop	de
-	ld	iy, (ix - 56)
+	ld	iy, (ix - 53)
 	add	iy, de
 	ld	de, 16405
 	add	iy, de
-	ld	hl, (ix - 62)
-	ld	de, (ix - 71)
+	ld	hl, (ix - 59)
+	ld	de, (ix - 68)
 BB27_82:
-	ld	(ix - 62), hl
-	ld	(ix - 71), de
+	ld	(ix - 59), hl
+	ld	(ix - 68), de
 	lea	hl, iy
 	ld	bc, 64
 	ldir
 	ld	de, 640
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	add	hl, de
 	ex	de, hl
-	ld	hl, (ix - 62)
+	ld	hl, (ix - 59)
 	lea	iy, iy + 64
 	dec	hl
 	add	hl, bc
@@ -8144,7 +8158,7 @@ BB27_88:
 	jp	nc, BB27_139
 	jp	BB27_148
 BB27_89:
-	ld	de, (ix - 62)
+	ld	de, (ix - 53)
 	push	de
 	pop	hl
 	add	hl, bc
@@ -8158,17 +8172,16 @@ BB27_89:
 BB27_91:
 	ld	hl, (ix - 38)
 	add	hl, de
-	push	de
-	pop	iy
-	ld	bc, 6
+	ld	(ix - 53), de
+	ld	bc, 9
 	call	__imulu
 	push	hl
 	pop	de
-	ld	hl, (ix - 68)
-	add	hl, de
-	ld	hl, (hl)
+	ld	iy, (ix - 62)
+	add	iy, de
+	ld	hl, (iy)
 	ld	(ix - 56), hl
-	lea	hl, iy
+	ld	hl, (ix - 53)
 	ld	bc, 40
 	call	__imulu
 	ld	(ix - 47), hl
@@ -8183,7 +8196,7 @@ BB27_91:
 	pop	hl
 	ld	de, 80
 	add	hl, de
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	push	bc
 	pop	iy
 	ld	de, -8388608
@@ -8206,18 +8219,18 @@ BB27_94:
 	ld	bc, 8388568
 	or	a, a
 	sbc	hl, bc
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 	jr	c, BB27_96
 	ld	hl, 40
 BB27_96:
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	ld	bc, (ix - 59)
 	add	hl, bc
-	ld	(ix - 74), hl
+	ld	(ix - 71), hl
 	ld	hl, 200
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 71), hl
+	ld	(ix - 68), hl
 	push	bc
 	pop	hl
 	ld	bc, 640
@@ -8234,13 +8247,13 @@ BB27_96:
 	lea	hl, iy
 	dec	bc
 	ldir
-	ld	hl, (ix - 74)
+	ld	hl, (ix - 71)
 	ld	de, 240
 	or	a, a
 	sbc	hl, de
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	jr	nc, BB27_98
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 BB27_98:
 	ld	bc, 255
 	add	hl, bc
@@ -8261,12 +8274,12 @@ BB27_100:
 	push	hl
 	pop	iy
 BB27_101:
-	ld	(ix - 53), bc
+	ld	(ix - 50), bc
 	ld	bc, 640
 	add	iy, bc
 	lea	de, iy
 	ldir
-	ld	bc, (ix - 53)
+	ld	bc, (ix - 50)
 	dec	bc
 	push	bc
 	pop	hl
@@ -8289,7 +8302,7 @@ BB27_102:
 	lea	hl, iy
 	ld	de, 44
 	add	hl, de
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	lea	hl, iy
 	ld	de, -196
 	add	hl, de
@@ -8301,13 +8314,13 @@ BB27_102:
 	ld	de, 76
 	add	hl, de
 	ld	(ix - 59), hl
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 	ld	de, -8388608
 	add	hl, de
 	ld	bc, -8388607
 	or	a, a
 	sbc	hl, bc
-	ld	bc, (ix - 53)
+	ld	bc, (ix - 50)
 	jr	nc, BB27_105
 	or	a, a
 	sbc	hl, hl
@@ -8327,7 +8340,7 @@ BB27_107:
 	ld	(ix - 59), iy
 	add	iy, bc
 	ld	hl, 240
-	ld	(ix - 71), bc
+	ld	(ix - 68), bc
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -8347,15 +8360,15 @@ BB27_109:
 	ld	iy, (ix - 47)
 	jr	z, BB27_114
 	ld	(ix - 59), hl
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	ld	bc, 640
 	call	__imulu
 	push	hl
 	pop	de
 	ld	hl, -2883576
 	add	hl, de
-	ld	(ix - 71), hl
-	ld	hl, (ix - 53)
+	ld	(ix - 68), hl
+	ld	hl, (ix - 50)
 	ld	bc, -32
 	call	__imulu
 	push	hl
@@ -8377,15 +8390,15 @@ BB27_112:
 	ld	de, 16405
 	add	iy, de
 	ld	hl, (ix - 59)
-	ld	de, (ix - 71)
+	ld	de, (ix - 68)
 BB27_113:
 	ld	(ix - 59), hl
-	ld	(ix - 71), de
+	ld	(ix - 68), de
 	lea	hl, iy
 	ld	bc, 64
 	ldir
 	ld	de, 640
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	add	hl, de
 	ex	de, hl
 	ld	hl, (ix - 59)
@@ -8409,7 +8422,7 @@ BB27_114:
 	add	hl, sp
 	ld	sp, hl
 	ld	(ix - 1), 0
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 	push	hl
 	ld	hl, 40
 	push	hl
@@ -8419,21 +8432,21 @@ BB27_114:
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	de, (ix - 62)
+	ld	de, (ix - 53)
 	dec	de
 	ld	bc, (ix - 38)
 	push	de
 	pop	hl
 	add	hl, bc
-	ld	bc, 6
+	ld	bc, 9
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, (ix - 68)
-	add	hl, bc
-	ld	hl, (hl)
-	ld	(ix - 56), hl
-	ld	(ix - 59), de
+	ld	iy, (ix - 62)
+	add	iy, bc
+	ld	hl, (iy)
+	ld	(ix - 53), hl
+	ld	(ix - 56), de
 	ex	de, hl
 	ld	bc, 40
 	call	__imulu
@@ -8449,7 +8462,7 @@ BB27_114:
 	pop	hl
 	ld	de, 80
 	add	hl, de
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	push	bc
 	pop	iy
 	ld	de, -8388608
@@ -8467,23 +8480,23 @@ BB27_117:
 	pop	hl
 	ld	bc, 40
 	add	hl, bc
-	ld	(ix - 62), hl
+	ld	(ix - 59), hl
 	lea	hl, iy
 	ld	bc, 8388568
 	or	a, a
 	sbc	hl, bc
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 	jr	c, BB27_119
 	ld	hl, 40
 BB27_119:
-	ld	(ix - 53), hl
-	ld	bc, (ix - 62)
+	ld	(ix - 50), hl
+	ld	bc, (ix - 59)
 	add	hl, bc
-	ld	(ix - 74), hl
+	ld	(ix - 71), hl
 	ld	hl, 200
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 71), hl
+	ld	(ix - 68), hl
 	push	bc
 	pop	hl
 	ld	bc, 640
@@ -8496,17 +8509,17 @@ BB27_119:
 	lea	hl, iy
 	inc	hl
 	ex	de, hl
-	ld	(ix - 62), iy
+	ld	(ix - 59), iy
 	lea	hl, iy
 	dec	bc
 	ldir
-	ld	hl, (ix - 74)
+	ld	hl, (ix - 71)
 	ld	de, 240
 	or	a, a
 	sbc	hl, de
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	jr	nc, BB27_121
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 BB27_121:
 	ld	bc, 255
 	add	hl, bc
@@ -8523,16 +8536,16 @@ BB27_121:
 	ld	bc, 239
 BB27_123:
 	inc	bc
-	ld	hl, (ix - 62)
+	ld	hl, (ix - 59)
 	push	hl
 	pop	iy
 BB27_124:
-	ld	(ix - 53), bc
+	ld	(ix - 50), bc
 	ld	bc, 640
 	add	iy, bc
 	lea	de, iy
 	ldir
-	ld	bc, (ix - 53)
+	ld	bc, (ix - 50)
 	dec	bc
 	push	bc
 	pop	hl
@@ -8555,7 +8568,7 @@ BB27_125:
 	lea	hl, iy
 	ld	de, 44
 	add	hl, de
-	ld	(ix - 53), hl
+	ld	(ix - 50), hl
 	lea	hl, iy
 	ld	de, -196
 	add	hl, de
@@ -8566,14 +8579,14 @@ BB27_125:
 	lea	hl, iy
 	ld	de, 76
 	add	hl, de
-	ld	(ix - 62), hl
-	ld	hl, (ix - 53)
+	ld	(ix - 59), hl
+	ld	hl, (ix - 50)
 	ld	de, -8388608
 	add	hl, de
 	ld	bc, -8388607
 	or	a, a
 	sbc	hl, bc
-	ld	bc, (ix - 53)
+	ld	bc, (ix - 50)
 	jr	nc, BB27_128
 	or	a, a
 	sbc	hl, hl
@@ -8586,14 +8599,14 @@ BB27_128:
 	ld	de, 8388564
 	or	a, a
 	sbc	hl, de
-	ld	iy, (ix - 62)
+	ld	iy, (ix - 59)
 	jr	c, BB27_130
 	ld	iy, 32
 BB27_130:
-	ld	(ix - 62), iy
+	ld	(ix - 59), iy
 	add	iy, bc
 	ld	hl, 240
-	ld	(ix - 71), bc
+	ld	(ix - 68), bc
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -8603,7 +8616,7 @@ BB27_130:
 	or	a, a
 	sbc	hl, bc
 	jr	nc, BB27_132
-	ld	de, (ix - 62)
+	ld	de, (ix - 59)
 BB27_132:
 	ex	de, hl
 	ld	bc, 252
@@ -8612,16 +8625,16 @@ BB27_132:
 	or	a, a
 	ld	iy, (ix - 47)
 	jr	z, BB27_137
-	ld	(ix - 62), hl
-	ld	hl, (ix - 71)
+	ld	(ix - 59), hl
+	ld	hl, (ix - 68)
 	ld	bc, 640
 	call	__imulu
 	push	hl
 	pop	de
 	ld	hl, -2883576
 	add	hl, de
-	ld	(ix - 71), hl
-	ld	hl, (ix - 53)
+	ld	(ix - 68), hl
+	ld	hl, (ix - 50)
 	ld	bc, -32
 	call	__imulu
 	push	hl
@@ -8638,23 +8651,23 @@ BB27_135:
 	call	__ishl
 	push	hl
 	pop	de
-	ld	iy, (ix - 56)
+	ld	iy, (ix - 53)
 	add	iy, de
 	ld	de, 16405
 	add	iy, de
-	ld	hl, (ix - 62)
-	ld	de, (ix - 71)
+	ld	hl, (ix - 59)
+	ld	de, (ix - 68)
 BB27_136:
-	ld	(ix - 62), hl
-	ld	(ix - 71), de
+	ld	(ix - 59), hl
+	ld	(ix - 68), de
 	lea	hl, iy
 	ld	bc, 64
 	ldir
 	ld	de, 640
-	ld	hl, (ix - 71)
+	ld	hl, (ix - 68)
 	add	hl, de
 	ex	de, hl
-	ld	hl, (ix - 62)
+	ld	hl, (ix - 59)
 	lea	iy, iy + 64
 	dec	hl
 	add	hl, bc
@@ -8663,7 +8676,7 @@ BB27_136:
 	jr	nz, BB27_136
 BB27_137:
 	ld	de, 18453
-	ld	iy, (ix - 56)
+	ld	iy, (ix - 53)
 	add	iy, de
 	ld	hl, 32
 	push	hl
@@ -8675,7 +8688,7 @@ BB27_137:
 	add	hl, sp
 	ld	sp, hl
 	ld	(ix - 1), 0
-	ld	hl, (ix - 53)
+	ld	hl, (ix - 50)
 	push	hl
 	ld	hl, 40
 	push	hl
@@ -8686,9 +8699,9 @@ BB27_137:
 	add	hl, sp
 	ld	sp, hl
 	ld	bc, (ix - 38)
-	ld	hl, (ix - 59)
+	ld	hl, (ix - 56)
 BB27_138:
-	ld	(ix - 62), hl
+	ld	(ix - 53), hl
 BB27_139:
 	ld	a, (ix - 41)
 	and	a, 1
@@ -8702,18 +8715,18 @@ BB27_140:
 	jr	BB27_139
 BB27_141:
 	ld	hl, (ix - 38)
-	ld	de, (ix - 62)
+	ld	de, (ix - 53)
 	add	hl, de
-	ld	(ix - 53), hl
-	ld	bc, 6
+	ld	(ix - 50), hl
+	ld	bc, 9
 	call	__imulu
 	push	hl
 	pop	de
-	ld	iy, (ix - 68)
+	ld	iy, (ix - 62)
 	add	iy, de
 	ld	hl, (iy)
 	ld	(ix - 41), hl
-	ld	hl, (iy + 3)
+	ld	hl, (iy + 6)
 	ld	(ix - 47), hl
 	ld	iy, -3145600
 	call	_os_ClrLCDFull
@@ -8765,8 +8778,8 @@ BB27_141:
 	ld	bc, 0
 	ld	a, b
 	jp	c, BB27_147
-	ld	(ix - 74), e
-	ld	(ix - 71), hl
+	ld	(ix - 71), e
+	ld	(ix - 68), hl
 	ld	bc, -1
 	ld	d, b
 BB27_145:
@@ -8821,8 +8834,8 @@ BB27_145:
 	push	hl
 	pop	bc
 	ld	a, e
-	ld	hl, (ix - 71)
-	ld	e, (ix - 74)
+	ld	hl, (ix - 68)
+	ld	e, (ix - 71)
 BB27_147:
 	call	__lcmpu
 	ld	hl, _.str.44
@@ -8830,10 +8843,10 @@ BB27_147:
 	jp	BB27_20
 BB27_148:
 	lea	hl, iy
-	ld	de, (ix - 62)
+	ld	de, (ix - 53)
 	add	hl, de
 	ld	(ix - 41), hl
-	ld	hl, (ix - 77)
+	ld	hl, (ix - 74)
 	or	a, a
 	sbc	hl, bc
 	push	hl
@@ -8843,7 +8856,7 @@ BB27_148:
 	or	a, a
 	sbc	hl, bc
 	jr	c, BB27_150
-	ld	(ix - 62), de
+	ld	(ix - 53), de
 BB27_150:
 	lea	bc, iy
 	jp	BB27_21
@@ -9616,7 +9629,7 @@ __Z17verifyTexturePack9packEntry:
 	sbc.sis	hl, de
 	jp	nz, BB30_9
 	ld	de, -4
-	ld	hl, (ix + 9)
+	ld	hl, (ix + 12)
 	push	hl
 	pop	bc
 	add	iy, bc
@@ -15128,7 +15141,7 @@ __Z12failedToSavev:
 	ld	ix, 0
 	add	ix, sp
 	push	hl
-	ld	hl, _.str.100
+	ld	hl, _.str.56
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15148,7 +15161,7 @@ __Z12failedToSavev:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.100
+	ld	hl, _.str.56
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15163,7 +15176,7 @@ __Z12failedToSavev:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15183,7 +15196,7 @@ __Z12failedToSavev:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15207,7 +15220,7 @@ __Z16failedToLoadSavev:
 	ld	ix, 0
 	add	ix, sp
 	push	hl
-	ld	hl, _.str.102
+	ld	hl, _.str.2.58
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15227,7 +15240,7 @@ __Z16failedToLoadSavev:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.102
+	ld	hl, _.str.2.58
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15242,7 +15255,7 @@ __Z16failedToLoadSavev:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15262,7 +15275,7 @@ __Z16failedToLoadSavev:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15297,7 +15310,7 @@ __Z4savePKc:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.103
+	ld	hl, _.str.3.63
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15317,7 +15330,7 @@ __Z4savePKc:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.103
+	ld	hl, _.str.3.63
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15356,7 +15369,7 @@ __Z4savePKc:
 	call	__ishl
 	ld	(ix - 50), hl
 	ld	de, -2806784
-	ld	hl, _.str.104
+	ld	hl, _.str.4.64
 	ld	bc, 7
 	ldir
 	ld	hl, 4
@@ -15574,7 +15587,7 @@ BB56_14:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.105
+	ld	hl, _.str.5.65
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15594,7 +15607,7 @@ BB56_14:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.105
+	ld	hl, _.str.5.65
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15609,7 +15622,7 @@ BB56_14:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.106
+	ld	hl, _.str.6.66
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15629,7 +15642,7 @@ BB56_14:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.106
+	ld	hl, _.str.6.66
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15644,7 +15657,7 @@ BB56_14:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.107
+	ld	hl, _.str.7.67
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15664,7 +15677,7 @@ BB56_14:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.107
+	ld	hl, _.str.7.67
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15713,7 +15726,7 @@ BB56_15:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.110
+	ld	hl, _.str.10.70
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15734,7 +15747,7 @@ BB56_15:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.110
+	ld	hl, _.str.10.70
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15749,7 +15762,7 @@ BB56_15:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.111
+	ld	hl, _.str.11.71
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15769,7 +15782,7 @@ BB56_15:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.111
+	ld	hl, _.str.11.71
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15787,7 +15800,7 @@ BB56_15:
 	call	_init_USB
 	bit	0, a
 	jp	z, BB56_29
-	ld	hl, _.str.112
+	ld	hl, _.str.12.72
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15807,7 +15820,7 @@ BB56_15:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.112
+	ld	hl, _.str.12.72
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15822,9 +15835,9 @@ BB56_15:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.114
+	ld	hl, _.str.14.74
 	push	hl
-	ld	hl, _.str.113
+	ld	hl, _.str.13.73
 	push	hl
 	call	_createDirectory
 	ld	hl, 6
@@ -15848,13 +15861,13 @@ BB56_15:
 	lea	hl, iy
 	add	hl, de
 	ex	de, hl
-	ld	hl, _.str.115
+	ld	hl, _.str.15.75
 	ld	bc, 5
 	ldir
 	ld	hl, 1
 	push	hl
 	push	iy
-	ld	hl, _.str.116
+	ld	hl, _.str.16.76
 	push	hl
 	call	_openFile
 	push	hl
@@ -15913,7 +15926,7 @@ BB56_23:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.119
+	ld	hl, _.str.19.79
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15934,7 +15947,7 @@ BB56_23:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.119
+	ld	hl, _.str.19.79
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -15949,7 +15962,7 @@ BB56_23:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.120
+	ld	hl, _.str.20.80
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -15969,7 +15982,7 @@ BB56_23:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.120
+	ld	hl, _.str.20.80
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -16004,7 +16017,7 @@ BB56_24:
 	jr	nz, BB56_24
 	jp	BB56_37
 BB56_26:
-	ld	hl, _.str.108
+	ld	hl, _.str.8.68
 	push	hl
 	ld	hl, (ix + 6)
 	push	hl
@@ -16047,7 +16060,7 @@ BB56_26:
 	ld	(ix - 38), a
 	jp	BB56_36
 BB56_29:
-	ld	hl, _.str.117
+	ld	hl, _.str.17.77
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -16068,7 +16081,7 @@ BB56_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.117
+	ld	hl, _.str.17.77
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -16083,7 +16096,7 @@ BB56_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.100
+	ld	hl, _.str.56
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -16103,7 +16116,7 @@ BB56_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.100
+	ld	hl, _.str.56
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -16118,7 +16131,7 @@ BB56_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -16138,7 +16151,7 @@ BB56_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -16189,7 +16202,7 @@ BB56_35:
 	push	hl
 	call	_ti_Delete
 	pop	hl
-	ld	hl, _.str.109
+	ld	hl, _.str.9.69
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -16210,7 +16223,7 @@ BB56_35:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.109
+	ld	hl, _.str.9.69
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -16225,7 +16238,7 @@ BB56_35:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.100
+	ld	hl, _.str.56
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -16245,7 +16258,7 @@ BB56_35:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.100
+	ld	hl, _.str.56
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -16260,7 +16273,7 @@ BB56_35:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -16280,7 +16293,7 @@ BB56_35:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -16330,11 +16343,11 @@ BB56_39:
 	bit	0, (ix - 47)
 	jr	z, BB56_37
 BB56_40:
-	ld	hl, _.str.118
+	ld	hl, _.str.18.78
 	push	hl
 	call	_printStringAndMoveDownCentered
 	pop	hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_printStringAndMoveDownCentered
 	pop	hl
@@ -16584,14 +16597,14 @@ __Z9checkSavePKcb:
 	lea	hl, iy
 	add	hl, de
 	ex	de, hl
-	ld	hl, _.str.115
+	ld	hl, _.str.15.75
 	ld	bc, 5
 	ldir
 	or	a, a
 	sbc	hl, hl
 	push	hl
 	push	iy
-	ld	hl, _.str.116
+	ld	hl, _.str.16.76
 	push	hl
 	call	_openFile
 	push	hl
@@ -16806,7 +16819,7 @@ BB58_23:
 	lea	de, iy
 	ld	hl, -2806784
 	ldir
-	ld	hl, _.str.104
+	ld	hl, _.str.4.64
 	push	hl
 	push	iy
 	call	_strcmp
@@ -16900,10 +16913,10 @@ BB58_28:
 	pop	ix
 	ret
 BB58_30:
-	ld	hl, _.str.123
+	ld	hl, _.str.23.84
 	jr	BB58_32
 BB58_31:
-	ld	hl, _.str.124
+	ld	hl, _.str.24.85
 BB58_32:
 	ld	(ix - 35), hl
 	push	hl
@@ -16940,7 +16953,7 @@ BB58_32:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.102
+	ld	hl, _.str.2.58
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -16960,7 +16973,7 @@ BB58_32:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.102
+	ld	hl, _.str.2.58
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -16975,7 +16988,7 @@ BB58_32:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -16995,7 +17008,7 @@ BB58_32:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -17630,7 +17643,7 @@ BB61_13:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, bc
 	ld	hl, (hl)
 	push	ix
@@ -17751,7 +17764,7 @@ BB61_16:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, bc
 	ld	hl, (hl)
 	push	ix
@@ -17873,7 +17886,7 @@ BB61_19:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, bc
 	ld	hl, (hl)
 	push	ix
@@ -18016,7 +18029,7 @@ BB61_25:
 	call	__imulu
 	push	hl
 	pop	de
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, de
 	ld	hl, (hl)
 	push	hl
@@ -18074,7 +18087,7 @@ BB61_25:
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.120
+	ld	hl, _.str.20.80
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18088,7 +18101,7 @@ BB61_25:
 	ld	de, 120
 	push	de
 	push	hl
-	ld	hl, _.str.120
+	ld	hl, _.str.20.80
 	push	hl
 	call	_gfx_PrintStringXY
 	ld	hl, 9
@@ -18134,7 +18147,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.126
+	ld	hl, _.str.26.92
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18161,7 +18174,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.126
+	ld	hl, _.str.26.92
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18176,7 +18189,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.127
+	ld	hl, _.str.27.93
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18202,7 +18215,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.127
+	ld	hl, _.str.27.93
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18217,7 +18230,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.128
+	ld	hl, _.str.28.94
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18243,7 +18256,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.128
+	ld	hl, _.str.28.94
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18258,7 +18271,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.107
+	ld	hl, _.str.7.67
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18284,7 +18297,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.107
+	ld	hl, _.str.7.67
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18335,7 +18348,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.110
+	ld	hl, _.str.10.70
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18362,7 +18375,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.110
+	ld	hl, _.str.10.70
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18377,7 +18390,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.111
+	ld	hl, _.str.11.71
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18403,7 +18416,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.111
+	ld	hl, _.str.11.71
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18425,7 +18438,7 @@ BB61_29:
 	call	_init_USB
 	bit	0, a
 	jp	z, BB61_34
-	ld	hl, _.str.112
+	ld	hl, _.str.12.72
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18451,7 +18464,7 @@ BB61_29:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.112
+	ld	hl, _.str.12.72
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18479,7 +18492,7 @@ BB61_29:
 	call	__imulu
 	push	hl
 	pop	de
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, de
 	ld	hl, (hl)
 	push	hl
@@ -18508,11 +18521,11 @@ BB61_29:
 	lea	hl, iy
 	add	hl, de
 	ex	de, hl
-	ld	hl, _.str.115
+	ld	hl, _.str.15.75
 	ld	bc, 5
 	ldir
 	push	iy
-	ld	hl, _.str.116
+	ld	hl, _.str.16.76
 	push	hl
 	call	_deleteFile
 	ld	hl, 6
@@ -18525,7 +18538,7 @@ BB61_29:
 	ld	(hl), a
 	jp	BB61_35
 BB61_34:
-	ld	hl, _.str.117
+	ld	hl, _.str.17.77
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18552,7 +18565,7 @@ BB61_34:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.117
+	ld	hl, _.str.17.77
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18567,7 +18580,7 @@ BB61_34:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -18593,7 +18606,7 @@ BB61_34:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -18661,7 +18674,7 @@ BB61_41:
 	call	__imulu
 	push	hl
 	pop	de
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, de
 	ld	hl, (hl)
 	push	hl
@@ -18681,7 +18694,7 @@ BB61_42:
 	call	__imulu
 	push	hl
 	pop	de
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, de
 	ld	hl, (hl)
 	push	hl
@@ -18838,7 +18851,7 @@ __Z17redrawSaveOptionsv:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, bc
 	ld	hl, (hl)
 	ld	(ix - 3), hl
@@ -18899,7 +18912,7 @@ BB62_3:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, bc
 	ld	hl, (hl)
 	ld	(ix - 3), hl
@@ -18962,7 +18975,7 @@ BB62_6:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, bc
 	ld	hl, (hl)
 	ld	(ix - 3), hl
@@ -19025,7 +19038,7 @@ BB62_9:
 	call	__imulu
 	push	hl
 	pop	bc
-	ld	hl, _saveNames
+	ld	hl, __ZL9saveNames
 	add	hl, bc
 	ld	hl, (hl)
 	ld	(ix - 3), hl
@@ -19193,16 +19206,16 @@ __Z14takeScreenshotv:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 111
+	lea	hl, ix - 76
 	ld	sp, hl
 	ld	hl, 76480
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	ld	hl, -2883584
-	ld	(ix - 102), hl
-	lea	hl, ix - 32
-	ld	(ix - 108), hl
-	lea	hl, ix - 96
-	ld	(ix - 105), hl
+	ld	(ix - 70), hl
+	lea	hl, ix - 16
+	ld	(ix - 76), hl
+	lea	hl, ix - 64
+	ld	(ix - 73), hl
 	ld	hl, (_cursorBackground)
 	ld	de, (_playerCursorX)
 	ld	bc, (_playerCursorY)
@@ -19214,21 +19227,21 @@ __Z14takeScreenshotv:
 	add	hl, sp
 	ld	sp, hl
 BB64_1:
-	ld	de, (ix - 99)
+	ld	de, (ix - 67)
 	ld	hl, -2806784
 	add	hl, de
 	ex	de, hl
-	ld	iy, (ix - 102)
+	ld	iy, (ix - 70)
 	lea	hl, iy
 	ld	bc, 320
 	ldir
 	ld	de, 320
 	add	iy, de
-	ld	(ix - 102), iy
+	ld	(ix - 70), iy
 	ld	de, -320
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	add	hl, de
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	or	a, a
 	sbc	hl, de
 	jr	nz, BB64_1
@@ -19246,7 +19259,7 @@ BB64_1:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.129
+	ld	hl, _.str.29.106
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -19257,16 +19270,16 @@ BB64_1:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.129
+	ld	hl, _.str.29.106
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19281,7 +19294,7 @@ BB64_1:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.130
+	ld	hl, _.str.30.107
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -19292,16 +19305,16 @@ BB64_1:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.130
+	ld	hl, _.str.30.107
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19316,7 +19329,7 @@ BB64_1:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.111
+	ld	hl, _.str.11.71
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -19327,16 +19340,16 @@ BB64_1:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.111
+	ld	hl, _.str.11.71
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19353,8 +19366,8 @@ BB64_1:
 	ld	sp, hl
 	call	_init_USB
 	bit	0, a
-	jp	z, BB64_9
-	ld	hl, _.str.112
+	jp	z, BB64_7
+	ld	hl, _.str.12.72
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -19365,16 +19378,16 @@ BB64_1:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.112
+	ld	hl, _.str.12.72
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19389,20 +19402,20 @@ BB64_1:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 105)
+	ld	hl, (ix - 73)
 	push	hl
 	call	_time
 	pop	hl
-	ld	hl, (ix - 105)
+	ld	hl, (ix - 73)
 	push	hl
 	call	_localtime
 	pop	de
 	push	hl
-	ld	hl, _.str.131
+	ld	hl, _.str.31.108
 	push	hl
-	ld	hl, 32
+	ld	hl, 16
 	push	hl
-	ld	hl, (ix - 108)
+	ld	hl, (ix - 76)
 	push	hl
 	call	_strftime
 	ld	hl, 12
@@ -19412,60 +19425,20 @@ BB64_1:
 	ld	de, 4096
 	lea	hl, iy
 	add	hl, de
-	ld	(ix - 111), hl
+	ld	(ix - 70), hl
 	ex	de, hl
-	ld	hl, ___const._Z14takeScreenshotv.header
+	ld	hl, __ZL9BMPheader
 	ld	bc, 54
 	ldir
-	ld	de, 4153
-	ld	(ix - 102), iy
-	add	iy, de
-	or	a, a
-	sbc	hl, hl
-	ld	(ix - 99), hl
-	ld	b, 3
-BB64_4:
-	ld	de, (ix - 99)
-	ld	hl, -1900032
-	add	hl, de
-	ld	de, (hl)
-	ld	a, e
-	call	__bshl
-	ld	(iy - 3), a
-	ld	l, e
-	ld	h, d
-	ld	c, 2
-	call	__sshru
-	ld	a, l
-	and	a, -8
-	ld	(iy - 2), a
-	ld	l, e
-	ld	h, d
-	ld	c, 7
-	call	__sshru
-	ld	a, l
-	and	a, -8
-	ld	(iy - 1), a
-	ld	(iy), 0
-	ld	de, 2
-	ld	hl, (ix - 99)
-	add	hl, de
-	lea	iy, iy + 4
-	ld	(ix - 99), hl
-	ld	de, 512
-	or	a, a
-	sbc	hl, de
-	jr	nz, BB64_4
 	ld	de, 5174
-	ld	hl, (ix - 102)
-	add	hl, de
-	ex	de, hl
+	add	iy, de
+	lea	de, iy
 	ld	hl, -2806784
 	ld	bc, 458
 	ldir
-	ld	hl, _.str.132
+	ld	hl, _.str.32.109
 	push	hl
-	ld	hl, _.str.113
+	ld	hl, _.str.13.73
 	push	hl
 	call	_createDirectory
 	ld	hl, 6
@@ -19473,9 +19446,9 @@ BB64_4:
 	ld	sp, hl
 	ld	hl, 1
 	push	hl
-	ld	hl, (ix - 108)
+	ld	hl, (ix - 76)
 	push	hl
-	ld	hl, _.str.133
+	ld	hl, _.str.33.110
 	push	hl
 	call	_openFile
 	push	hl
@@ -19488,23 +19461,23 @@ BB64_4:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jp	z, BB64_10
+	jp	z, BB64_8
 	or	a, a
 	sbc	hl, hl
 	push	hl
 	ld	hl, 77878
 	push	hl
 	push	de
-	ld	(ix - 99), de
+	ld	(ix - 67), de
 	call	_fat_SetFileSize
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 111)
+	ld	hl, (ix - 70)
 	push	hl
 	ld	hl, 3
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_fat_WriteFile
 	ld	iy, 9
@@ -19513,8 +19486,8 @@ BB64_4:
 	ld	de, 3
 	or	a, a
 	sbc	hl, de
-	jp	nz, BB64_16
-	ld	hl, _.str.134
+	jp	nz, BB64_14
+	ld	hl, _.str.34.111
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -19525,16 +19498,16 @@ BB64_4:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 102), hl
+	ld	(ix - 70), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 102)
+	ld	hl, (ix - 70)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.134
+	ld	hl, _.str.34.111
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19553,54 +19526,54 @@ BB64_4:
 	push	hl
 	ld	hl, 150
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_fat_WriteFile
-	ld	(ix - 102), hl
+	ld	(ix - 70), hl
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_fat_CloseFile
 	pop	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_free
 	pop	hl
 	ld	de, 150
-	ld	hl, (ix - 102)
+	ld	hl, (ix - 70)
 	or	a, a
 	sbc	hl, de
-	jp	nz, BB64_10
-	ld	iy, (ix - 105)
+	jp	nz, BB64_8
+	ld	iy, (ix - 73)
 	lea	de, iy
 	ld	hl, ___const._Z14takeScreenshotv.buffer
-	ld	bc, 64
+	ld	bc, 48
 	ldir
-	ld	hl, (ix - 108)
+	ld	hl, (ix - 76)
 	push	hl
 	push	iy
 	call	_strcat
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 105)
+	ld	hl, (ix - 73)
 	push	hl
 	call	_strlen
 	push	hl
 	pop	de
 	pop	hl
-	ld	bc, (ix - 105)
+	ld	bc, (ix - 73)
 	push	bc
 	pop	iy
 	add	iy, de
-	ld	hl, _.str.135
+	ld	hl, _.str.35.112
 	ld	a, (hl)
 	ld	(iy), a
-	ld	a, (_.str.135+1)
+	ld	a, (_.str.35.112+1)
 	ld	(iy + 1), a
-	ld	a, (_.str.135+2)
+	ld	a, (_.str.35.112+2)
 	ld	(iy + 2), a
 	push	bc
 	call	_gfx_GetStringWidth
@@ -19612,16 +19585,16 @@ BB64_4:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 105)
+	ld	hl, (ix - 73)
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19636,7 +19609,7 @@ BB64_4:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.118
+	ld	hl, _.str.18.78
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -19647,39 +19620,76 @@ BB64_4:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.118
-	jp	BB64_11
+	ld	hl, _.str.18.78
+	jp	BB64_9
+BB64_7:
+	ld	hl, _.str.17.77
+	push	hl
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	c, 1
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 67), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 67)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.17.77
+	push	hl
+	call	_gfx_PrintString
+	pop	hl
+	call	_gfx_GetTextY
+	ld	de, 10
+	add	hl, de
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+BB64_8:
+	ld	hl, _.str.36.113
+	push	hl
+	call	_gfx_GetStringWidth
+	pop	de
+	ld	c, 1
+	call	__ishru
+	push	hl
+	pop	de
+	ld	hl, 160
+	or	a, a
+	sbc	hl, de
+	ld	(ix - 67), hl
+	call	_gfx_GetTextY
+	push	hl
+	ld	hl, (ix - 67)
+	push	hl
+	call	_gfx_SetTextXY
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.36.113
 BB64_9:
-	ld	hl, _.str.117
-	push	hl
-	call	_gfx_GetStringWidth
-	pop	de
-	ld	c, 1
-	call	__ishru
-	push	hl
-	pop	de
-	ld	hl, 160
-	or	a, a
-	sbc	hl, de
-	ld	(ix - 99), hl
-	call	_gfx_GetTextY
-	push	hl
-	ld	hl, (ix - 99)
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.117
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19694,8 +19704,7 @@ BB64_9:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-BB64_10:
-	ld	hl, _.str.136
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_GetStringWidth
 	pop	de
@@ -19706,52 +19715,16 @@ BB64_10:
 	ld	hl, 160
 	or	a, a
 	sbc	hl, de
-	ld	(ix - 99), hl
+	ld	(ix - 67), hl
 	call	_gfx_GetTextY
 	push	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_gfx_SetTextXY
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, _.str.136
-BB64_11:
-	push	hl
-	call	_gfx_PrintString
-	pop	hl
-	call	_gfx_GetTextY
-	ld	de, 10
-	add	hl, de
-	push	hl
-	or	a, a
-	sbc	hl, hl
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.101
-	push	hl
-	call	_gfx_GetStringWidth
-	pop	de
-	ld	c, 1
-	call	__ishru
-	push	hl
-	pop	de
-	ld	hl, 160
-	or	a, a
-	sbc	hl, de
-	ld	(ix - 99), hl
-	call	_gfx_GetTextY
-	push	hl
-	ld	hl, (ix - 99)
-	push	hl
-	call	_gfx_SetTextXY
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.101
+	ld	hl, _.str.1.57
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19771,40 +19744,40 @@ BB64_11:
 	lea	hl, iy
 	add	hl, de
 	bit	0, (hl)
-	jr	z, BB64_13
+	jr	z, BB64_11
 	ld	de, 1027
 	add	iy, de
 	push	iy
 	call	_fat_Close
 	pop	hl
 	ld	iy, (_global)
-BB64_13:
+BB64_11:
 	ld	de, 1795
 	add	iy, de
 	bit	0, (iy)
-	jr	z, BB64_15
+	jr	z, BB64_13
 	call	_usb_WaitForEvents
 	ld	iy, (_global)
 	pea	iy + 3
 	call	_msd_Close
 	pop	hl
-BB64_15:
+BB64_13:
 	call	_usb_Cleanup
 	call	_os_GetKey
 	call	__Z10drawScreenv
 	ld	sp, ix
 	pop	ix
 	ret
-BB64_16:
-	ld	hl, (ix - 99)
+BB64_14:
+	ld	hl, (ix - 67)
 	push	hl
 	call	_fat_CloseFile
 	pop	hl
-	ld	hl, (ix - 99)
+	ld	hl, (ix - 67)
 	push	hl
 	call	_free
 	pop	hl
-	jp	BB64_10
+	jp	BB64_8
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -20961,610 +20934,6 @@ _cubePolygons:
 _outlineColor:
 	rb	1
 
-	section	.rodata,"a",@progbits
-	private	_.str.56
-_.str.56:
-	db	"WORLD1", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.1.57
-_.str.1.57:
-	db	"WORLD2", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.2.58
-_.str.2.58:
-	db	"WORLD3", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.3.59
-_.str.3.59:
-	db	"WORLD4", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.4.60
-_.str.4.60:
-	db	"WORLD5", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.5.61
-_.str.5.61:
-	db	"WORLD6", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.6.62
-_.str.6.62:
-	db	"WORLD7", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.7.63
-_.str.7.63:
-	db	"WORLD8", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.8.64
-_.str.8.64:
-	db	"WORLD9", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.9.65
-_.str.9.65:
-	db	"WORLD10", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.10.66
-_.str.10.66:
-	db	"WORLD11", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.11.67
-_.str.11.67:
-	db	"WORLD12", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.12.68
-_.str.12.68:
-	db	"WORLD13", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.13.69
-_.str.13.69:
-	db	"WORLD14", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.14.70
-_.str.14.70:
-	db	"WORLD15", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.15.71
-_.str.15.71:
-	db	"WORLD16", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.16.72
-_.str.16.72:
-	db	"WORLD17", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.17.73
-_.str.17.73:
-	db	"WORLD18", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.18.74
-_.str.18.74:
-	db	"WORLD19", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.19.75
-_.str.19.75:
-	db	"WORLD20", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.20.76
-_.str.20.76:
-	db	"WORLD21", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.21.77
-_.str.21.77:
-	db	"WORLD22", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.22.78
-_.str.22.78:
-	db	"WORLD23", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.23.79
-_.str.23.79:
-	db	"WORLD24", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.24.80
-_.str.24.80:
-	db	"WORLD25", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.25.81
-_.str.25.81:
-	db	"WORLD26", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.26.82
-_.str.26.82:
-	db	"WORLD27", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.27.83
-_.str.27.83:
-	db	"WORLD28", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.28.84
-_.str.28.84:
-	db	"WORLD29", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.29.85
-_.str.29.85:
-	db	"WORLD30", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.30.86
-_.str.30.86:
-	db	"WORLD31", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.31.87
-_.str.31.87:
-	db	"WORLD32", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.32.88
-_.str.32.88:
-	db	"WORLD33", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.33.89
-_.str.33.89:
-	db	"WORLD34", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.34.90
-_.str.34.90:
-	db	"WORLD35", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.35.91
-_.str.35.91:
-	db	"WORLD36", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.36.92
-_.str.36.92:
-	db	"WORLD37", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.37.93
-_.str.37.93:
-	db	"WORLD38", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.38.94
-_.str.38.94:
-	db	"WORLD39", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.39.95
-_.str.39.95:
-	db	"WORLD40", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.40.96
-_.str.40.96:
-	db	"WORLD41", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.41.97
-_.str.41.97:
-	db	"WORLD42", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.42.98
-_.str.42.98:
-	db	"WORLD43", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.43.99
-_.str.43.99:
-	db	"WORLD44", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.44.100
-_.str.44.100:
-	db	"WORLD45", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.45
-_.str.45:
-	db	"WORLD46", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.46
-_.str.46:
-	db	"WORLD47", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.47
-_.str.47:
-	db	"WORLD48", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.48
-_.str.48:
-	db	"WORLD49", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.49
-_.str.49:
-	db	"WORLD50", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.50
-_.str.50:
-	db	"WORLD51", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.51
-_.str.51:
-	db	"WORLD52", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.52
-_.str.52:
-	db	"WORLD53", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.53
-_.str.53:
-	db	"WORLD54", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.54
-_.str.54:
-	db	"WORLD55", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.55
-_.str.55:
-	db	"WORLD56", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.56.101
-_.str.56.101:
-	db	"WORLD57", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.57
-_.str.57:
-	db	"WORLD58", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.58
-_.str.58:
-	db	"WORLD59", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.59
-_.str.59:
-	db	"WORLD60", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.60
-_.str.60:
-	db	"WORLD61", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.61
-_.str.61:
-	db	"WORLD62", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.62
-_.str.62:
-	db	"WORLD63", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.63
-_.str.63:
-	db	"WORLD64", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.64
-_.str.64:
-	db	"WORLD65", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.65
-_.str.65:
-	db	"WORLD66", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.66
-_.str.66:
-	db	"WORLD67", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.67
-_.str.67:
-	db	"WORLD68", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.68
-_.str.68:
-	db	"WORLD69", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.69
-_.str.69:
-	db	"WORLD70", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.70
-_.str.70:
-	db	"WORLD71", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.71
-_.str.71:
-	db	"WORLD72", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.72
-_.str.72:
-	db	"WORLD73", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.73
-_.str.73:
-	db	"WORLD74", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.74
-_.str.74:
-	db	"WORLD75", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.75
-_.str.75:
-	db	"WORLD76", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.76
-_.str.76:
-	db	"WORLD77", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.77
-_.str.77:
-	db	"WORLD78", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.78
-_.str.78:
-	db	"WORLD79", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.79
-_.str.79:
-	db	"WORLD80", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.80
-_.str.80:
-	db	"WORLD81", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.81
-_.str.81:
-	db	"WORLD82", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.82
-_.str.82:
-	db	"WORLD83", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.83
-_.str.83:
-	db	"WORLD84", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.84
-_.str.84:
-	db	"WORLD85", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.85
-_.str.85:
-	db	"WORLD86", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.86
-_.str.86:
-	db	"WORLD87", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.87
-_.str.87:
-	db	"WORLD88", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.88
-_.str.88:
-	db	"WORLD89", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.89
-_.str.89:
-	db	"WORLD90", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.90
-_.str.90:
-	db	"WORLD91", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.91
-_.str.91:
-	db	"WORLD92", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.92
-_.str.92:
-	db	"WORLD93", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.93
-_.str.93:
-	db	"WORLD94", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.94
-_.str.94:
-	db	"WORLD95", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.95
-_.str.95:
-	db	"WORLD96", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.96
-_.str.96:
-	db	"WORLD97", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.97
-_.str.97:
-	db	"WORLD98", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.98
-_.str.98:
-	db	"WORLD99", 0
-
-	section	.rodata,"a",@progbits
-	private	_.str.99
-_.str.99:
-	db	"WORLD100", 0
-
-	section	.data,"aw",@progbits
-	public	_saveNames
-_saveNames:
-	dl	_.str.56
-	dl	_.str.1.57
-	dl	_.str.2.58
-	dl	_.str.3.59
-	dl	_.str.4.60
-	dl	_.str.5.61
-	dl	_.str.6.62
-	dl	_.str.7.63
-	dl	_.str.8.64
-	dl	_.str.9.65
-	dl	_.str.10.66
-	dl	_.str.11.67
-	dl	_.str.12.68
-	dl	_.str.13.69
-	dl	_.str.14.70
-	dl	_.str.15.71
-	dl	_.str.16.72
-	dl	_.str.17.73
-	dl	_.str.18.74
-	dl	_.str.19.75
-	dl	_.str.20.76
-	dl	_.str.21.77
-	dl	_.str.22.78
-	dl	_.str.23.79
-	dl	_.str.24.80
-	dl	_.str.25.81
-	dl	_.str.26.82
-	dl	_.str.27.83
-	dl	_.str.28.84
-	dl	_.str.29.85
-	dl	_.str.30.86
-	dl	_.str.31.87
-	dl	_.str.32.88
-	dl	_.str.33.89
-	dl	_.str.34.90
-	dl	_.str.35.91
-	dl	_.str.36.92
-	dl	_.str.37.93
-	dl	_.str.38.94
-	dl	_.str.39.95
-	dl	_.str.40.96
-	dl	_.str.41.97
-	dl	_.str.42.98
-	dl	_.str.43.99
-	dl	_.str.44.100
-	dl	_.str.45
-	dl	_.str.46
-	dl	_.str.47
-	dl	_.str.48
-	dl	_.str.49
-	dl	_.str.50
-	dl	_.str.51
-	dl	_.str.52
-	dl	_.str.53
-	dl	_.str.54
-	dl	_.str.55
-	dl	_.str.56.101
-	dl	_.str.57
-	dl	_.str.58
-	dl	_.str.59
-	dl	_.str.60
-	dl	_.str.61
-	dl	_.str.62
-	dl	_.str.63
-	dl	_.str.64
-	dl	_.str.65
-	dl	_.str.66
-	dl	_.str.67
-	dl	_.str.68
-	dl	_.str.69
-	dl	_.str.70
-	dl	_.str.71
-	dl	_.str.72
-	dl	_.str.73
-	dl	_.str.74
-	dl	_.str.75
-	dl	_.str.76
-	dl	_.str.77
-	dl	_.str.78
-	dl	_.str.79
-	dl	_.str.80
-	dl	_.str.81
-	dl	_.str.82
-	dl	_.str.83
-	dl	_.str.84
-	dl	_.str.85
-	dl	_.str.86
-	dl	_.str.87
-	dl	_.str.88
-	dl	_.str.89
-	dl	_.str.90
-	dl	_.str.91
-	dl	_.str.92
-	dl	_.str.93
-	dl	_.str.94
-	dl	_.str.95
-	dl	_.str.96
-	dl	_.str.97
-	dl	_.str.98
-	dl	_.str.99
-
 	section	.bss,"aw",@nobits
 	public	_selectedSave
 _selectedSave:
@@ -21576,23 +20945,23 @@ _offset:
 	rb	1
 
 	section	.rodata,"a",@progbits
-	private	_.str.100
-_.str.100:
+	private	_.str.56
+_.str.56:
 	db	"Failed to save.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.101
-_.str.101:
+	private	_.str.1.57
+_.str.1.57:
 	db	"Press any key to continue.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.102
-_.str.102:
+	private	_.str.2.58
+_.str.2.58:
 	db	"Failed to load save.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.103
-_.str.103:
+	private	_.str.3.63
+_.str.3.63:
 	db	"Generating save file, please wait...", 0
 
 	section	.data,"aw",@progbits
@@ -21607,8 +20976,8 @@ _playerCursor:
 	db	1
 
 	section	.rodata,"a",@progbits
-	private	_.str.104
-_.str.104:
+	private	_.str.4.64
+_.str.4.64:
 	db	"BLOCKS", 0
 
 	section	.bss,"aw",@nobits
@@ -21642,93 +21011,93 @@ _angleY:
 	dd	0x42340000
 
 	section	.rodata,"a",@progbits
-	private	_.str.105
-_.str.105:
+	private	_.str.5.65
+_.str.5.65:
 	db	"Would you like to save to archive or USB?", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.106
-_.str.106:
+	private	_.str.6.66
+_.str.6.66:
 	db	"Press 1 for archive, press 2 for USB.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.107
-_.str.107:
+	private	_.str.7.67
+_.str.7.67:
 	db	"Or press clear to cancel.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.108
-_.str.108:
+	private	_.str.8.68
+_.str.8.68:
 	db	"w+", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.109
-_.str.109:
+	private	_.str.9.69
+_.str.9.69:
 	db	"Failed to write save", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.110
-_.str.110:
+	private	_.str.10.70
+_.str.10.70:
 	db	"Please plug in a FAT32 formatted USB drive now.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.111
-_.str.111:
+	private	_.str.11.71
+_.str.11.71:
 	db	"Press any key to cancel", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.112
-_.str.112:
+	private	_.str.12.72
+_.str.12.72:
 	db	"Please do not disconnect the USB drive.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.113
-_.str.113:
+	private	_.str.13.73
+_.str.13.73:
 	db	"/", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.114
-_.str.114:
+	private	_.str.14.74
+_.str.14.74:
 	db	"SAVES", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.115
-_.str.115:
+	private	_.str.15.75
+_.str.15.75:
 	db	".SAV", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.116
-_.str.116:
+	private	_.str.16.76
+_.str.16.76:
 	db	"/SAVES", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.117
-_.str.117:
+	private	_.str.17.77
+_.str.17.77:
 	db	"Failed to init USB.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.118
-_.str.118:
+	private	_.str.18.78
+_.str.18.78:
 	db	"You may now remove the drive.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.119
-_.str.119:
+	private	_.str.19.79
+_.str.19.79:
 	db	"Are you sure you don't want to save?", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.120
-_.str.120:
+	private	_.str.20.80
+_.str.20.80:
 	db	"Press 1 for yes, 2 for no.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.123
-_.str.123:
+	private	_.str.23.84
+_.str.23.84:
 	db	"Wrong save file version", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.124
-_.str.124:
+	private	_.str.24.85
+_.str.24.85:
 	db	"Bad checksum.", 0
 
 	section	.data,"aw",@progbits
@@ -21817,24 +21186,128 @@ _nsxcyd:
 	rb	3
 
 	section	.rodata,"a",@progbits
+	private	__ZL9saveNames
+__ZL9saveNames:
+	dl	_.str.37.95
+	dl	_.str.38.96
+	dl	_.str.39.97
+	dl	_.str.40.98
+	dl	_.str.41.99
+	dl	_.str.42.100
+	dl	_.str.43.101
+	dl	_.str.44.102
+	dl	_.str.45
+	dl	_.str.46
+	dl	_.str.47
+	dl	_.str.48
+	dl	_.str.49
+	dl	_.str.50
+	dl	_.str.51
+	dl	_.str.52
+	dl	_.str.53
+	dl	_.str.54
+	dl	_.str.55
+	dl	_.str.56.103
+	dl	_.str.57
+	dl	_.str.58
+	dl	_.str.59
+	dl	_.str.60
+	dl	_.str.61
+	dl	_.str.62
+	dl	_.str.63
+	dl	_.str.64
+	dl	_.str.65
+	dl	_.str.66
+	dl	_.str.67
+	dl	_.str.68
+	dl	_.str.69
+	dl	_.str.70
+	dl	_.str.71
+	dl	_.str.72
+	dl	_.str.73
+	dl	_.str.74
+	dl	_.str.75
+	dl	_.str.76
+	dl	_.str.77
+	dl	_.str.78
+	dl	_.str.79
+	dl	_.str.80
+	dl	_.str.81
+	dl	_.str.82
+	dl	_.str.83
+	dl	_.str.84
+	dl	_.str.85
+	dl	_.str.86
+	dl	_.str.87
+	dl	_.str.88
+	dl	_.str.89
+	dl	_.str.90
+	dl	_.str.91
+	dl	_.str.92
+	dl	_.str.93
+	dl	_.str.94
+	dl	_.str.95
+	dl	_.str.96
+	dl	_.str.97
+	dl	_.str.98
+	dl	_.str.99
+	dl	_.str.100
+	dl	_.str.101
+	dl	_.str.102
+	dl	_.str.103
+	dl	_.str.104
+	dl	_.str.105
+	dl	_.str.106
+	dl	_.str.107
+	dl	_.str.108
+	dl	_.str.109
+	dl	_.str.110
+	dl	_.str.111
+	dl	_.str.112
+	dl	_.str.113
+	dl	_.str.114
+	dl	_.str.115
+	dl	_.str.116
+	dl	_.str.117
+	dl	_.str.118
+	dl	_.str.119
+	dl	_.str.120
+	dl	_.str.121
+	dl	_.str.122
+	dl	_.str.123
+	dl	_.str.124
+	dl	_.str.125
+	dl	_.str.126
+	dl	_.str.127
+	dl	_.str.128
+	dl	_.str.129
+	dl	_.str.130
+	dl	_.str.131
+	dl	_.str.132
+	dl	_.str.133
+	dl	_.str.134
+	dl	_.str.135
+	dl	_.str.136
+
+	section	.rodata,"a",@progbits
 	private	___const._Z8mainMenuPcj.buffer
 ___const._Z8mainMenuPcj.buffer:
 	db	"Are you sure you'd like to delete "
 	db	66 dup 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.126
-_.str.126:
+	private	_.str.26.92
+_.str.26.92:
 	db	"Would you like to delete the save from", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.127
-_.str.127:
+	private	_.str.27.93
+_.str.27.93:
 	db	"archive or USB?", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.128
-_.str.128:
+	private	_.str.28.94
+_.str.28.94:
 	db	"Press 1 for archive, 2 for USB.", 0
 
 	section	.bss,"aw",@nobits
@@ -21843,55 +21316,555 @@ _cursorBackground:
 	rb	3
 
 	section	.rodata,"a",@progbits
-	private	_.str.129
-_.str.129:
+	private	_.str.29.106
+_.str.29.106:
 	db	"Please plug in a FAT32 formatted USB drive", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.130
-_.str.130:
+	private	_.str.30.107
+_.str.30.107:
 	db	"to save the screenshot to now.", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.131
-_.str.131:
+	private	_.str.31.108
+_.str.31.108:
 	db	"%H%M-%j.BMP", 0
 
 	section	.rodata,"a",@progbits
-	private	___const._Z14takeScreenshotv.header
-___const._Z14takeScreenshotv.header:
+	private	__ZL9BMPheader
+__ZL9BMPheader:
 	db	"BM60", 0, 0, 0, 0, 0, "6", 0, 0, "(", 0, 0, 0, "@", 0, 0, "ð", 0, 0, 0, "", 0, "", 0, 0, 0, 0, 0, 0, ",", 0, "#.", 0, 0, "#.", 0, 0, 0, "", 0, 0, 0, 0, 0, 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.132
-_.str.132:
+	private	_.str.32.109
+_.str.32.109:
 	db	"SHOTS", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.133
-_.str.133:
+	private	_.str.33.110
+_.str.33.110:
 	db	"/SHOTS", 0
 
 	section	.rodata,"a",@progbits
-	private	_.str.134
-_.str.134:
+	private	_.str.34.111
+_.str.34.111:
 	db	"Writing image data", 0
 
 	section	.rodata,"a",@progbits
 	private	___const._Z14takeScreenshotv.buffer
 ___const._Z14takeScreenshotv.buffer:
 	db	"Screenshot saved as ""SHOTS\"
-	db	37 dup 0
+	db	21 dup 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.35.112
+_.str.35.112:
+	db	""".", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.36.113
+_.str.36.113:
+	db	"Failed to write screenshot.", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.37.95
+_.str.37.95:
+	db	"WORLD1", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.38.96
+_.str.38.96:
+	db	"WORLD2", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.39.97
+_.str.39.97:
+	db	"WORLD3", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.40.98
+_.str.40.98:
+	db	"WORLD4", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.41.99
+_.str.41.99:
+	db	"WORLD5", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.42.100
+_.str.42.100:
+	db	"WORLD6", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.43.101
+_.str.43.101:
+	db	"WORLD7", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.44.102
+_.str.44.102:
+	db	"WORLD8", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.45
+_.str.45:
+	db	"WORLD9", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.46
+_.str.46:
+	db	"WORLD10", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.47
+_.str.47:
+	db	"WORLD11", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.48
+_.str.48:
+	db	"WORLD12", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.49
+_.str.49:
+	db	"WORLD13", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.50
+_.str.50:
+	db	"WORLD14", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.51
+_.str.51:
+	db	"WORLD15", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.52
+_.str.52:
+	db	"WORLD16", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.53
+_.str.53:
+	db	"WORLD17", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.54
+_.str.54:
+	db	"WORLD18", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.55
+_.str.55:
+	db	"WORLD19", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.56.103
+_.str.56.103:
+	db	"WORLD20", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.57
+_.str.57:
+	db	"WORLD21", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.58
+_.str.58:
+	db	"WORLD22", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.59
+_.str.59:
+	db	"WORLD23", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.60
+_.str.60:
+	db	"WORLD24", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.61
+_.str.61:
+	db	"WORLD25", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.62
+_.str.62:
+	db	"WORLD26", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.63
+_.str.63:
+	db	"WORLD27", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.64
+_.str.64:
+	db	"WORLD28", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.65
+_.str.65:
+	db	"WORLD29", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.66
+_.str.66:
+	db	"WORLD30", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.67
+_.str.67:
+	db	"WORLD31", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.68
+_.str.68:
+	db	"WORLD32", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.69
+_.str.69:
+	db	"WORLD33", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.70
+_.str.70:
+	db	"WORLD34", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.71
+_.str.71:
+	db	"WORLD35", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.72
+_.str.72:
+	db	"WORLD36", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.73
+_.str.73:
+	db	"WORLD37", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.74
+_.str.74:
+	db	"WORLD38", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.75
+_.str.75:
+	db	"WORLD39", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.76
+_.str.76:
+	db	"WORLD40", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.77
+_.str.77:
+	db	"WORLD41", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.78
+_.str.78:
+	db	"WORLD42", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.79
+_.str.79:
+	db	"WORLD43", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.80
+_.str.80:
+	db	"WORLD44", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.81
+_.str.81:
+	db	"WORLD45", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.82
+_.str.82:
+	db	"WORLD46", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.83
+_.str.83:
+	db	"WORLD47", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.84
+_.str.84:
+	db	"WORLD48", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.85
+_.str.85:
+	db	"WORLD49", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.86
+_.str.86:
+	db	"WORLD50", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.87
+_.str.87:
+	db	"WORLD51", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.88
+_.str.88:
+	db	"WORLD52", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.89
+_.str.89:
+	db	"WORLD53", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.90
+_.str.90:
+	db	"WORLD54", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.91
+_.str.91:
+	db	"WORLD55", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.92
+_.str.92:
+	db	"WORLD56", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.93
+_.str.93:
+	db	"WORLD57", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.94
+_.str.94:
+	db	"WORLD58", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.95
+_.str.95:
+	db	"WORLD59", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.96
+_.str.96:
+	db	"WORLD60", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.97
+_.str.97:
+	db	"WORLD61", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.98
+_.str.98:
+	db	"WORLD62", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.99
+_.str.99:
+	db	"WORLD63", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.100
+_.str.100:
+	db	"WORLD64", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.101
+_.str.101:
+	db	"WORLD65", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.102
+_.str.102:
+	db	"WORLD66", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.103
+_.str.103:
+	db	"WORLD67", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.104
+_.str.104:
+	db	"WORLD68", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.105
+_.str.105:
+	db	"WORLD69", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.106
+_.str.106:
+	db	"WORLD70", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.107
+_.str.107:
+	db	"WORLD71", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.108
+_.str.108:
+	db	"WORLD72", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.109
+_.str.109:
+	db	"WORLD73", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.110
+_.str.110:
+	db	"WORLD74", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.111
+_.str.111:
+	db	"WORLD75", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.112
+_.str.112:
+	db	"WORLD76", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.113
+_.str.113:
+	db	"WORLD77", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.114
+_.str.114:
+	db	"WORLD78", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.115
+_.str.115:
+	db	"WORLD79", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.116
+_.str.116:
+	db	"WORLD80", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.117
+_.str.117:
+	db	"WORLD81", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.118
+_.str.118:
+	db	"WORLD82", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.119
+_.str.119:
+	db	"WORLD83", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.120
+_.str.120:
+	db	"WORLD84", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.121
+_.str.121:
+	db	"WORLD85", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.122
+_.str.122:
+	db	"WORLD86", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.123
+_.str.123:
+	db	"WORLD87", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.124
+_.str.124:
+	db	"WORLD88", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.125
+_.str.125:
+	db	"WORLD89", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.126
+_.str.126:
+	db	"WORLD90", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.127
+_.str.127:
+	db	"WORLD91", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.128
+_.str.128:
+	db	"WORLD92", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.129
+_.str.129:
+	db	"WORLD93", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.130
+_.str.130:
+	db	"WORLD94", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.131
+_.str.131:
+	db	"WORLD95", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.132
+_.str.132:
+	db	"WORLD96", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.133
+_.str.133:
+	db	"WORLD97", 0
+
+	section	.rodata,"a",@progbits
+	private	_.str.134
+_.str.134:
+	db	"WORLD98", 0
 
 	section	.rodata,"a",@progbits
 	private	_.str.135
 _.str.135:
-	db	""".", 0
+	db	"WORLD99", 0
 
 	section	.rodata,"a",@progbits
 	private	_.str.136
 _.str.136:
-	db	"Failed to write screenshot.", 0
+	db	"WORLD100", 0
 
 	section	.bss,"aw",@nobits
 	public	_texturePackName
@@ -22244,10 +22217,9 @@ _.str.137:
 	extern	__sshl
 	extern	_strncpy
 	extern	_os_DrawStatusBar
-	extern	__sshru
 	extern	_strlen
-	extern	_ti_Read
 	extern	_msd_FindPartitions
+	extern	_ti_Read
 	extern	_fat_ReadFile
 	extern	__iand
 	extern	_gfx_FillRectangle
@@ -22333,7 +22305,6 @@ _.str.137:
 	extern	_os_ResetFlagBits
 	extern	_gfx_SetColor
 	extern	__land
-	extern	__bshl
 	extern	_os_FontDrawText
 	extern	_fat_OpenFile
 	extern	_gfx_PrintStringXY

@@ -544,7 +544,6 @@ void resetCamera() {
     cxsy = 0.612372436f;
     cxcy = 0.612372436f;
     // d means delta
-    // Need to be updated if cubeSize changes
     cxd = 0.8660254037844387f*static_cast<float>(cubeSize);
     nsxd = 0.49999999999999994f*static_cast<float>(cubeSize);
     cyd = 0.7071067811865476f*static_cast<float>(cubeSize);

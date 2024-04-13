@@ -14,7 +14,9 @@ extern "C" {
     #include "printString.h"
 }
 // I want to include save file compression... just thinking about how, especially without breaking backwards compatibility.
-const char* saveNames[] = {"WORLD1","WORLD2","WORLD3","WORLD4","WORLD5","WORLD6","WORLD7","WORLD8","WORLD9","WORLD10","WORLD11","WORLD12","WORLD13","WORLD14","WORLD15","WORLD16","WORLD17","WORLD18","WORLD19","WORLD20","WORLD21","WORLD22","WORLD23","WORLD24","WORLD25","WORLD26","WORLD27","WORLD28","WORLD29","WORLD30","WORLD31","WORLD32","WORLD33","WORLD34","WORLD35","WORLD36","WORLD37","WORLD38","WORLD39","WORLD40","WORLD41","WORLD42","WORLD43","WORLD44","WORLD45","WORLD46","WORLD47","WORLD48","WORLD49","WORLD50","WORLD51","WORLD52","WORLD53","WORLD54","WORLD55","WORLD56","WORLD57","WORLD58","WORLD59","WORLD60","WORLD61","WORLD62","WORLD63","WORLD64","WORLD65","WORLD66","WORLD67","WORLD68","WORLD69","WORLD70","WORLD71","WORLD72","WORLD73","WORLD74","WORLD75","WORLD76","WORLD77","WORLD78","WORLD79","WORLD80","WORLD81","WORLD82","WORLD83","WORLD84","WORLD85","WORLD86","WORLD87","WORLD88","WORLD89","WORLD90","WORLD91","WORLD92","WORLD93","WORLD94","WORLD95","WORLD96","WORLD97","WORLD98","WORLD99", "WORLD100"};
+const char* const saveNames[] = {"WORLD1","WORLD2","WORLD3","WORLD4","WORLD5","WORLD6","WORLD7","WORLD8","WORLD9","WORLD10","WORLD11","WORLD12","WORLD13","WORLD14","WORLD15","WORLD16","WORLD17","WORLD18","WORLD19","WORLD20","WORLD21","WORLD22","WORLD23","WORLD24","WORLD25","WORLD26","WORLD27","WORLD28","WORLD29","WORLD30","WORLD31","WORLD32","WORLD33","WORLD34","WORLD35","WORLD36","WORLD37","WORLD38","WORLD39","WORLD40","WORLD41","WORLD42","WORLD43","WORLD44","WORLD45","WORLD46","WORLD47","WORLD48","WORLD49","WORLD50","WORLD51","WORLD52","WORLD53","WORLD54","WORLD55","WORLD56","WORLD57","WORLD58","WORLD59","WORLD60","WORLD61","WORLD62","WORLD63","WORLD64","WORLD65","WORLD66","WORLD67","WORLD68","WORLD69","WORLD70","WORLD71","WORLD72","WORLD73","WORLD74","WORLD75","WORLD76","WORLD77","WORLD78","WORLD79","WORLD80","WORLD81","WORLD82","WORLD83","WORLD84","WORLD85","WORLD86","WORLD87","WORLD88","WORLD89","WORLD90","WORLD91","WORLD92","WORLD93","WORLD94","WORLD95","WORLD96","WORLD97","WORLD98","WORLD99", "WORLD100"};
+// hilarious how most of this header is zeros.
+const unsigned char BMPheader[] = {'B', 'M', 54, 48, 1, 0, 0, 0, 0, 0, 54, 4, 0, 0, 40, 0, 0, 0, 64, 1, 0, 0, 240, 0, 0, 0, 1, 0, 8, 0, 0, 0, 0, 0, 0, 44, 1, 0, 35, 46, 0, 0, 35, 46, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0};
 uint8_t selectedSave = 0;
 uint8_t offset = 0;
 
@@ -505,24 +507,24 @@ void takeScreenshot() {
     printStringAndMoveDownCentered("Please plug in a FAT32 formatted USB drive");
     printStringAndMoveDownCentered("to save the screenshot to now.");
     printStringAndMoveDownCentered("Press any key to cancel");
-    char name[32];
+    char name[16];
     bool good = false;
     if (init_USB()) {
         printStringAndMoveDownCentered("Please do not disconnect the USB drive.");
         time_t currentTime;
         time(&currentTime);
         tm* currentLocalTime = localtime(&currentTime);
-        strftime(name, 32, "%H%M-%j.BMP", currentLocalTime);
+        strftime(name, 16, "%H%M-%j.BMP", currentLocalTime);
         // actual header data is 1078B
-        unsigned char header[] = {'B', 'M', 54, 48, 1, 0, 0, 0, 0, 0, 54, 4, 0, 0, 40, 0, 0, 0, 64, 1, 0, 0, 240, 0, 0, 0, 1, 0, 8, 0, 0, 0, 0, 0, 0, 44, 1, 0, 35, 46, 0, 0, 35, 46, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0};
         unsigned char* headerBuffer = ((unsigned char*)cursorBackground) + 4096;
-        memcpy(headerBuffer, header, 54);
-        for (unsigned int i = 0; i < 256; i++) {
+        memcpy(headerBuffer, BMPheader, 54);
+        for (unsigned int i,j = 0; i < 256; i++) {
             uint16_t color = gfx_palette[i];
-            headerBuffer[(i<<2)+54] = (color & 0x001F)<<3;
-            headerBuffer[(i<<2)+55] = (color & 0x03E0)>>2;
-            headerBuffer[(i<<2)+56] = (color & 0x7C00)>>7;
-            headerBuffer[(i<<2)+57] = 0;
+            headerBuffer[(j)+54] = (color & 0x001F)<<3;
+            headerBuffer[(j)+55] = (color & 0x03E0)>>2;
+            headerBuffer[(j)+56] = (color & 0x7C00)>>7;
+            headerBuffer[(j)+57] = 0;
+            j += 4;
         }
         memcpy(headerBuffer + 1078, gfx_vram + (LCD_WIDTH*LCD_HEIGHT), 458);
         createDirectory("/", "SHOTS");
@@ -540,7 +542,7 @@ void takeScreenshot() {
         printStringAndMoveDownCentered("Failed to init USB.");
     }
     if (good) {
-        char buffer[64] = "Screenshot saved as \"SHOTS\\";
+        char buffer[48] = "Screenshot saved as \"SHOTS\\";
         strcat(buffer, name);
         strcat(buffer, "\".");
         printStringAndMoveDownCentered(buffer);

@@ -42,6 +42,7 @@ Doing a re-render will be INSANELY expensive
 
 struct packEntry {
     texturePack* pack;
+    char* filename;
     unsigned int size;
 };
 
@@ -136,10 +137,10 @@ int main() {
         }
         toSaveOrNotToSave = checkSave(nameBuffer, usb);
         fillDirt();
-        gfx_sprite_t* background2 = (gfx_sprite_t*)(((uint8_t*) cursorBackground) + 6402);
+        gfx_sprite_t* background2 = (gfx_sprite_t*)(cursorBackground->data + 6400);
         cursorBackground->width = 160;
-        background2->width = 160;
         cursorBackground->height = 40;
+        background2->width = 160;
         background2->height = 40;
         gfx_GetSprite(cursorBackground, 0, 0);
         gfx_GetSprite(background2, 160, 0);
@@ -750,6 +751,7 @@ int texturePackCompare(const void *arg1, const void *arg2) {
 }
 
 void texturePackMenu() {
+    memset(gfx_vram, 0, 320*240*sizeof(uint16_t));
     char* name;
     void* vat_ptr = nullptr;
     char** texturePackNames = (char**) malloc(0);
@@ -775,9 +777,11 @@ void texturePackMenu() {
     for (unsigned int i = 0; i < numberOfTexturePacks; i++) {
         uint8_t texturePackHandle = ti_Open(texturePackNames[i], "r");
         packs[i].pack = (texturePack*)ti_GetDataPtr(texturePackHandle);
+        packs[i].filename = texturePackNames[i];
         packs[i].size = ti_GetSize(texturePackHandle);
         ti_Close(texturePackHandle);
     }
+    free(texturePackNames);
     unsigned int offset = 0;
     unsigned int selectedPack = 0;
     bool quit = false;
@@ -791,7 +795,6 @@ void texturePackMenu() {
     // here we make the actual menu
     os_FontSelect(os_LargeFont);
     while (!quit) {
-        memset(gfx_vram, 0, 320*240*sizeof(uint16_t));
         os_SetDrawFGColor(65535);
         os_SetDrawBGColor(0);
         fontPrintString("Please select a", 4);
@@ -859,12 +862,11 @@ void texturePackMenu() {
         }
     }
     texturePackEnd:
-    texturePackName = new char[strlen(texturePackNames[selectedPack + offset]) + 1];
-    strcpy(texturePackName, texturePackNames[selectedPack + offset]);
+    texturePackName = new char[strlen(packs[selectedPack + offset].filename) + 1];
+    strcpy(texturePackName, packs[selectedPack + offset].filename);
     for (unsigned int i = 0; i < numberOfTexturePacks; i++) {
-        delete[] texturePackNames[i];
+        delete[] packs[i].filename;
     }
-    free(texturePackNames);
     delete[] packs;
 }
 
