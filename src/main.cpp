@@ -794,11 +794,12 @@ void texturePackMenu() {
     qsort(packs, numberOfTexturePacks, sizeof(packEntry), texturePackCompare);
     // here we make the actual menu
     os_FontSelect(os_LargeFont);
+    os_SetDrawFGColor(65535);
+    os_SetDrawBGColor(0);
+    fontPrintString("Please select a", 4);
+    fontPrintString("texture pack.", 23);
     while (!quit) {
-        os_SetDrawFGColor(65535);
-        os_SetDrawBGColor(0);
-        fontPrintString("Please select a", 4);
-        fontPrintString("texture pack.", 23);
+        memset(gfx_vram + (12800*sizeof(uint16_t)), 0, 64000*sizeof(uint16_t));
         for (unsigned int i = 0; i + offset < numberOfTexturePacks && i < 5; i++) {
             drawTexturePackSelection(packs[i + offset].pack, i, i == selectedPack);
         }

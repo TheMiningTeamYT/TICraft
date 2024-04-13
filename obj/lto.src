@@ -6716,6 +6716,55 @@ BB27_19:
 	push	hl
 	call	_os_FontSelect
 	pop	hl
+	ld	hl, 65535
+	push	hl
+	call	_os_SetDrawFGColor
+	pop	hl
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	call	_os_SetDrawBGColor
+	pop	hl
+	ld	hl, _.str.39
+	push	hl
+	call	_os_FontGetWidth
+	push	hl
+	pop	de
+	pop	hl
+	ld	hl, 320
+	or	a, a
+	sbc	hl, de
+	ld	c, 1
+	call	__ishru
+	ld	de, 4
+	push	de
+	push	hl
+	ld	hl, _.str.39
+	push	hl
+	call	_os_FontDrawText
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, _.str.40
+	push	hl
+	call	_os_FontGetWidth
+	push	hl
+	pop	de
+	pop	hl
+	ld	hl, 320
+	or	a, a
+	sbc	hl, de
+	ld	c, 1
+	call	__ishru
+	ld	de, 23
+	push	de
+	push	hl
+	ld	hl, _.str.40
+	push	hl
+	call	_os_FontDrawText
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
 	ld	hl, (ix - 44)
 	ld	de, -6
 	add	hl, de
@@ -6746,57 +6795,15 @@ BB27_20:
 	ld	bc, (ix - 38)
 BB27_21:
 	ld	(ix - 56), bc
-	ld	hl, 65535
-	push	hl
-	call	_os_SetDrawFGColor
-	pop	hl
-	or	a, a
-	sbc	hl, hl
-	push	hl
-	call	_os_SetDrawBGColor
-	pop	hl
-	ld	hl, _.str.39
-	push	hl
-	call	_os_FontGetWidth
+	xor	a, a
+	ld	(-2857984), a
+	ld	hl, -2857984
 	push	hl
 	pop	de
-	pop	hl
-	ld	hl, 320
-	or	a, a
-	sbc	hl, de
-	ld	a, 1
-	ld	c, a
-	call	__ishru
-	ld	de, 4
-	push	de
-	push	hl
-	ld	hl, _.str.39
-	push	hl
-	call	_os_FontDrawText
-	ld	hl, 9
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, _.str.40
-	push	hl
-	call	_os_FontGetWidth
-	push	hl
-	pop	de
-	pop	hl
-	ld	hl, 320
-	or	a, a
-	sbc	hl, de
-	ld	c, 1
-	call	__ishru
-	ld	de, 23
-	push	de
-	push	hl
-	ld	hl, _.str.40
-	push	hl
-	call	_os_FontDrawText
+	inc	de
+	ld	bc, 127999
+	ldir
 	ld	bc, (ix - 56)
-	ld	hl, 9
-	add	hl, sp
-	ld	sp, hl
 	push	bc
 	pop	hl
 	ld	de, (ix - 44)
