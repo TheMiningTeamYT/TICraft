@@ -73,10 +73,10 @@ A raw polygon (really quadrilateral)
 */
 struct polygon {
     // The points of the polygon, represented as a list of indexes into an array of screenPoints
-    uint8_t points[4];
+    unsigned int points[4];
 
     // The number of the polygon in the shape (cube) it is a part of
-    uint8_t polygonNum;
+    unsigned int polygonNum;
 };
 
 // Get the distance from a point to the camera
@@ -139,52 +139,6 @@ class object {
     bool outline;
 };
 
-// this can (and should) be replaced by a more efficient cubeSave
-struct cubeSave {
-    // X position of the cube
-    Fixed24 x;
-
-    // Y position of the cube
-    Fixed24 y;
-
-    // Z position of the cube
-    Fixed24 z;
-
-    // Size of the cube
-    Fixed24 legacy_size;
-
-    // An index into an array of pointers representing the texture of the cube
-    uint8_t texture;
-};
-
-struct cubeSave_v2 {
-    // X position of the cube
-    int16_t x;
-
-    // Y position of the cube
-    int16_t y;
-
-    // Z position of the cube
-    int16_t z;
-
-    // An index into an array of pointers representing the texture of the cube
-    uint8_t texture;
-};
-
-/*
-Save file format:
-struct saveFile {
-    char magic[7]; // BLOCKS
-    unsigned int version = 1; // Version
-    unsigned int numberOfObjects;
-    cubeSave objects[numberOfObjects];
-    uint8_t selectedObject;
-    Fixed24[3] cameraPos;
-    Fixed24[3] cursorPos;
-    uint32_t checksum; // CRC32
-};
-*/
-
 // Used for sorting of objects
 int distanceCompare(const void *arg1, const void *arg2);
 
@@ -218,10 +172,19 @@ extern Fixed24 cx;
 extern Fixed24 sx;
 extern Fixed24 cy;
 extern Fixed24 sy;
-extern Fixed24 cxdy;
-extern Fixed24 nsxdy;
-extern Fixed24 ncyd;
-extern Fixed24 syd;
+extern Fixed24 nsxsy;
+extern Fixed24 nsxcy;
+extern Fixed24 cxsy;
+extern Fixed24 cxcy;
+// d means delta
+extern Fixed24 cxd;
+extern Fixed24 nsxd;
+extern Fixed24 cyd;
+extern Fixed24 nsyd;
+extern Fixed24 nsxsyd;
+extern Fixed24 nsxcyd;
+extern Fixed24 cxsyd;
+extern Fixed24 cxcyd;
 extern float angleX;
 extern float angleY;
 extern float degRadRatio;
@@ -239,8 +202,7 @@ extern "C" {
     void drawTextureLineNewA_NoClip(int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset, uint8_t polygonZ);
     uint16_t approx_sqrt_a(unsigned int n);
     uint8_t polygonZShift(unsigned int x);
-    struct squaredPair findXZSquared(Fixed24 n);
-    struct squaredPair findYSquared(Fixed24 n);
+    struct squaredPair findXYZSquared(Fixed24 n);
     int polygonPointMultiply(int n);
     void shadeScreen();
 }

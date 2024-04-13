@@ -263,7 +263,6 @@ void load() {
     if (!saveGood) {
         error = true;
     }
-    resetCamera();
     if (version >= 2 && saveGood) {
         Fixed24 cursorPos[3];
         selectedObject = *saveData;
@@ -278,13 +277,21 @@ void load() {
             angleX = *((float*)saveData);
             angleY = *(((float*)saveData) + 1);
             cx = cosf(angleX*degRadRatio);
-            cxdy = cx*(Fixed24)-cubeSize;
+            cxd = cx*(Fixed24)cubeSize;
             sx = sinf(angleX*degRadRatio);
-            nsxdy = sx*(Fixed24)cubeSize;
+            nsxd = sx*(Fixed24)cubeSize;
             cy = cosf(angleY*degRadRatio);
-            ncyd = cy*(Fixed24)-cubeSize;
+            cyd = cy*(Fixed24)cubeSize;
             sy = sinf(angleY*degRadRatio);
-            syd = sy*(Fixed24)cubeSize;
+            nsyd = sy*(Fixed24)-cubeSize;
+            cxsy = cx*sy;
+            cxsyd = cxsy*(Fixed24)cubeSize;
+            cxcy = cx*cy;
+            cxcyd = cxcy*(Fixed24)cubeSize;
+            nsxsy = -sx*sy;
+            nsxsyd = nsxsy*(Fixed24)cubeSize;
+            nsxcy = -sx*cy;
+            nsxcyd = nsxcy*(Fixed24)cubeSize;
         }
     }
     if (!saveGood && error) {

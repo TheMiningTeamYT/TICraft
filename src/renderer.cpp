@@ -53,24 +53,26 @@ float angleX = 30;
 float angleY = 45;
 float degRadRatio = M_PI/180;
 
-Fixed24 cx = 0.8660254037844387f;
-Fixed24 sx = 0.49999999999999994f;
-Fixed24 cy = 0.7071067811865476f;
-Fixed24 sy = 0.7071067811865476f;
+Fixed24 cx;
+Fixed24 sx;
+Fixed24 cy;
+Fixed24 sy;
+Fixed24 nsxsy;
+Fixed24 nsxcy;
+Fixed24 cxsy;
+Fixed24 cxcy;
 // d means delta
-Fixed24 cxdy = cx*(Fixed24)-cubeSize;
-Fixed24 nsxdy = sx*(Fixed24)cubeSize;
-Fixed24 ncyd = cy*(Fixed24)-cubeSize;
-Fixed24 syd = sy*(Fixed24)cubeSize;
+Fixed24 cxd;
+Fixed24 nsxd;
+Fixed24 cyd;
+Fixed24 nsyd;
+Fixed24 nsxsyd;
+Fixed24 nsxcyd;
+Fixed24 cxsyd;
+Fixed24 cxcyd;
 
 uint8_t outlineColor = 0;
 
-/*
-clip:
-clip = 0 // not affected by clipping
-clip = 1 // affected by clipping, no z buffer
-clip = 2 // affected by clipping, write to z buffer
-*/
 void object::generatePolygons() {
     generatePoints();
     if (!visible) {
@@ -81,13 +83,13 @@ void object::generatePolygons() {
         // The polygon we are rendering
         polygon polygon = cubePolygons[polygonNum];
         screenPoint polygonPoints[] = {renderedPoints[polygon.points[0]], renderedPoints[polygon.points[1]], renderedPoints[polygon.points[2]], renderedPoints[polygon.points[3]]};
-        uint8_t normalizedZ;
-        // Are we going to render the polygon?
-        bool render = false;
         // I feel like those multiplications make it slower than it has to be but online resources say this is a good idea and I don't have any of those right now
         // online resources = http://www.faqs.org/faqs/graphics/algorithms-faq/
         // And this is certainly faster than sorting
         if (((polygonPoints[0].x-polygonPoints[1].x)*(polygonPoints[2].y-polygonPoints[1].y))-((polygonPoints[0].y-polygonPoints[1].y)*(polygonPoints[2].x-polygonPoints[1].x)) < 0) {
+            uint8_t normalizedZ;
+            // Are we going to render the polygon?
+            bool render = false;
             if (outline) {
                 render = true;
             } else {
@@ -122,22 +124,23 @@ void object::generatePolygons() {
                     }
                 }
             }
+            // Render this polygon
+            renderThePolygon:
+            if (render) {
+                renderPolygon(this, polygonPoints, polygon.polygonNum, normalizedZ);
+            }
+            #if diagnostics == true
+            else {
+                obscuredPolygons++;
+            }
+            #endif
         }
-        // Render this polygon
-        renderThePolygon:
-        if (render) {
-            renderPolygon(this, polygonPoints, polygon.polygonNum, normalizedZ);
-        }
-        #if diagnostics == true
-        else {
-            obscuredPolygons++;
-        }
-        #endif
     }
 }
 
 void object::deleteObject() {
     if (visible) {
+        generatePoints();
         gfx_SetColor(255);
         int minX = renderedPoints[0].x;
         int minY = renderedPoints[0].y;
@@ -164,176 +167,131 @@ void object::deleteObject() {
         gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             object* otherObject = zSortedObjects[i];
-            otherObject->generatePoints();
-            if (otherObject != this) {
-                for (uint8_t pointNum = 0; pointNum < 8; pointNum++) {
-                    screenPoint point = renderedPoints[pointNum];
-                    if (point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY) {
-                        otherObject->generatePolygons();
-                        break;
+            if (otherObject->visible) {
+                otherObject->generatePoints();
+                if (otherObject != this) {
+                    for (uint8_t pointNum = 0; pointNum < 8; pointNum++) {
+                        screenPoint point = renderedPoints[pointNum];
+                        if (point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY) {
+                            otherObject->generatePolygons();
+                            break;
+                        }
                     }
                 }
             }
         }
         gfx_SetDrawScreen();
-        delete this;
     }
+    delete this;
 }
 
 // bugs with inconsistent behavior be here.
 // how... I'm not sure
 // sometimes it works fine, sometimes it fails spectacularly.
 // and I will never know why.
+// Could use the z buffer here for some occlusion culling... hmm
 void object::generatePoints() {
     // i want to rewrite this in assembly
     // because i have... little faith in the compiler
     visible = false;
-    
-    const Fixed24 x1 = (Fixed24)x - cameraXYZ[0];
-    squaredPair xSquared = findXZSquared(x1);
-    const Fixed24 y1 = (Fixed24)y - cameraXYZ[1];
-    squaredPair ySquared = findYSquared(y1);
-    const Fixed24 z1 = (Fixed24)z - cameraXYZ[2];
-    squaredPair zSquared = findXZSquared(z1);
-    if (angleX >= 45 && y1 > (Fixed24)0) {
-        return;
-    }
-
     if (distance > zCullingDistance && !outline) {
         return;
     }
-
-    const Fixed24 cyz1 = cy*z1;
-    const Fixed24 cyz2 = cyz1 - ncyd;
-    const Fixed24 syx1 = sy*x1;
-    const Fixed24 syx2 = syx1 + syd;
-    Fixed24 sum1 = cyz1 + syx1;
-    const Fixed24 nsxy1 = -sx*y1;
-    const Fixed24 cxy1 = cx*y1;
-    Fixed24 dz = (cx*sum1) + nsxy1;
-    if (dz <= (Fixed24)10) {
-        return;
-    }
-
-    const Fixed24 ncyx1 = -cy*x1;
-    const Fixed24 ncyx2 = ncyx1 + ncyd;
-    const Fixed24 syz1 = sy*z1;
-    const Fixed24 syz2 = syz1 + syd;
-    Fixed24 dx = ncyx1 + syz1;
-    if (dz + (Fixed24)20 < (dx).abs()) {
-        return;
-    }
-
-    Fixed24 dy = (sx*sum1) + cxy1;
-    if (dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
-        visible = true;
-    }
-    Fixed24 sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[0] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), distance};
-
-    dy += cxdy;
-    dz += nsxdy;
-    if (dz <= (Fixed24)10) {
-        visible = false;
-        return;
-    }
-    if (!visible) {
-        if (dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
-            visible = true;
-        }
-    }
-    sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[3] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.a + ySquared.b + zSquared.a)};
-
-    dx += ncyd;
-    sum1 += syd;
-    dy = (sx*sum1) + cxy1;
-    dz = (cx*sum1) + nsxy1;
-    if (dz <= (Fixed24)10) {
-        visible = false;
-        return;
-    }
-    if (!visible) {
-        if (dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
-            visible = true;
-        }
-    }
-    sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[1] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.b + ySquared.a + zSquared.a)};
-
-    dy += cxdy;
-    dz += nsxdy;
-    if (dz <= (Fixed24)10) {
-        visible = false;
-        return;
-    }
-    if (!visible) {
-        if (dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
-            visible = true;
-        }
-    }
-    sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[2] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.b + ySquared.b + zSquared.a)};
     
-    dx = ncyx1 + syz2;
-    sum1 = cyz2 + syx1;
-    dy = (sx*sum1) + cxy1;
-    dz = (cx*sum1) + nsxy1;
-    if (dz <= (Fixed24)10) {
-        visible = false;
+    const Fixed24 x1 = (Fixed24)x - cameraXYZ[0];
+    const Fixed24 ny1 = cameraXYZ[1] - (Fixed24)y;
+    const Fixed24 z1 = (Fixed24)z - cameraXYZ[2];
+    if (angleX >= 45 && ny1 < (Fixed24)0) {
         return;
     }
-    if (!visible) {
-        if (dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
-            visible = true;
-        }
-    }
-    sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[4] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.a + ySquared.a + zSquared.b)};
 
-    dy += cxdy;
-    dz += nsxdy;
+    const Fixed24 cxsyx = cxsy*x1;
+    const Fixed24 nsxy = sx*ny1;
+    const Fixed24 cxcyz = cxcy*z1;
+    Fixed24 dz = cxsyx + nsxy + cxcyz;
     if (dz <= (Fixed24)10) {
-        visible = false;
         return;
     }
-    if (!visible) {
-        if (dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
-            visible = true;
-        }
-    }
-    sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[7] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.a + ySquared.b + zSquared.b)};
 
-    dx += ncyd;
-    sum1 += syd;
-    dy = (sx*sum1) + cxy1;
-    dz = (cx*sum1) + nsxy1;
-    if (dz <= (Fixed24)10) {
-        visible = false;
+    const Fixed24 cyx = cy*x1;
+    const Fixed24 nsyz = -sy*z1;
+    Fixed24 dx = cyx + nsyz;
+    if (dx.abs() >= ((Fixed24)0.933610050995f)*dz + (Fixed24)30) {
         return;
     }
-    if (!visible) {
-        if (dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
-            visible = true;
-        }
-    }
-    sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[5] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.b + ySquared.a + zSquared.b)};
 
-    dy += cxdy;
-    dz += nsxdy;
-    if (dz <= (Fixed24)10) {
-        visible = false;
+    const Fixed24 cxy = cx*ny1;
+    const Fixed24 nsxcyz = nsxcy*z1;
+    const Fixed24 nsxsyx = nsxsy*x1;
+    Fixed24 dy = nsxsyx + cxy + nsxcyz;
+    if (dy.abs() > ((Fixed24)0.7002075382f)*dz + (Fixed24)30) {
         return;
     }
-    if (!visible) {
-        if (dz >= (dx).abs() && dy.abs() <= ((Fixed24)0.7002075382f)*dz) {
-            visible = true;
-        }
+    Fixed24 w = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[0] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), distance};
+
+    dz += nsxd;
+    if (dz <= (Fixed24)10) {
+        return;
     }
-    sum2 = ((Fixed24)-171.3777608f)/dz;
-    renderedPoints[6] = {(int16_t)((int)(sum2*dx)+160), (int16_t)(120+(int)(sum2*dy)), approx_sqrt_a(xSquared.b + ySquared.b + zSquared.b)};
+    const squaredPair xSquared = findXYZSquared(x1);
+    const squaredPair ySquared = findXYZSquared(ny1);
+    const squaredPair zSquared = findXYZSquared(z1);
+    dy += cxd;
+    w = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[3] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), approx_sqrt_a(xSquared.a + ySquared.b + zSquared.a)};
+
+    dz = cxsyx + cxsyd + nsxy + cxcyz;
+    if (dz <= (Fixed24)10) {
+        return;
+    }
+    dx += cyd;
+    dy = nsxsyx + nsxsyd + cxy + nsxcyz;
+    w = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[1] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), approx_sqrt_a(xSquared.b + ySquared.a + zSquared.a)};
+
+    dz += nsxd;
+    if (dz <= (Fixed24)10) {
+        return;
+    }
+    dy += cxd;
+    w = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[2] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), approx_sqrt_a(xSquared.b + ySquared.b + zSquared.a)};
+
+    dz = cxsyx + nsxy + cxcyz + cxcyd;
+    if (dz <= (Fixed24)10) {
+        return;
+    }
+    dx = cyx + nsyz + nsyd;
+    dy = nsxsyx + cxy + nsxcyz + nsxcyd;
+    w = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[4] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), approx_sqrt_a(xSquared.a + ySquared.a + zSquared.b)};
+
+    dz += nsxd;
+    if (dz <= (Fixed24)10) {
+        return;
+    }
+    dy += cxd;
+    w = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[7] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), approx_sqrt_a(xSquared.a + ySquared.b + zSquared.b)};
+
+    dz = cxsyx + cxsyd + nsxy + cxcyz + cxcyd;
+    if (dz <= (Fixed24)10) {
+        return;
+    }
+    dx = cyx + cyd + nsyz + nsyd;
+    dy = nsxsyx + nsxsyd + cxy + nsxcyz + nsxcyd;
+    w = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[5] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), approx_sqrt_a(xSquared.b + ySquared.a + zSquared.b)};
+
+    dz += nsxd;
+    if (dz <= (Fixed24)10) {
+        return;
+    }
+    dy += cxd;
+    w = ((Fixed24)171.3777608f)/dz;
+    renderedPoints[6] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), approx_sqrt_a(xSquared.b + ySquared.b + zSquared.b)};
+    visible = true;
 }
 
 void object::moveBy(int newX, int newY, int newZ) {
@@ -382,7 +340,6 @@ void deleteEverything() {
 }
 
 void drawScreen() {
-    __asm__ ("di");
     gfx_SetTextXY(0, 0);
     memset(gfx_vram, 255, 153600);
     #if diagnostics == true
@@ -390,6 +347,7 @@ void drawScreen() {
     obscuredPolygons = 0;
     #endif
     gfx_SetDrawBuffer();
+    __asm__ ("di");
     for (unsigned int i = 0; i < numberOfObjects; i++) {
         zSortedObjects[i]->generatePolygons();
     }
@@ -427,10 +385,6 @@ void drawScreen() {
 // idea: integrate this into generatePolygons instead of having it as a seperate function
 
 void renderPolygon(object* sourceObject, screenPoint* polygonRenderedPoints, uint8_t polygonNum, uint8_t normalizedZ) {
-    // result of memory optimization
-    const uint8_t* texture = textures[sourceObject->texture][polygonNum];
-
-    // uint8_t* points = polygon.points;
     if (sourceObject->outline) {
         gfx_SetColor(outlineColor);
         // Not sure if this is faster or slower than what I was doing before
@@ -439,6 +393,8 @@ void renderPolygon(object* sourceObject, screenPoint* polygonRenderedPoints, uin
         gfx_Polygon(polygonPoints, 4);
         return;
     }
+    // result of memory optimization
+    const uint8_t* texture = textures[sourceObject->texture][polygonNum];
     bool clipLines = false;
     for (unsigned int i = 0; i < 4; i++) {
         if (polygonRenderedPoints[i].x < 0 || polygonRenderedPoints[i].x > GFX_LCD_WIDTH - 1 || polygonRenderedPoints[i].y < 0 || polygonRenderedPoints[i].y > GFX_LCD_HEIGHT) {
@@ -532,9 +488,9 @@ void rotateCamera(float x, float y) {
     if ((x != 0) && (angleX + x >= -90 && angleX + x <= 90)) {
         angleX += x;
         cx = cosf(angleX*degRadRatio);
-        cxdy = cx*(Fixed24)-cubeSize;
+        cxd = cx*(Fixed24)cubeSize;
         sx = sinf(angleX*degRadRatio);
-        nsxdy = sx*(Fixed24)cubeSize;
+        nsxd = sx*(Fixed24)cubeSize;
     }
     if (y != 0) {
         angleY += y;
@@ -545,10 +501,18 @@ void rotateCamera(float x, float y) {
             angleY += 360;
         }
         cy = cosf(angleY*degRadRatio);
-        ncyd = cy*(Fixed24)-cubeSize;
+        cyd = cy*(Fixed24)cubeSize;
         sy = sinf(angleY*degRadRatio);
-        syd = sy*(Fixed24)cubeSize;
+        nsyd = sy*(Fixed24)-cubeSize;
     }
+    cxsy = cx*sy;
+    cxsyd = cxsy*(Fixed24)cubeSize;
+    cxcy = cx*cy;
+    cxcyd = cxcy*(Fixed24)cubeSize;
+    nsxsy = -sx*sy;
+    nsxsyd = nsxsy*(Fixed24)cubeSize;
+    nsxcy = -sx*cy;
+    nsxcyd = nsxcy*(Fixed24)cubeSize;
     drawBuffer();
     drawScreen();
 }
@@ -575,10 +539,20 @@ void resetCamera() {
     sx = 0.49999999999999994f;
     cy = 0.7071067811865476f;
     sy = 0.7071067811865476f;
-    cxdy = cx*(Fixed24)-cubeSize;
-    nsxdy = sx*(Fixed24)cubeSize;
-    ncyd = cy*(Fixed24)-cubeSize;
-    syd = sy*(Fixed24)cubeSize;
+    nsxsy = -0.353553391f;
+    nsxcy = -0.353553391f;
+    cxsy = 0.612372436f;
+    cxcy = 0.612372436f;
+    // d means delta
+    // Need to be updated if cubeSize changes
+    cxd = 0.8660254037844387f*static_cast<float>(cubeSize);
+    nsxd = 0.49999999999999994f*static_cast<float>(cubeSize);
+    cyd = 0.7071067811865476f*static_cast<float>(cubeSize);
+    nsyd = -0.7071067811865476f*static_cast<float>(cubeSize);
+    nsxsyd = -0.353553391f*static_cast<float>(cubeSize);
+    nsxcyd = -0.353553391f*static_cast<float>(cubeSize);
+    cxsyd = 0.612372436f*static_cast<float>(cubeSize);
+    cxcyd = 0.612372436f*static_cast<float>(cubeSize);
     cameraXYZ[0] = -100;
     cameraXYZ[1] = 150;
     cameraXYZ[2] = -100;

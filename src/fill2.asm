@@ -64,29 +64,28 @@ _drawTextureLineNewA:
     ld (iy + sy), bc
     ; Compute abs(dy)
     call abs
-    ; save abs(dy) to the stack
-    push hl
     ; Negate hl
     ex de, hl
     ; Store hl to dy
     ld (iy + dy), hl
     ; Load dx
-    ld de, (iy + dx)
-    add hl, de
+    ld bc, (iy + dx)
+    add hl, bc
     add hl, hl
-    ; Push error*2 to the stack and retrieve abs(dy) from the stack
-    ex (sp), hl
-    or a, a
-    sbc hl, de
+    ; Push error*2 to the stack
+    push hl
+    ; Retrieve abs(dy) from DE
     ex de, hl
+    or a, a
+    sbc hl, bc
+    ; Push dx to the stack
+    push bc
     ; Jump if dx is greater
     jr c, textureRatio_cont
-        ; Else, restore dy
-        add hl, de
+        ; Else, restore dy and push it to the stack
+        add hl, bc
+        ex (sp), hl
     textureRatio_cont:
-    ; At this point dx or dy (whichever has a bigger absolute value) is in hl
-    ; push hl to the stack
-    push hl
     ; Pre-multiply y0 & y1
     ld de, (iy + y0)
     ; 44 cycles to multiply any number in DE by 320

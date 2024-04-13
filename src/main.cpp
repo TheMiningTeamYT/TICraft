@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
+#include <time.h>
 #include "renderer.hpp"
 #include "textures.hpp"
 #include "saves.hpp"
@@ -65,6 +66,7 @@ void exitOverlay(int code) {
 bool fineMovement;
 
 int main() {
+    //srand(time(nullptr));
     interruptOriginalValue = *((uint8_t*)0xF00005);
     // Disable RTC interrupt
     *((uint8_t*)0xF00005) &= 0xEF;
@@ -73,7 +75,7 @@ int main() {
     ti_SetGCBehavior(gfx_End, texturePackMenu);
     // what exactly do you do?
     // ti_CleanAll();
-    // sizeof(object*)*1000 + (255*255) + 2 = 68027B (66.43 KiB)
+    // (255*255) + 2 = 65027B (63.50 KiB)
     if (ti_MemChk() < (255*255) + 2) {
         os_PutStrFull("WARNING!! Not enough free user mem to run TICRAFT! Continuing may result in corruption or your calculator crashing and resetting. Try deleting or archiving some programs or AppVars. Press \"Enter\" to continue or press any other key to exit.");
         os_ResetFlag(SHIFT, ALPHALOCK);
@@ -165,23 +167,43 @@ int main() {
         printStringAndMoveDownCentered("Enter: Show the block selection menu");
         printStringAndMoveDownCentered("Mode: Perform a full re-render of the screen");
         printStringAndMoveDownCentered("Made by Logan C.");
-        // implement more controls in the near future
-        if (!toSaveOrNotToSave) {
+        resetCamera();
+        if (toSaveOrNotToSave) {
+            load();
+        } else {
             playerCursor.moveTo(20, 20, 20);
-            resetCamera();
             selectedObject = 10;
-            for (int i = 0; i < 400; i++) {
-                if (numberOfObjects < maxNumberOfObjects) {
-                    // workaround for compiler bug
-                    div_t xy = div(i, 20);
-                    objects[numberOfObjects] = new object((xy.rem)*20, 0, (xy.quot)*20, 10, false);
+            /*float a = (((abs(rand()) % 39936) + 1024)-20480)/1024.0f;
+            int b = rand() % 25;
+            int c = rand() % 25;
+            for (int i = 0; i < 256 && numberOfObjects < maxNumberOfObjects; i++) {
+                // workaround for compiler bug
+                div_t xy = div(i, 16);
+                int x = (xy.rem)*cubeSize;
+                int y = abs((((int)(sinf((((float)(xy.rem + b))/(0.5f*a))+a)*cosf((((float)(xy.quot+c))/(0.5f*a))+a)*a))>>2)+3)*cubeSize;
+                int z = (xy.quot)*cubeSize;
+                objects[numberOfObjects] = new object(x, y, z, 10, false);
+                numberOfObjects++;
+                for (uint8_t j = 0; j < 2 && y > 0 && numberOfObjects < maxNumberOfObjects; j++) {
+                    y -= cubeSize;
+                    objects[numberOfObjects] = new object(x, y, z, 7, false);
                     numberOfObjects++;
                 }
+                while (y > 0 && numberOfObjects < maxNumberOfObjects) {
+                    y -= cubeSize;
+                    objects[numberOfObjects] = new object(x, y, z, 21, false);
+                    numberOfObjects++;
+                }
+            }*/
+            for (int i = 0; i < 1225; i++) {
+                // workaround for compiler bug
+                div_t xy = div(i, 35);
+                objects[numberOfObjects] = new object(xy.rem*20, 0, xy.quot*20, 10, false);
+                numberOfObjects++;
             }
-        } else {
-            load();
         }
         fineMovement = false;
+        outlineColor = 0;
         memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
         xSort();
         gfx_Sprite_NoClip(cursorBackground, 0, 0);
@@ -615,7 +637,7 @@ int main() {
                     } else {
                         outlineColor = 0;
                     }
-                    drawCursor();
+                    playerCursor.generatePolygons();
                     break;
                 default:
                     break;
