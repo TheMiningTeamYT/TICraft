@@ -23,5 +23,5 @@ ___icon:
 	db	$AB, $8A, $CC, $AB, $AB, $8A, $94, $AB, $AB, $AB, $8A, $8A, $AB, $AB, $8A, $62
 	public ___description
 ___description:
-	db	"Perspective Correct 3D Minecraft. v2.1.2", 0
+	db	"Perspective Correct 3D Minecraft. v2.1.3", 0
 ___prgm_init:
