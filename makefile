@@ -1,5 +1,5 @@
 NAME = TICRAFT
-DESCRIPTION = "Perspective Correct 3D Minecraft. v2.1.3"
+DESCRIPTION = "Perspective Correct 3D Minecraft. v2.1.4"
 COMPRESSED = YES
 COMPRESSED_MODE = zx7
 ARCHIVED = YES

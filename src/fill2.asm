@@ -115,8 +115,6 @@ _drawTextureLineNewA:
     add hl, hl
     add hl, hl
     ld (iy + y1), hl
-    ; Init A
-    ld a, (iy + polygonZ)
     ; Init the alternate register set
     exx
         pop bc
@@ -269,8 +267,6 @@ dx_cont_off:
     ; Push e2 back onto the stack
     push de ; 10
 line_ends_off_screen:
-    ; Save polygonZ to D
-    ld d, a ; 4
     ; Load the texel value and advance the texture pointer
     exx ; 4
         ; Load the texel value
@@ -288,10 +284,6 @@ line_ends_off_screen:
             textureCont_off:
         ex af, af' ; 4
     exx ; 4
-    ; Save the pixel value to E
-    ld e, a ; 4
-    ; Restore polygonZ to A
-    ld a, d ; 4
     ; Load x0 into BC
     ld bc, (iy + x0) ; 24
     ; If the texel is 255 (the transparency color), skip drawing the pixel
@@ -306,20 +298,20 @@ line_ends_off_screen:
             sbc hl, bc ; 8
             jr c, real_end ; 8/9
         ex af, af' ; 4
-        dec e ; 4
-        ld a, b ; 4
-        or a, c ; 4
-        dec bc ; 4
-        ld c, e ; 4
-        ld a, d ; 4
         lea de, ix + 1 ; 12
         ld hl, 76799 ; 16
         add hl, de ; 4
+        dec a ; 4
+        ld d, a ; 4
+        ld a, b ; 4
+        or a, c ; 4
+        dec bc ; 4
+        ld a, (iy + polygonZ) ; 16
         jr z, left_fill_cont_off_2 ; 8/9
             cp a, (hl) ; 8
             jr nc, left_fill_cont_off
                 ld (hl), a ; 4
-                ld (ix), c ; 14
+                ld (ix), d ; 14
         left_fill_cont_off:
         ex af, af' ; 4
             jr z, right_fill_cont_off ; 8/9
@@ -328,14 +320,12 @@ line_ends_off_screen:
         inc hl ; 4
         cp a, (hl) ; 8
         jr nc, fill_cont_off_2 ; 8/9
-            ex de, hl ; 4
-            ld (de), a ; 9
-            ld (hl), c ; 9
+            ld (hl), a ; 6
+            ld (ix + 1), d ; 14
             ex af, af' ; 4
         right_fill_cont_off:
         ex af, af' ; 4
         fill_cont_off_2:
-        ld c, (iy + x0) ; 16
         scf ; 4
     fill_cont_off:
     ; Grab e2 from the stack
@@ -403,8 +393,6 @@ dx_cont_on:
     ; Push e2 back onto the stack
     push de ; 4
 line_ends_on_screen:
-    ; Save polygonZ to D
-    ld d, a ; 4
     ; Load the texel value and advance the texture pointer
     exx ; 4
         ; Load the texel value
@@ -422,35 +410,30 @@ line_ends_on_screen:
             textureCont_on:
         ex af, af' ; 4
     exx ; 4
-    ; Save the pixel value to E
-    ld e, a ; 4
-    ; Restore polygonZ to A
-    ld a, d ; 4
     ; Load x0 into BC
     ld bc, (iy + x0) ; 24
     ; If the texel is 255 (the transparency color), skip drawing the pixel
     jr c, fill_cont_on ; 8/9
-        dec e ; 4
+        dec a ; 4
         ld hl, (iy + x1) ; 24
         sbc hl, bc ; 8
-        ld c, e ; 4
         lea de, ix ; 12
         ld hl, 76801 ; 16
         add hl, de ; 4
+        ld d, a ; 4
+        ld a, (iy + polygonZ) ; 16
         jr z, right_fill_cont_on ; 8/9
             cp a, (hl) ; 8
             jr nc, right_fill_cont_on ; 8/9
                 ld (hl), a ; 6
-                ld (ix + 1), c ; 14
+                ld (ix + 1), d ; 14
         right_fill_cont_on:
         dec hl ; 4
         cp a, (hl) ; 8
         jr nc, left_fill_cont_on ; 8/9
-            ex de, hl ; 4
-            ld (de), a ; 6
-            ld (hl), c ; 6
+            ld (hl), a ; 6
+            ld (ix), d ; 14
         left_fill_cont_on:
-        ld c, (iy + x0) ; 16
         scf ; 4
     fill_cont_on:
     ; Grab e2 from the stack

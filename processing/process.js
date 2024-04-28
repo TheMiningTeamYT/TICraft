@@ -21,6 +21,7 @@ if (process.argv.length < 3) {
 }
 const absoluteDir = path.dirname(path.resolve(process.argv[2])) + path.sep;
 const sourceFile = absoluteDir + path.basename(process.argv[2]);
+let icon;
 let texturePack;
 try {
     texturePack = JSON.parse(fs.readFileSync(sourceFile));
@@ -49,6 +50,12 @@ if (typeof(texturePack.image) === "undefined") {
     console.log("This is not a valid texture pack json! The image field is missing!");
     process.exit(1);
 }
+if (typeof(texturePack.icon) === "undefined") {
+    console.log("No icon was specified, using the default icon instead.");
+    icon = "unknown_pack.png";
+} else {
+    icon = absoluteDir + texturePack.icon;
+}
 processFile();
 async function processFile() {
     let image;
@@ -56,6 +63,17 @@ async function processFile() {
         if (e.code === "ENOENT") {
             console.log("Could not find texture map!");
             process.exit(1);
+        } else {
+            throw e;
+        }
+    });
+    let iconImage;
+    let iconImagePromise = Jimp.read(icon).then(image => {
+        iconImage = image;
+    }).catch(e => {
+        if (e.code === "ENOENT") {
+            console.log("Could not find the specified icon, using the default icon instead...");
+            iconImagePromise = Jimp.read("unknown_pack.png").then(image => iconImage = image);
         } else {
             throw e;
         }
@@ -70,11 +88,11 @@ async function processFile() {
     let errorRed = 0;
     let errorGreen = 0;
     let errorBlue = 0;
-    let colors = [[0,0,0,1]];
+    let colors = [[0,0,0,Infinity]];
     for (var i = 0; i < imageData.data.length; i += 4) {
-        let red = imageData.data[i];
-        let green = imageData.data[i + 1];
-        let blue = imageData.data[i + 2];
+        const red = imageData.data[i];
+        const green = imageData.data[i + 1];
+        const blue = imageData.data[i + 2];
         if (colors.length > 0) {
             let diffColors = [];
             for (var a = 0; a < colors.length; a++) {
@@ -90,7 +108,7 @@ async function processFile() {
             colors.push([red, green, blue, 1]);
         }
     }
-    console.log(colors.length);
+    console.log("Number of unique colors found: " + colors.length);
     let palette = colors.sort((a, b) => b[3] - a[3]).slice(0, paletteSize).sort((a, b) => ((rgbToLinear(a[0]) + rgbToLinear(a[1]) + rgbToLinear(a[2])) - (rgbToLinear(b[0]) + rgbToLinear(b[1]) + rgbToLinear(b[2]))));
     let indexedImageBuffer = new SmartBuffer();
     indexedImageBuffer.writeStringNT("TICRAFT_TEXTURES");
@@ -114,21 +132,21 @@ async function processFile() {
     indexedImageBuffer.writeUInt16LE(rgb888to555full([181, 0, 0]));
     indexedImageBuffer.writeUInt16LE(13741);
     indexedImageBuffer.writeUInt16LE(32767);
-    let sky = [106, 186, 252];
+    const sky = [106, 186, 252];
     indexedImageBuffer.writeUInt16LE(rgb888to555full(sky));
     indexedImageBuffer.writeUInt16LE(darkenRgb888to555full(sky));
     errorRed = 0;
     errorGreen = 0;
     errorBlue = 0;
     for (var i = 0; i < imageData.data.length; i += 4) {
-        let originalRed = linearToRGB(rgbToLinear(imageData.data[i]) + errorRed);
-        let originalGreen = linearToRGB(rgbToLinear(imageData.data[i + 1]) + errorGreen);
-        let originalBlue = linearToRGB(rgbToLinear(imageData.data[i + 2]) + errorBlue);
+        const originalRed = linearToRGB(rgbToLinear(imageData.data[i]) + errorRed);
+        const originalGreen = linearToRGB(rgbToLinear(imageData.data[i + 1]) + errorGreen);
+        const originalBlue = linearToRGB(rgbToLinear(imageData.data[i + 2]) + errorBlue);
         let diffPalette = [];
         for (var a = 0; a < palette.length; a++) {
             diffPalette.push(Math.pow(originalRed - palette[a][0], 2) + Math.pow(originalGreen - palette[a][1], 2) + Math.pow(originalBlue - palette[a][2], 2));
         }
-        let index = diffPalette.indexOf(Math.min(...diffPalette));
+        const index = diffPalette.indexOf(Math.min(...diffPalette));
         if (imageData.data[i + 3] < 128) {
             indexedImageBuffer.writeUInt8(255);
             imageData.data[i + 3] = 0;
@@ -136,10 +154,10 @@ async function processFile() {
             indexedImageBuffer.writeUInt8(index);
             imageData.data[i + 3] = 255;
         }
-        let closestPaletteColor = palette[index];
-        let red = (closestPaletteColor[0]);
-        let green = (closestPaletteColor[1]);
-        let blue = (closestPaletteColor[2]);
+        const closestPaletteColor = palette[index];
+        const red = (closestPaletteColor[0]);
+        const green = (closestPaletteColor[1]);
+        const blue = (closestPaletteColor[2]);
         if (dithering === true) {
             if (i % 16 === 0) {
                 errorRed = 0;
@@ -155,19 +173,9 @@ async function processFile() {
         imageData.data[i + 1] = green;
         imageData.data[i + 2] = blue;
     }
-    let iconImage;
-    await Jimp.read(absoluteDir + texturePack.icon).then(image => {
-        iconImage = image;
-    }).catch(e => {
-        if (e.code === "ENOENT") {
-            console.log("Could not find icon, using default icon instead...");
-        } else {
-            throw e;
-        }
-    });
-    if (typeof(iconImage) === "undefined") {
-        await Jimp.read("unknown_pack.png").then(image => iconImage = image);
-    }
+    await iconImagePromise;
+    // Just incase it's not done reading the icon specified in the JSON, but then it fails to find the icon specified, and we need to wait for it to read the default icon.
+    await iconImagePromise;
     iconImage.resize(32, 32);
     for (var i = 0; i < iconImage.bitmap.data.length; i += 4) {
         indexedImageBuffer.writeUInt16LE(rgb888to565full([iconImage.bitmap.data[i], iconImage.bitmap.data[i + 1], iconImage.bitmap.data[i + 2]]));

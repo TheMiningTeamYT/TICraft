@@ -245,7 +245,6 @@ void load() {
             numberOfObjects = maxNumberOfObjects;
         }
         saveData += sizeof(unsigned int);
-        // uhh... why... why is it written like this
         for (unsigned int i = 0; i < numberOfObjects; i++) {
             if (version < 4) {
                 if (i < maxNumberOfObjects) {
@@ -484,8 +483,6 @@ void fillDirt() {
             gfx_Sprite_NoClip(cursorBackground, x, y);
         }
     }
-    cursorBackground->width = 96;
-    cursorBackground->height = 10;
 }
 
 void redrawSaveOptions() {
@@ -516,15 +513,13 @@ void takeScreenshot() {
         tm* currentLocalTime = localtime(&currentTime);
         strftime(name, 16, "%H%M-%j.BMP", currentLocalTime);
         // actual header data is 1078B
-        unsigned char* headerBuffer = ((unsigned char*)cursorBackground) + 4096;
+        unsigned char* headerBuffer = ((unsigned char*)cursorBackground->data) + sizeof(global_t);
         memcpy(headerBuffer, BMPheader, 54);
-        for (unsigned int i,j = 0; i < 256; i++) {
-            uint16_t color = gfx_palette[i];
-            headerBuffer[(j)+54] = (color & 0x001F)<<3;
-            headerBuffer[(j)+55] = (color & 0x03E0)>>2;
-            headerBuffer[(j)+56] = (color & 0x7C00)>>7;
-            headerBuffer[(j)+57] = 0;
-            j += 4;
+        for (unsigned int i = 0; i < 256; i++) {
+            headerBuffer[(i*4) + 54] = (gfx_palette[i] & 0x001F)<<3;
+            headerBuffer[(i*4) + 55] = (gfx_palette[i] & 0x03E0)>>2;
+            headerBuffer[(i*4) + 56] = (gfx_palette[i] & 0x7C00)>>7;
+            headerBuffer[(i*4) + 57] = 0;
         }
         memcpy(headerBuffer + 1078, gfx_vram + (LCD_WIDTH*LCD_HEIGHT), 458);
         createDirectory("/", "SHOTS");

@@ -14070,18 +14070,14 @@ __Z12rotateCameraff:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 9
+	lea	hl, ix - 6
 	ld	sp, hl
 	ld	hl, (ix + 6)
 	ld	e, (ix + 9)
-	ld	bc, (ix + 12)
-	ld	(ix - 3), bc
-	ld	a, (ix + 15)
-	ld	(ix - 6), a
 	ld	bc, 0
 	xor	a, a
 	call	__fcmp
-	jp	z, BB48_4
+	jr	z, BB48_3
 	ld	bc, (_angleX)
 	ld	a, (_angleX+3)
 	call	__fadd
@@ -14094,89 +14090,21 @@ __Z12rotateCameraff:
 	ld	bc, -4980736
 	ld	a, -62
 	call	__fcmp
-	jp	m, BB48_4
+	jp	m, BB48_3
 	ld	e, 66
 	ld	hl, -4980736
 	lea	bc, iy
 	ld	a, d
 	call	__fcmp
-	jp	m, BB48_4
-	ld	hl, _angleX
-	lea	bc, iy
-	ld	(_angleX), bc
-	push	hl
-	pop	iy
-	lea	hl, iy + 3
-	ld	(hl), d
-	ld	hl, (_degRadRatio)
-	ld	(ix - 9), bc
-	ld	iy, _degRadRatio
-	lea	iy, iy + 3
-	push	hl
-	pop	bc
-	ld	a, (iy)
-	ld	hl, (ix - 9)
-	ld	e, d
-	call	__fmul
-	ld	l, a
-	push	hl
-	push	bc
-	call	_cosf
-	push	hl
-	pop	bc
-	ld	a, e
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, -8388608
-	ld	e, 69
-	call	__fmul
-	call	__ftol
-	ld	(_cx), bc
-	ld	hl, 81920
-	push	hl
-	push	bc
-	call	_fp_mul
-	ld	iy, 6
-	add	iy, sp
-	ld	sp, iy
-	ld	(_cxd), hl
-	ld	hl, (_angleX)
-	ld	a, (_angleX+3)
-	ld	e, a
-	ld	bc, (_degRadRatio)
-	ld	a, (_degRadRatio+3)
-	call	__fmul
-	ld	l, a
-	push	hl
-	push	bc
-	call	_sinf
-	push	hl
-	pop	bc
-	ld	a, e
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, -8388608
-	ld	e, 69
-	call	__fmul
-	call	__ftol
-	ld	(_sx), bc
-	ld	hl, 81920
-	push	hl
-	push	bc
-	call	_fp_mul
-	ld	iy, 6
-	add	iy, sp
-	ld	sp, iy
-	ld	(_nsxd), hl
-BB48_4:
-	ld	hl, (ix - 3)
-	ld	e, (ix - 6)
+	jp	p, BB48_17
+BB48_3:
+	ld	hl, (ix + 12)
+	ld	e, (ix + 15)
 	ld	bc, 0
 	xor	a, a
 	call	__fcmp
-	jp	z, BB48_13
+	jp	z, BB48_16
+BB48_4:
 	ld	iy, -7929856
 	ld	bc, (_angleY)
 	ld	a, (_angleY+3)
@@ -14187,9 +14115,9 @@ BB48_4:
 	push	bc
 	pop	iy
 	call	__fcmp
-	jp	p, BB48_8
+	jp	p, BB48_7
 	ld	iy, -7929856
-BB48_7:
+BB48_6:
 	ld	a, d
 	ld	hl, -4980736
 	ld	e, -61
@@ -14198,8 +14126,8 @@ BB48_7:
 	lea	hl, iy
 	ld	e, 67
 	call	__fcmp
-	jp	m, BB48_7
-BB48_8:
+	jp	m, BB48_6
+BB48_7:
 	ld	(_angleY), bc
 	ld	a, d
 	ld	(_angleY+3), a
@@ -14212,9 +14140,9 @@ BB48_8:
 	ld	a, -62
 	call	__fcmp
 	lea	hl, iy
-	jp	p, BB48_12
+	jp	p, BB48_11
 	ld	iy, -4980736
-BB48_10:
+BB48_9:
 	push	hl
 	pop	bc
 	ld	a, d
@@ -14228,11 +14156,11 @@ BB48_10:
 	lea	bc, iy
 	ld	a, -62
 	call	__fcmp
-	jp	m, BB48_10
+	jp	m, BB48_9
 	ld	(_angleY), hl
 	ld	a, d
 	ld	(_angleY+3), a
-BB48_12:
+BB48_11:
 	ld	bc, (_degRadRatio)
 	ld	iy, _degRadRatio
 	lea	iy, iy + 3
@@ -14291,7 +14219,7 @@ BB48_12:
 	add	iy, sp
 	ld	sp, iy
 	ld	(_nsyd), hl
-BB48_13:
+BB48_12:
 	ld	hl, (_sy)
 	ld	de, (_cx)
 	push	hl
@@ -14405,9 +14333,9 @@ BB48_13:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jr	z, BB48_16
+	jr	z, BB48_15
 	ld	iy, _zSortedObjects
-BB48_15:
+BB48_14:
 	ld	(ix - 6), iy
 	ld	hl, (iy)
 	push	hl
@@ -14421,8 +14349,8 @@ BB48_15:
 	ld	(ix - 3), hl
 	or	a, a
 	sbc	hl, de
-	jr	c, BB48_15
-BB48_16:
+	jr	c, BB48_14
+BB48_15:
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -14435,9 +14363,91 @@ BB48_16:
 	push	de
 	push	hl
 	call	_gfx_GetSprite
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	call	__Z10drawCursorv
+BB48_16:
 	ld	sp, ix
 	pop	ix
-	jp	__Z10drawCursorv
+	ret
+BB48_17:
+	ld	hl, _angleX
+	lea	bc, iy
+	ld	(_angleX), bc
+	push	hl
+	pop	iy
+	lea	hl, iy + 3
+	ld	(hl), d
+	ld	hl, (_degRadRatio)
+	ld	(ix - 3), bc
+	ld	iy, _degRadRatio
+	lea	iy, iy + 3
+	push	hl
+	pop	bc
+	ld	a, (iy)
+	ld	hl, (ix - 3)
+	ld	e, d
+	call	__fmul
+	ld	l, a
+	push	hl
+	push	bc
+	call	_cosf
+	push	hl
+	pop	bc
+	ld	a, e
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, -8388608
+	ld	e, 69
+	call	__fmul
+	call	__ftol
+	ld	(_cx), bc
+	ld	hl, 81920
+	push	hl
+	push	bc
+	call	_fp_mul
+	ld	iy, 6
+	add	iy, sp
+	ld	sp, iy
+	ld	(_cxd), hl
+	ld	hl, (_angleX)
+	ld	a, (_angleX+3)
+	ld	e, a
+	ld	bc, (_degRadRatio)
+	ld	a, (_degRadRatio+3)
+	call	__fmul
+	ld	l, a
+	push	hl
+	push	bc
+	call	_sinf
+	push	hl
+	pop	bc
+	ld	a, e
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, -8388608
+	ld	e, 69
+	call	__fmul
+	call	__ftol
+	ld	(_sx), bc
+	ld	hl, 81920
+	push	hl
+	push	bc
+	call	_fp_mul
+	ld	iy, 6
+	add	iy, sp
+	ld	sp, iy
+	ld	(_nsxd), hl
+	ld	hl, (ix + 12)
+	ld	e, (ix + 15)
+	ld	bc, 0
+	xor	a, a
+	call	__fcmp
+	jp	nz, BB48_4
+	jp	BB48_12
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -16556,10 +16566,6 @@ BB57_3:
 	or	a, a
 	sbc	hl, de
 	jp	c, BB57_3
-	ld	hl, (_cursorBackground)
-	ld	(hl), 96
-	ld	iy, (_cursorBackground)
-	ld	(iy + 1), 10
 	ld	sp, ix
 	pop	ix
 	ret
@@ -19213,7 +19219,7 @@ __Z14takeScreenshotv:
 	push	ix
 	ld	ix, 0
 	add	ix, sp
-	lea	hl, ix - 76
+	lea	hl, ix - 79
 	ld	sp, hl
 	ld	hl, 76480
 	ld	(ix - 67), hl
@@ -19373,7 +19379,7 @@ BB64_1:
 	ld	sp, hl
 	call	_init_USB
 	bit	0, a
-	jp	z, BB64_7
+	jp	z, BB64_9
 	ld	hl, _.str.12.72
 	push	hl
 	call	_gfx_GetStringWidth
@@ -19429,17 +19435,58 @@ BB64_1:
 	add	hl, sp
 	ld	sp, hl
 	ld	iy, (_cursorBackground)
-	ld	de, 4096
+	ld	de, 1799
 	lea	hl, iy
 	add	hl, de
-	ld	(ix - 70), hl
+	ld	(ix - 79), hl
 	ex	de, hl
 	ld	hl, __ZL9BMPheader
 	ld	bc, 54
 	ldir
-	ld	de, 5174
+	ld	de, 1856
+	ld	(ix - 70), iy
 	add	iy, de
-	lea	de, iy
+	or	a, a
+	sbc	hl, hl
+	ld	(ix - 67), hl
+BB64_4:
+	ld	bc, (ix - 67)
+	ld	hl, -1900032
+	add	hl, bc
+	ld	a, (hl)
+	ld	b, 3
+	call	__bshl
+	ld	(iy - 3), a
+	ld	bc, (hl)
+	ex	de, hl
+	ld	l, c
+	ld	h, b
+	ld	c, 2
+	call	__sshru
+	ld	a, l
+	and	a, -8
+	ld	(iy - 2), a
+	ex	de, hl
+	ld	hl, (hl)
+	ld	c, 7
+	call	__sshru
+	ld	a, l
+	and	a, -8
+	ld	(iy - 1), a
+	ld	(iy), 0
+	ld	hl, (ix - 67)
+	ld	de, 2
+	add	hl, de
+	lea	iy, iy + 4
+	ld	(ix - 67), hl
+	ld	bc, 512
+	or	a, a
+	sbc	hl, bc
+	jp	nz, BB64_4
+	ld	de, 2877
+	ld	hl, (ix - 70)
+	add	hl, de
+	ex	de, hl
 	ld	hl, -2806784
 	ld	bc, 458
 	ldir
@@ -19468,7 +19515,7 @@ BB64_1:
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
-	jp	z, BB64_8
+	jp	z, BB64_10
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -19480,7 +19527,7 @@ BB64_1:
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, (ix - 70)
+	ld	hl, (ix - 79)
 	push	hl
 	ld	hl, 3
 	push	hl
@@ -19493,7 +19540,7 @@ BB64_1:
 	ld	de, 3
 	or	a, a
 	sbc	hl, de
-	jp	nz, BB64_14
+	jp	nz, BB64_16
 	ld	hl, _.str.34.111
 	push	hl
 	call	_gfx_GetStringWidth
@@ -19552,7 +19599,7 @@ BB64_1:
 	ld	hl, (ix - 70)
 	or	a, a
 	sbc	hl, de
-	jp	nz, BB64_8
+	jp	nz, BB64_10
 	ld	iy, (ix - 73)
 	lea	de, iy
 	ld	hl, ___const._Z14takeScreenshotv.buffer
@@ -19637,8 +19684,8 @@ BB64_1:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, _.str.18.78
-	jp	BB64_9
-BB64_7:
+	jp	BB64_11
+BB64_9:
 	ld	hl, _.str.17.77
 	push	hl
 	call	_gfx_GetStringWidth
@@ -19674,7 +19721,7 @@ BB64_7:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-BB64_8:
+BB64_10:
 	ld	hl, _.str.36.113
 	push	hl
 	call	_gfx_GetStringWidth
@@ -19696,7 +19743,7 @@ BB64_8:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, _.str.36.113
-BB64_9:
+BB64_11:
 	push	hl
 	call	_gfx_PrintString
 	pop	hl
@@ -19751,31 +19798,31 @@ BB64_9:
 	lea	hl, iy
 	add	hl, de
 	bit	0, (hl)
-	jr	z, BB64_11
+	jr	z, BB64_13
 	ld	de, 1027
 	add	iy, de
 	push	iy
 	call	_fat_Close
 	pop	hl
 	ld	iy, (_global)
-BB64_11:
+BB64_13:
 	ld	de, 1795
 	add	iy, de
 	bit	0, (iy)
-	jr	z, BB64_13
+	jr	z, BB64_15
 	call	_usb_WaitForEvents
 	ld	iy, (_global)
 	pea	iy + 3
 	call	_msd_Close
 	pop	hl
-BB64_13:
+BB64_15:
 	call	_usb_Cleanup
 	call	_os_GetKey
 	call	__Z10drawScreenv
 	ld	sp, ix
 	pop	ix
 	ret
-BB64_14:
+BB64_16:
 	ld	hl, (ix - 67)
 	push	hl
 	call	_fat_CloseFile
@@ -19784,7 +19831,7 @@ BB64_14:
 	push	hl
 	call	_free
 	pop	hl
-	jp	BB64_8
+	jp	BB64_10
 	section	.text,"ax",@progbits
 
 	section	.text,"ax",@progbits
@@ -20700,7 +20747,7 @@ _.str.10:
 	section	.rodata,"a",@progbits
 	private	_.str.11
 _.str.11:
-	db	"Welcome to TICraft v2.1.3! While you wait:", 0
+	db	"Welcome to TICraft v2.1.4! While you wait:", 0
 
 	section	.rodata,"a",@progbits
 	private	_.str.12
@@ -22224,6 +22271,7 @@ _.str.137:
 	extern	__sshl
 	extern	_strncpy
 	extern	_os_DrawStatusBar
+	extern	__sshru
 	extern	_strlen
 	extern	_msd_FindPartitions
 	extern	_ti_Read
@@ -22312,6 +22360,7 @@ _.str.137:
 	extern	_os_ResetFlagBits
 	extern	_gfx_SetColor
 	extern	__land
+	extern	__bshl
 	extern	_os_FontDrawText
 	extern	_fat_OpenFile
 	extern	_gfx_PrintStringXY

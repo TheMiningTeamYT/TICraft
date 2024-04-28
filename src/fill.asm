@@ -110,8 +110,6 @@ _drawTextureLineNewA_NoClip:
     mlt hl ; 12
     add hl, hl ; 4
     ld (iy + y1), hl ; 18
-    ; Init D
-    ld d, (iy + polygonZ) ; 16
     ; Init the alternate register set
     exx
         pop bc
@@ -150,10 +148,8 @@ _drawTextureLineNewA_NoClip:
         ; Push e2 back onto the stack
         push de ; 10
     new_fillLoop:
-        ; Save polygonZ to D
-        ld d, a ; 4
         ; Load the texel value and advance the texture pointer
-        exx ; 1
+        exx ; 4
         new_fillLoop_entry_point:
             ; Load the texel value
             ld a, b ; 4
@@ -170,35 +166,31 @@ _drawTextureLineNewA_NoClip:
                 textureCont:
             ex af, af' ; 4
         exx ; 4
-        ; Save the pixel value to E
-        ld e, a ; 4
-        ; Restore polygonZ to A
-        ld a, d ; 4
         ; Load x0 into BC
         ld bc, (iy + x0) ; 24
         ; If the texel is 255 (the transparency color), skip drawing the pixel
         jr c, fill_cont ; 8/9
-            dec e ; 4
+            dec a ; 4
             ld hl, (iy + x1) ; 24
             sbc hl, bc ; 8
-            ld c, e ; 4
             lea de, ix ; 12
             ld hl, 76801 ; 16
             add hl, de ; 4
+            ; Save the pixel value to d
+            ld d, a ; 4
+            ld a, (iy + polygonZ) ; 16
             jr z, right_fill_cont ; 8/9
                 cp a, (hl) ; 8
                 jr nc, right_fill_cont ; 8/9
                     ld (hl), a ; 6
-                    ld (ix + 1), c ; 14
+                    ld (ix + 1), d ; 14
             right_fill_cont:
             dec hl ; 4
             cp a, (hl) ; 8
             jr nc, left_fill_cont ; 8/9
-                ex de, hl ; 4
-                ld (de), a ; 6
-                ld (hl), c ; 6
+                ld (hl), a ; 6
+                ld (ix), d ; 14
             left_fill_cont:
-            ld c, (iy + x0) ; 16
             scf ; 4
         fill_cont:
         ; Grab e2 from the stack
@@ -257,170 +249,6 @@ _drawTextureLineNewA_NoClip:
     real_end:
     ld sp, iy
     pop ix
-    ret
-section .text
-; approximates the square root of num
-; 2^(floor((floor(log2(num))+1)/2)-1) + (num)/(2^(floor((floor(log2(num))+1)/2)+1))
-; Seems to be consistently within ±6% of the real answer
-public _approx_sqrt_a
-_approx_sqrt_a:
-    ; Set hl to 3
-    ld hl, 3
-    add hl, sp
-    ld de, (hl)
-    sbc hl, sp
-    sbc hl, de
-    ex de, hl
-    ; If the number is greater than 3, move on
-    jr c, threeCont
-    ; Else, if the number is 1 or 0, return HL
-    bit 1, l
-    ret z
-    ; Else, return HL - 1
-    dec hl
-    ret
-threeCont:
-    ; Save the original number for later
-    push hl
-    ; Count the number of bits
-    ; ((x+1)/2)
-    ld b, 12
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    add hl, hl
-    jr c, count_bits_cont
-    add hl, hl
-    jr c, count_bits_cont
-    dec b
-    count_bits_cont:
-    ; generate our guess
-    ld a, b
-    sub a, 9
-    ; If the log is less than 9 (true log is less than 18), continue
-    jr c, log_less_than_8
-        di
-        ; Else, shift the number right by 8 and the guess left by 8
-        ld b, a
-        inc sp
-        pop de
-        dec sp
-        ld a, e
-        ld hl, 256
-        jr nz, shift_guess
-        srl d
-        rra
-        srl d
-        rra
-        ld e, a
-        
-        ; add the guess and the shifted original number together
-        add hl, de
-        ret
-    log_less_than_8:
-    pop de
-    ; Because the carry flag is always set by the time we get here, this gives -1
-    sbc hl, hl
-    add hl, sp
-    ; Shift the original number right by 1 to start
-    srl (hl)
-    ; Start our guess at 2
-    ld hl, 2
-    dec b
-    ; If the log is 1, return
-    ret z
-    ; Finish shifting the original number right
-    ld a, e
-    rr d
-    rra
-    dec b
-    jr z, guess_cont
-    ; 1 << b
-    ; (2^b)
-    shift_guess:
-    ; Shift our guess left and the original number right
-    add hl, hl
-    srl d
-    rra
-    dec b
-    jr z, guess_cont
-    add hl, hl
-    srl d
-    rra
-    dec b
-    jr z, guess_cont
-    add hl, hl
-    srl d
-    rra
-    dec b
-    jr z, guess_cont
-    add hl, hl
-    srl d
-    rra
-    dec b
-    jr z, guess_cont
-    add hl, hl
-    srl d
-    rra
-    dec b
-    jr z, guess_cont
-    add hl, hl
-    srl d
-    rra
-    guess_cont:
-    ; Shift the original number right 2 final times
-    srl d
-    rra
-    srl d
-    rra
-    ld e, a
-    ; add the guess and the shifted original number together
-    add hl, de
     ret
 section .text
 public _shadeScreen

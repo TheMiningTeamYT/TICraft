@@ -485,12 +485,14 @@ int getPointDistance(point point) {
 }
 
 void rotateCamera(float x, float y) {
+    bool rotated = false;
     if ((x != 0) && (angleX + x >= -90 && angleX + x <= 90)) {
         angleX += x;
         cx = cosf(angleX*degRadRatio);
         cxd = cx*(Fixed24)cubeSize;
         sx = sinf(angleX*degRadRatio);
         nsxd = sx*(Fixed24)cubeSize;
+        rotated = true;
     }
     if (y != 0) {
         angleY += y;
@@ -504,17 +506,20 @@ void rotateCamera(float x, float y) {
         cyd = cy*(Fixed24)cubeSize;
         sy = sinf(angleY*degRadRatio);
         nsyd = sy*(Fixed24)-cubeSize;
+        rotated = true;
     }
-    cxsy = cx*sy;
-    cxsyd = cxsy*(Fixed24)cubeSize;
-    cxcy = cx*cy;
-    cxcyd = cxcy*(Fixed24)cubeSize;
-    nsxsy = -sx*sy;
-    nsxsyd = nsxsy*(Fixed24)cubeSize;
-    nsxcy = -sx*cy;
-    nsxcyd = nsxcy*(Fixed24)cubeSize;
-    drawBuffer();
-    drawScreen();
+    if (rotated) {
+        cxsy = cx*sy;
+        cxsyd = cxsy*(Fixed24)cubeSize;
+        cxcy = cx*cy;
+        cxcyd = cxcy*(Fixed24)cubeSize;
+        nsxsy = -sx*sy;
+        nsxsyd = nsxsy*(Fixed24)cubeSize;
+        nsxcy = -sx*cy;
+        nsxcyd = nsxcy*(Fixed24)cubeSize;
+        drawBuffer();
+        drawScreen();
+    }
 }
 
 void redrawScreen() {
