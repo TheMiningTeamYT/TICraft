@@ -7,6 +7,7 @@
 #include "saves.hpp"
 #include "crc32.h"
 #include "cursor.hpp"
+#include "sincos.hpp"
 #include <time.h>
 
 extern "C" {
@@ -40,7 +41,7 @@ void save(const char* name) {
     bool saveGood = true;
     bool error = false;
     Fixed24 cursorPos[3] = {playerCursor.x, playerCursor.y, playerCursor.z};
-    // is using memcpy a bunch the best way to write this data out to memory? I DON'T KNOW!
+    // is this the best way to write this data out to memory? I DON'T KNOW!
     memcpy(saveData, "BLOCKS", 7);
     saveData += 7;
     *((unsigned int*)saveData) = saveFileVersion;
@@ -48,8 +49,8 @@ void save(const char* name) {
     *((unsigned int*)saveData) = numberOfObjects;
     saveData += sizeof(unsigned int);
     for (unsigned int i = 0; i < numberOfObjects; i++) {
-        *((cubeSave_v2*)saveData) = {objects[i]->x, objects[i]->y, objects[i]->z, objects[i]->texture};
-        saveData += sizeof(cubeSave_v2);
+        *((cubeSave_v3*)saveData) = {static_cast<int8_t>(objects[i]->x/cubeSize), static_cast<int8_t>(objects[i]->y/cubeSize), static_cast<int8_t>(objects[i]->z/cubeSize), objects[i]->texture};
+        saveData += sizeof(cubeSave_v3);
     }
     *saveData = selectedObject;
     saveData += 1;
@@ -57,10 +58,10 @@ void save(const char* name) {
     saveData += sizeof(Fixed24)*3;
     memcpy(saveData, cursorPos, sizeof(Fixed24)*3);
     saveData += sizeof(Fixed24)*3;
-    *((float*)saveData) = angleX;
-    saveData += sizeof(float);
-    *((float*)saveData) = angleY;
-    saveData += sizeof(float);
+    *((Fixed24*)saveData) = angleX;
+    saveData += sizeof(Fixed24);
+    *((Fixed24*)saveData) = angleY;
+    saveData += sizeof(Fixed24);
     *((uint32_t*)saveData) = crc32((char*) saveDataBuffer, (int)(saveData - (uint8_t*)saveDataBuffer));
     saveData += sizeof(uint32_t);
     deleteEverything();
@@ -155,20 +156,25 @@ bool checkSave(const char* name, bool USB) {
     gfx_SetTextFGColor(254);
     bool toSaveOrNotToSave = true;
     bool userSelected = false;
-    uint8_t* saveData = (uint8_t*)saveDataBuffer;
+    char* saveData = reinterpret_cast<char*>(saveDataBuffer);
     int fileSize = 0;
+    bool fileFound = true;
     if (USB) {
         if (init_USB()) {
             char nameBuffer[32];
             strcpy(nameBuffer, name);
             strcat(nameBuffer, ".SAV");
             fat_file_t* file = openFile("/SAVES", nameBuffer, false);
-            if (file == nullptr) {
+            if (!file) {
                 toSaveOrNotToSave = false;
+                fileFound = false;
             } else {
-                toSaveOrNotToSave = readFile(file, saveBufferSize, saveData);
-                if (toSaveOrNotToSave) {
-                    fileSize = getSizeOf(file);
+                fileSize = getSizeOf(file);
+                if (fileSize > saveBufferSize) {
+                    printStringAndMoveDownCentered("Save file too big.");
+                    toSaveOrNotToSave = false;
+                } else {
+                    toSaveOrNotToSave = readFile(file, saveBufferSize, saveData);
                 }
                 closeFile(file);
             }
@@ -179,111 +185,101 @@ bool checkSave(const char* name, bool USB) {
     } else {
         uint8_t handle = ti_Open(name, "r");
         if (handle) {
-            toSaveOrNotToSave = ti_Read(saveData, 1, ti_GetSize(handle), handle) == ti_GetSize(handle);
-            if (toSaveOrNotToSave) {
-                fileSize = ti_GetSize(handle);
+            fileSize = ti_GetSize(handle);
+            if (fileSize > saveBufferSize) {
+                printStringAndMoveDownCentered("Save file too big.");
+                toSaveOrNotToSave = false;
+            } else {
+                toSaveOrNotToSave = ti_Read(saveData, 1, fileSize, handle) == fileSize;
             }
             ti_Close(handle);
         } else {
             toSaveOrNotToSave = false;
+            fileFound = false;
         }
     }
     if (toSaveOrNotToSave) {
-        char signature[7];
-        bool error = false;
-        unsigned int version;
-        bool saveGood = true;
-        uint32_t checksum;
-        uint32_t properChecksum;
-        if (saveGood) {
-            memcpy(signature, saveData, 7);
-            saveData += 7;
-            saveGood = strcmp(signature, "BLOCKS") == 0;
-            version = *((unsigned int*)saveData);
-            saveData += sizeof(unsigned int);
-            saveGood = version <= saveFileVersion;
-        } else if (error == false) {
-            error = true;
-            printStringAndMoveDownCentered("Bad read.");
-        }
-        if (saveGood) {
-            checksum = crc32((char*) saveDataBuffer, fileSize - sizeof(uint32_t));
-            saveData = ((uint8_t*) saveDataBuffer) + (fileSize - sizeof(uint32_t));
-            properChecksum = *((uint32_t*)saveData);
-            saveGood = checksum == properChecksum;
-        } else if (error == false) {
-            error = true;
-            printStringAndMoveDownCentered("Wrong save file version");
-        }
-        if (saveGood) {
-            toSaveOrNotToSave = true;
-        } else if (error == false) {
-            error = true;
-            printStringAndMoveDownCentered("Bad checksum.");
-        }
-        if (!saveGood && error) {
+        if (strcmp((char*)saveData, "BLOCKS") != 0) {
+            printStringAndMoveDownCentered("Bad magic bytes.");
             failedToLoadSave();
-            toSaveOrNotToSave = false;
+            return false;
         }
+        saveData += 7;
+        if (*((unsigned int*)saveData) > saveFileVersion) {
+            printStringAndMoveDownCentered("Wrong save file version.");
+            failedToLoadSave();
+            return false;
+        }
+        saveData += sizeof(unsigned int);
+        if (*((unsigned int*)saveData) > maxNumberOfObjects) {
+            printStringAndMoveDownCentered("Save file contains too many blocks.");
+            failedToLoadSave();
+            return false;
+        }
+        saveData = ((char*) saveDataBuffer) + (fileSize - sizeof(uint32_t));
+        if (crc32((char*) saveDataBuffer, fileSize - sizeof(uint32_t)) != *((uint32_t*)saveData)) {
+            printStringAndMoveDownCentered("Bad checksum.");
+            failedToLoadSave();
+            return false;
+        }
+        return true;
     }
-    return toSaveOrNotToSave;
+    if (fileFound) {
+        failedToLoadSave();
+    }
+    return false;
 }
 
 void load() {
-    uint8_t* saveData = (uint8_t*) saveDataBuffer;
-    bool good = true;
-    bool saveGood = true;
-    bool error = false;
-    unsigned int version;
-    saveGood = true;
-    if (saveGood) {
-        saveData += 7;
-        version = *((unsigned int*)saveData);
-        saveData += sizeof(unsigned int);
-        numberOfObjects = *((unsigned int*)saveData);
-        if (numberOfObjects > maxNumberOfObjects) {
-            numberOfObjects = maxNumberOfObjects;
-        }
-        saveData += sizeof(unsigned int);
-        for (unsigned int i = 0; i < numberOfObjects; i++) {
-            if (version < 4) {
-                if (i < maxNumberOfObjects) {
-                    objects[i] = new object(((cubeSave*)saveData)->x, ((cubeSave*)saveData)->y, ((cubeSave*)saveData)->z, ((cubeSave*)saveData)->texture, false);
-                }
-                saveData += sizeof(cubeSave);
-            } else {
-                if (i < maxNumberOfObjects) {
-                    objects[i] = new object(((cubeSave_v2*)saveData)->x, ((cubeSave_v2*)saveData)->y, ((cubeSave_v2*)saveData)->z, ((cubeSave_v2*)saveData)->texture, false);
-                }
-                saveData += sizeof(cubeSave_v2);
-            }
-        }
-    } else if (error == false) {
-        error = true;
+    uint8_t* saveData = ((uint8_t*)saveDataBuffer) + 7;
+    unsigned int version = *((unsigned int*)saveData);
+    saveData += sizeof(unsigned int);
+    numberOfObjects = *((unsigned int*)saveData);
+    saveData += sizeof(unsigned int);
+    size_t cubeSaveSize = sizeof(cubeSave_v3);
+    if (version < 4) {
+        cubeSaveSize = sizeof(cubeSave);
+    } else if (version < 5) {
+        cubeSaveSize = sizeof(cubeSave_v2);
     }
-    if (!saveGood) {
-        error = true;
+    // Version 4 save files were first introduced in TICraft v1.1.0
+    // Version 3 and below save files are deprecated and support for them will be removed in the future
+    for (unsigned int i = 0; i < numberOfObjects; i++) {
+        if (version <= 3) {
+            objects[i] = new object(((cubeSave*)saveData)->x, ((cubeSave*)saveData)->y, ((cubeSave*)saveData)->z, ((cubeSave*)saveData)->texture, false);
+        } else if (version == 4) {
+            objects[i] = new object(((cubeSave_v2*)saveData)->x, ((cubeSave_v2*)saveData)->y, ((cubeSave_v2*)saveData)->z, ((cubeSave_v2*)saveData)->texture, false);
+        } else {
+            objects[i] = new object(static_cast<int>(((cubeSave_v3*)saveData)->x)*cubeSize, static_cast<int>(((cubeSave_v3*)saveData)->y)*cubeSize, static_cast<int>(((cubeSave_v3*)saveData)->z)*cubeSize, ((cubeSave_v3*)saveData)->texture, false);
+        }
+        saveData += cubeSaveSize;
     }
-    if (version >= 2 && saveGood) {
-        Fixed24 cursorPos[3];
+    if (version >= 2) {
         selectedObject = *saveData;
-        saveData += 1;
+        saveData += sizeof(uint8_t);
         memcpy(cameraXYZ, saveData, sizeof(Fixed24)*3);
         saveData += sizeof(Fixed24)*3;
         playerCursor.x = *((Fixed24*)saveData);
-        playerCursor.y = *(((Fixed24*)saveData) + 1);
-        playerCursor.z = *(((Fixed24*)saveData) + 2);
-        saveData += sizeof(Fixed24)*3;
+        saveData += sizeof(Fixed24);
+        playerCursor.y = *((Fixed24*)saveData);
+        saveData += sizeof(Fixed24);
+        playerCursor.z = *((Fixed24*)saveData);
+        saveData += sizeof(Fixed24);
         if (version >= 3) {
-            angleX = *((float*)saveData);
-            angleY = *(((float*)saveData) + 1);
-            cx = cosf(angleX*degRadRatio);
+            if (version >= 5) {
+                angleX = *((Fixed24*)saveData);
+                angleY = *(((Fixed24*)saveData) + 1);
+            } else {
+                angleX = *((float*)saveData)*degRadRatio;
+                angleY = *(((float*)saveData) + 1)*degRadRatio;
+            }
+            cx = fastSinCos::cos(angleX);
             cxd = cx*(Fixed24)cubeSize;
-            sx = sinf(angleX*degRadRatio);
+            sx = fastSinCos::sin(angleX);
             nsxd = sx*(Fixed24)cubeSize;
-            cy = cosf(angleY*degRadRatio);
+            cy = fastSinCos::cos(angleY);
             cyd = cy*(Fixed24)cubeSize;
-            sy = sinf(angleY*degRadRatio);
+            sy = fastSinCos::sin(angleY);
             nsyd = sy*(Fixed24)-cubeSize;
             cxsy = cx*sy;
             cxsyd = cxsy*(Fixed24)cubeSize;
@@ -294,9 +290,6 @@ void load() {
             nsxcy = -sx*cy;
             nsxcyd = nsxcy*(Fixed24)cubeSize;
         }
-    }
-    if (!saveGood && error) {
-        failedToLoadSave();
     }
 }
 
@@ -504,16 +497,17 @@ void takeScreenshot() {
     printStringAndMoveDownCentered("Please plug in a FAT32 formatted USB drive");
     printStringAndMoveDownCentered("to save the screenshot to now.");
     printStringAndMoveDownCentered("Press any key to cancel");
-    char name[16];
+    char name[42] = "Screenshot saved as \"SHOTS\\";
     bool good = false;
     if (init_USB()) {
         printStringAndMoveDownCentered("Please do not disconnect the USB drive.");
         time_t currentTime;
         time(&currentTime);
         tm* currentLocalTime = localtime(&currentTime);
-        strftime(name, 16, "%H%M-%j.BMP", currentLocalTime);
+        // Untested
+        strftime(name + 27, 15, "%H%M-%j.BMP", currentLocalTime);
         // actual header data is 1078B
-        unsigned char* headerBuffer = ((unsigned char*)cursorBackground->data) + sizeof(global_t);
+        unsigned char* headerBuffer = cursorBackground->data + sizeof(global_t);
         memcpy(headerBuffer, BMPheader, 54);
         for (unsigned int i = 0; i < 256; i++) {
             headerBuffer[(i*4) + 54] = (gfx_palette[i] & 0x001F)<<3;
@@ -523,7 +517,7 @@ void takeScreenshot() {
         }
         memcpy(headerBuffer + 1078, gfx_vram + (LCD_WIDTH*LCD_HEIGHT), 458);
         createDirectory("/", "SHOTS");
-        fat_file_t* screenshot = openFile("/SHOTS", name, true);
+        fat_file_t* screenshot = openFile("/SHOTS", name + 27, true);
         if (screenshot) {
             fat_SetFileSize(screenshot, 77878);
             good = fat_WriteFile(screenshot, 3, headerBuffer) == 3;
@@ -537,10 +531,11 @@ void takeScreenshot() {
         printStringAndMoveDownCentered("Failed to init USB.");
     }
     if (good) {
-        char buffer[48] = "Screenshot saved as \"SHOTS\\";
-        strcat(buffer, name);
-        strcat(buffer, "\".");
-        printStringAndMoveDownCentered(buffer);
+        // Untested
+        name[39] = '\"';
+        name[40] = '.';
+        name[41] = 0;
+        printStringAndMoveDownCentered(name);
         printStringAndMoveDownCentered("You may now remove the drive.");
     } else {
         printStringAndMoveDownCentered("Failed to write screenshot.");

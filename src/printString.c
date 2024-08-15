@@ -1,4 +1,10 @@
 #include <graphx.h>
+#include <ti/screen.h>
+#include <sys/lcd.h>
+
+void fontPrintString(const char* string, uint16_t row) {
+    os_FontDrawText(string, (LCD_WIDTH - os_FontGetWidth(string))>>1, row);
+}
 
 void printStringCentered(const char* string, int row) {
     unsigned int width = gfx_GetStringWidth(string);

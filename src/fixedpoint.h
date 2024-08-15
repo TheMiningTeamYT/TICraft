@@ -44,12 +44,12 @@ struct Fixed24 {
   }
 
   int24_t round() {
-    int24_t fraction = n % (1 << POINT);
+    int24_t fraction = n & ((1 << POINT) - 1);
     int24_t whole = n - fraction;
     if (fraction > (1 << (POINT - 1))) {
       whole += (1 << (POINT - 1));
     }
-    return whole/(1 << POINT);
+    return whole >> POINT;
   }
 
   /* Rounds down the provided Fixed24 while preserving the last requested number
@@ -192,3 +192,6 @@ Fixed24 asin(Fixed24 x);
 Fixed24 atan2(Fixed24 &x, Fixed24 &y);
 
 Fixed24 abs(Fixed24 &x);
+
+// Enables creating a Fixed24 from a magic constant
+Fixed24 fromRaw(int _n);

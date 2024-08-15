@@ -1,19 +1,18 @@
+#include <time.h>
 #include <graphx.h>
 #include <fileioc.h>
 #include <ti/flags.h>
 #include <ti/getkey.h>
 #include <sys/power.h>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cctype>
-#include <time.h>
 #include "renderer.hpp"
 #include "textures.hpp"
 #include "saves.hpp"
-#include "crc32.h"
 #include "cursor.hpp"
 #include "version.hpp"
+#include "sincos.hpp"
+#include "blockMenu.hpp"
+#include "sys.hpp"
+#include "texturePackMenu.hpp"
 #define freeMem 0xD02587
 
 extern "C" {
@@ -21,9 +20,6 @@ extern "C" {
     int ti_MemChk();
     #include "printString.h"
 }
-
-// APD = Automatic Power Down (AFAIK)
-// The latest update has been resulting in a concerning number of NMI resets, so I need to figure out WTF is going on.
 
 /*
 Implement chunking
@@ -36,33 +32,6 @@ Allows many more blocks at theoretically no additional RAM cost
 Cons:
 Doing a re-render will be INSANELY expensive
 */
-
-// TODO:
-// Finish adding the alternate controls for keyboards
-
-struct packEntry {
-    texturePack* pack;
-    char* filename;
-    unsigned int size;
-};
-
-uint8_t interruptOriginalValue;
-void selectBlock();
-void drawSelection(int offset);
-void texturePackError(const char* message);
-void texturePackMenu();
-void drawTexturePackSelection(texturePack* pack, int row, bool selected);
-bool verifyTexturePack(packEntry pack);
-void exitOverlay(int code) {
-    gfx_End();
-    // Restore RTC interrupts
-    *((uint8_t*)0xF00005) = interruptOriginalValue;
-    os_EnableAPD();
-    // clear out pixel shadow
-    memset((void*) 0xD031F6, 0, 69090);
-    os_ClrHomeFull();
-    exit(code);
-};
 
 bool fineMovement;
 
@@ -88,6 +57,7 @@ int main() {
     cursorBackground = *((gfx_sprite_t**) freeMem);
     // texture pack selection menu goes here
     texturePackMenu();
+    fastSinCos::generateTable();
     ti_SetGCBehavior(gfx_End, gfxStart);
     bool userSelected = false;
     bool toSaveOrNotToSave = true;
@@ -172,40 +142,19 @@ int main() {
         if (toSaveOrNotToSave) {
             load();
         } else {
-            playerCursor.moveTo(20, 20, 20);
+            playerCursor.x = cubeSize;
+            playerCursor.y = cubeSize;
+            playerCursor.z = cubeSize;
             selectedObject = 10;
-            /*float a = (((abs(rand()) % 39936) + 1024)-20480)/1024.0f;
-            int b = rand() % 25;
-            int c = rand() % 25;
-            for (int i = 0; i < 256 && numberOfObjects < maxNumberOfObjects; i++) {
-                // workaround for compiler bug
-                div_t xy = div(i, 16);
-                int x = (xy.rem)*cubeSize;
-                int y = abs((((int)(sinf((((float)(xy.rem + b))/(0.5f*a))+a)*cosf((((float)(xy.quot+c))/(0.5f*a))+a)*a))>>2)+3)*cubeSize;
-                int z = (xy.quot)*cubeSize;
-                objects[numberOfObjects] = new object(x, y, z, 10, false);
-                numberOfObjects++;
-                for (uint8_t j = 0; j < 2 && y > 0 && numberOfObjects < maxNumberOfObjects; j++) {
-                    y -= cubeSize;
-                    objects[numberOfObjects] = new object(x, y, z, 7, false);
-                    numberOfObjects++;
-                }
-                while (y > 0 && numberOfObjects < maxNumberOfObjects) {
-                    y -= cubeSize;
-                    objects[numberOfObjects] = new object(x, y, z, 21, false);
-                    numberOfObjects++;
-                }
-            }*/
-            for (int i = 0; i < 1225; i++) {
+            for (int i = 0; i < 1225 && i < maxNumberOfObjects; i++) {
                 // workaround for compiler bug
                 div_t xy = div(i, 35);
-                objects[numberOfObjects] = new object(xy.rem*20, 0, xy.quot*20, 10, false);
+                objects[numberOfObjects] = new object(xy.rem*cubeSize, 0, xy.quot*cubeSize, 10, false);
                 numberOfObjects++;
             }
         }
         fineMovement = false;
         outlineColor = 0;
-        memcpy(zSortedObjects, objects, sizeof(object*) * numberOfObjects);
         xSort();
         gfx_Sprite_NoClip(cursorBackground, 0, 0);
         gfx_Sprite_NoClip(background2, 160, 0);
@@ -224,21 +173,21 @@ int main() {
                 // forward
                 case 0xFCE6:
                 case k_9:
-                    if (angleY < -67.5f) {
+                    if (angleY < static_cast<Fixed24>(-67.5f*degRadRatio)) {
                         moveCursor(6);
-                    } else if (angleY < -22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(-22.5f*degRadRatio)) {
                         moveCursor(2);
-                    } else if (angleY < 22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(22.5f*degRadRatio)) {
                         moveCursor(8);
-                    } else if (angleY < 67.5f) {
+                    } else if (angleY < static_cast<Fixed24>(67.5f*degRadRatio)) {
                         moveCursor(4);
-                    } else if (angleY < 112.5f) {
+                    } else if (angleY < static_cast<Fixed24>(112.5f*degRadRatio)) {
                         moveCursor(7);
-                    } else if (angleY < 157.5f) {
+                    } else if (angleY < static_cast<Fixed24>(157.5f*degRadRatio)) {
                         moveCursor(3);
-                    } else if (angleY < 202.5f) {
+                    } else if (angleY < static_cast<Fixed24>(202.5f*degRadRatio)) {
                         moveCursor(9);
-                    } else if (angleY < 247.5f) {
+                    } else if (angleY < static_cast<Fixed24>(247.5f*degRadRatio)) {
                         moveCursor(5);
                     } else {
                         moveCursor(6);
@@ -247,21 +196,21 @@ int main() {
                 // backward
                 case 0xFCFB:
                 case k_1:
-                    if (angleY < -67.5f) {
+                    if (angleY < static_cast<Fixed24>(-67.5f*degRadRatio)) {
                         moveCursor(7);
-                    } else if (angleY < -22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(-22.5f*degRadRatio)) {
                         moveCursor(3);
-                    } else if (angleY < 22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(22.5f*degRadRatio)) {
                         moveCursor(9);
-                    } else if (angleY < 67.5f) {
+                    } else if (angleY < static_cast<Fixed24>(67.5f*degRadRatio)) {
                         moveCursor(5);
-                    } else if (angleY < 112.5f) {
+                    } else if (angleY < static_cast<Fixed24>(112.5f*degRadRatio)) {
                         moveCursor(6);
-                    } else if (angleY < 157.5f) {
+                    } else if (angleY < static_cast<Fixed24>(157.5f*degRadRatio)) {
                         moveCursor(2);
-                    } else if (angleY < 202.5f) {
+                    } else if (angleY < static_cast<Fixed24>(202.5f*degRadRatio)) {
                         moveCursor(8);
-                    } else if (angleY < 247.5f) {
+                    } else if (angleY < static_cast<Fixed24>(247.5f*degRadRatio)) {
                         moveCursor(4);
                     } else {
                         moveCursor(7);
@@ -270,21 +219,21 @@ int main() {
                 // left
                 case 0xFCF2:
                 case k_7:
-                    if (angleY < -67.5f) {
+                    if (angleY < static_cast<Fixed24>(-67.5f*degRadRatio)) {
                         moveCursor(9);
-                    } else if (angleY < -22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(-22.5f*degRadRatio)) {
                         moveCursor(5);
-                    } else if (angleY < 22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(22.5f*degRadRatio)) {
                         moveCursor(6);
-                    } else if (angleY < 67.5f) {
+                    } else if (angleY < static_cast<Fixed24>(67.5f*degRadRatio)) {
                         moveCursor(2);
-                    } else if (angleY < 112.5f) {
+                    } else if (angleY < static_cast<Fixed24>(112.5f*degRadRatio)) {
                         moveCursor(8);
-                    } else if (angleY < 157.5f) {
+                    } else if (angleY < static_cast<Fixed24>(157.5f*degRadRatio)) {
                         moveCursor(4);
-                    } else if (angleY < 202.5f) {
+                    } else if (angleY < static_cast<Fixed24>(202.5f*degRadRatio)) {
                         moveCursor(7);
-                    } else if (angleY < 247.5f) {
+                    } else if (angleY < static_cast<Fixed24>(247.5f*degRadRatio)) {
                         moveCursor(3);
                     } else {
                         moveCursor(9);
@@ -293,21 +242,21 @@ int main() {
                 // right
                 case 0xFCE4:
                 case k_3:
-                    if (angleY < -67.5f) {
+                    if (angleY < static_cast<Fixed24>(-67.5f*degRadRatio)) {
                         moveCursor(8);
-                    } else if (angleY < -22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(-22.5f*degRadRatio)) {
                         moveCursor(4);
-                    } else if (angleY < 22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(22.5f*degRadRatio)) {
                         moveCursor(7);
-                    } else if (angleY < 67.5f) {
+                    } else if (angleY < static_cast<Fixed24>(67.5f*degRadRatio)) {
                         moveCursor(3);
-                    } else if (angleY < 112.5f) {
+                    } else if (angleY < static_cast<Fixed24>(112.5f*degRadRatio)) {
                         moveCursor(9);
-                    } else if (angleY < 157.5f) {
+                    } else if (angleY < static_cast<Fixed24>(157.5f*degRadRatio)) {
                         moveCursor(5);
-                    } else if (angleY < 202.5f) {
+                    } else if (angleY < static_cast<Fixed24>(202.5f*degRadRatio)) {
                         moveCursor(6);
-                    } else if (angleY < 247.5f) {
+                    } else if (angleY < static_cast<Fixed24>(247.5f*degRadRatio)) {
                         moveCursor(2);
                     } else {
                         moveCursor(8);
@@ -325,21 +274,21 @@ int main() {
                     break;
                 case 0xFCF8:
                 case k_8:
-                    if (angleY < -67.5f) {
+                    if (angleY < static_cast<Fixed24>(-67.5f*degRadRatio)) {
                         moveCursor(5);
-                    } else if (angleY < -22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(-22.5f*degRadRatio)) {
                         moveCursor(6);
-                    } else if (angleY < 22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(22.5f*degRadRatio)) {
                         moveCursor(2);
-                    } else if (angleY < 67.5f) {
+                    } else if (angleY < static_cast<Fixed24>(67.5f*degRadRatio)) {
                         moveCursor(8);
-                    } else if (angleY < 112.5f) {
+                    } else if (angleY < static_cast<Fixed24>(112.5f*degRadRatio)) {
                         moveCursor(4);
-                    } else if (angleY < 157.5f) {
+                    } else if (angleY < static_cast<Fixed24>(157.5f*degRadRatio)) {
                         moveCursor(7);
-                    } else if (angleY < 202.5f) {
+                    } else if (angleY < static_cast<Fixed24>(202.5f*degRadRatio)) {
                         moveCursor(3);
-                    } else if (angleY < 247.5f) {
+                    } else if (angleY < static_cast<Fixed24>(247.5f*degRadRatio)) {
                         moveCursor(9);
                     } else {
                         moveCursor(5);
@@ -347,21 +296,21 @@ int main() {
                     break;
                 case 0xFCF4:
                 case k_2:
-                    if (angleY < -67.5f) {
+                    if (angleY < static_cast<Fixed24>(-67.5f*degRadRatio)) {
                         moveCursor(4);
-                    } else if (angleY < -22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(-22.5f*degRadRatio)) {
                         moveCursor(7);
-                    } else if (angleY < 22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(22.5f*degRadRatio)) {
                         moveCursor(3);
-                    } else if (angleY < 67.5f) {
+                    } else if (angleY < static_cast<Fixed24>(67.5f*degRadRatio)) {
                         moveCursor(9);
-                    } else if (angleY < 112.5f) {
+                    } else if (angleY < static_cast<Fixed24>(112.5f*degRadRatio)) {
                         moveCursor(5);
-                    } else if (angleY < 157.5f) {
+                    } else if (angleY < static_cast<Fixed24>(157.5f*degRadRatio)) {
                         moveCursor(6);
-                    } else if (angleY < 202.5f) {
+                    } else if (angleY < static_cast<Fixed24>(202.5f*degRadRatio)) {
                         moveCursor(2);
-                    } else if (angleY < 247.5f) {
+                    } else if (angleY < static_cast<Fixed24>(247.5f*degRadRatio)) {
                         moveCursor(8);
                     } else {
                         moveCursor(4);
@@ -369,21 +318,21 @@ int main() {
                     break;
                 case 0xFCE2:
                 case k_4:
-                    if (angleY < -67.5f) {
+                    if (angleY < static_cast<Fixed24>(-67.5f*degRadRatio)) {
                         moveCursor(3);
-                    } else if (angleY < -22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(-22.5f*degRadRatio)) {
                         moveCursor(9);
-                    } else if (angleY < 22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(22.5f*degRadRatio)) {
                         moveCursor(5);
-                    } else if (angleY < 67.5f) {
+                    } else if (angleY < static_cast<Fixed24>(67.5f*degRadRatio)) {
                         moveCursor(6);
-                    } else if (angleY < 112.5f) {
+                    } else if (angleY < static_cast<Fixed24>(112.5f*degRadRatio)) {
                         moveCursor(2);
-                    } else if (angleY < 157.5f) {
+                    } else if (angleY < static_cast<Fixed24>(157.5f*degRadRatio)) {
                         moveCursor(8);
-                    } else if (angleY < 202.5f) {
+                    } else if (angleY < static_cast<Fixed24>(202.5f*degRadRatio)) {
                         moveCursor(4);
-                    } else if (angleY < 247.5f) {
+                    } else if (angleY < static_cast<Fixed24>(247.5f*degRadRatio)) {
                         moveCursor(7);
                     } else {
                         moveCursor(3);
@@ -391,21 +340,21 @@ int main() {
                     break;
                 case 0xFCE5:
                 case k_6:
-                    if (angleY < -67.5f) {
+                    if (angleY < static_cast<Fixed24>(-67.5f*degRadRatio)) {
                         moveCursor(2);
-                    } else if (angleY < -22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(-22.5f*degRadRatio)) {
                         moveCursor(8);
-                    } else if (angleY < 22.5f) {
+                    } else if (angleY < static_cast<Fixed24>(22.5f*degRadRatio)) {
                         moveCursor(4);
-                    } else if (angleY < 67.5f) {
+                    } else if (angleY < static_cast<Fixed24>(67.5f*degRadRatio)) {
                         moveCursor(7);
-                    } else if (angleY < 112.5f) {
+                    } else if (angleY < static_cast<Fixed24>(112.5f*degRadRatio)) {
                         moveCursor(3);
-                    } else if (angleY < 157.5f) {
+                    } else if (angleY < static_cast<Fixed24>(157.5f*degRadRatio)) {
                         moveCursor(9);
-                    } else if (angleY < 202.5f) {
+                    } else if (angleY < static_cast<Fixed24>(202.5f*degRadRatio)) {
                         moveCursor(5);
-                    } else if (angleY < 247.5f) {
+                    } else if (angleY < static_cast<Fixed24>(247.5f*degRadRatio)) {
                         moveCursor(6);
                     } else {
                         moveCursor(2);
@@ -413,41 +362,18 @@ int main() {
                     break;
                 case k_Space:
                 case k_5: {
-                    object* annoyingPointer = &playerCursor;
-                    object** matchingObject = (object**) bsearch(&annoyingPointer, objects, numberOfObjects, sizeof(object*), xCompare);
+                    // A linear search feels inefficient here but I guess it's fast enough
+                    object** matchingObject = objects;
                     bool deletedObject = false;
                     drawBuffer();
-                    if (matchingObject != nullptr) {
-                        while (matchingObject > &objects[0] && (*(matchingObject-1))->x == playerCursor.x) {
-                            matchingObject--;
+                    while (matchingObject < objects + numberOfObjects) {
+                        if (((*matchingObject)->x == playerCursor.x) && ((*matchingObject)->y == playerCursor.y) && ((*matchingObject)->z == playerCursor.z) && (is_visible(*matchingObject))) {
+                            deletedObject = true;
+                            break;
                         }
-                        while (matchingObject < &objects[numberOfObjects] && (*matchingObject)->x == playerCursor.x) {
-                            if ((*matchingObject)->y == playerCursor.y && (*matchingObject)->z == playerCursor.z) {
-                                deletedObject = true;
-                                break;
-                            }
-                            matchingObject++;
-                        }
+                        matchingObject++;
                     }
                     if (deletedObject) {
-                        deletedObject = false;
-                        object** zSortedPointer = (object**) bsearch(matchingObject, zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
-                        while (zSortedPointer > zSortedObjects && distanceCompare(zSortedPointer - 1, matchingObject) == 0) {
-                            zSortedPointer--;
-                        }
-                        while (zSortedPointer < zSortedObjects + numberOfObjects && distanceCompare(zSortedPointer, matchingObject) == 0) {
-                            if ((*zSortedPointer)->x == playerCursor.x && (*zSortedPointer)->y == playerCursor.y && (*zSortedPointer)->z == playerCursor.z) {
-                                deletedObject = true;
-                                memmove(zSortedPointer, zSortedPointer + 1, sizeof(object*) * (size_t)(zSortedObjects + numberOfObjects - zSortedPointer - 1));
-                                break;
-                            }
-                            zSortedPointer++;
-                        }
-                        // just incase something goes wrong in the search
-                        if (!deletedObject) {
-                            gfx_End();
-                            exitOverlay(1);
-                        }
                         object* matchingObjectReference = *matchingObject;
                         memmove(matchingObject, matchingObject + 1, sizeof(object*) * (size_t)(objects + numberOfObjects - matchingObject - 1));
                         numberOfObjects--;
@@ -458,17 +384,8 @@ int main() {
                             newObject->findDistance();
                             matchingObject = objects;
                             while (matchingObject < objects + numberOfObjects) {
-                                if ((*matchingObject)->x >= playerCursor.x) {
-                                    memmove(matchingObject + 1, matchingObject, sizeof(object*) * (size_t)(objects + numberOfObjects - matchingObject));
-                                    break;
-                                }
-                                matchingObject++;
-                            }
-                            *matchingObject = newObject;
-                            matchingObject = zSortedObjects;
-                            while (matchingObject < zSortedObjects + numberOfObjects) {
                                 if (distanceCompare(matchingObject, &newObject) >= 0) {
-                                    memmove(matchingObject + 1, matchingObject, sizeof(object*) * (size_t)(zSortedObjects + numberOfObjects - matchingObject));
+                                    memmove(matchingObject + 1, matchingObject, sizeof(object*) * (size_t)(objects + numberOfObjects - matchingObject));
                                     break;
                                 }
                                 matchingObject++;
@@ -590,33 +507,33 @@ int main() {
                 case 0xFCEC:
                 case k_Prgm:
                     if (fineMovement) {
-                        rotateCamera(-2.5, 0);
+                        rotateCamera(static_cast<Fixed24>(-2.5f*degRadRatio), 0);
                     } else {
-                        rotateCamera(-10, 0);
+                        rotateCamera(static_cast<Fixed24>(-10.0f*degRadRatio), 0);
                     }
                     break;
                 case 0x8B:
                 case k_Cos:
                     if (fineMovement) {
-                        rotateCamera(2.5, 0);
+                        rotateCamera(static_cast<Fixed24>(2.5f*degRadRatio), 0);
                     } else {
-                        rotateCamera(10, 0);
+                        rotateCamera(static_cast<Fixed24>(10.0f*degRadRatio), 0);
                     }
                     break;
                 case 0xFCEE:
                 case k_Sin:
                     if (fineMovement) {
-                        rotateCamera(0, -2.5);
+                        rotateCamera(0, static_cast<Fixed24>(-2.5f*degRadRatio));
                     } else {
-                        rotateCamera(0, -10);
+                        rotateCamera(0, static_cast<Fixed24>(-10.0f*degRadRatio));
                     }
                     break;
                 case 0x8D:
                 case k_Tan:
                     if (fineMovement) {
-                        rotateCamera(0, 2.5);
+                        rotateCamera(0, static_cast<Fixed24>(2.5f*degRadRatio));
                     } else {
-                        rotateCamera(0, 10);
+                        rotateCamera(0, static_cast<Fixed24>(10.0f*degRadRatio));
                     }
                     break;
                 case 0xFE0A:
@@ -646,264 +563,5 @@ int main() {
         }
         deleteEverything();
     }
-    exitOverlay(0);
-}
-
-void selectBlock() {
-    drawBuffer();
-    shadeScreen();
-    cursorBackground->width = 16;
-    cursorBackground->height = 16;
-    gfx_SetColor(253);
-    gfx_FillRectangle(72, 42, 176, 156);
-    for (uint8_t i = 0; i < 48; i++) {
-        if (i == selectedObject) {
-            gfx_SetColor(254);
-            gfx_FillRectangle(80 + (20*(i%8)), 50 + (24*(i/8)), 20, 20);
-        }
-        memcpy(cursorBackground->data, textures[i][1], 256);
-        gfx_Sprite_NoClip(cursorBackground, 82 + (20*(i%8)), 52 + (24*(i/8)));
-    }
-    bool quit = false;
-    while (!quit) {
-        os_ResetFlag(SHIFT, ALPHALOCK);
-        switch (os_GetKey()) {
-            case k_Up:
-            case k_8:
-                if (selectedObject/8 > 0) {
-                    drawSelection(-8);
-                } else {
-                    drawSelection(40);
-                }
-                break;
-            case k_Down:
-            case k_2:
-                if (selectedObject/8 < 5) {
-                    drawSelection(8);
-                } else {
-                    drawSelection(-40);
-                }
-                break;
-            case k_Left:
-            case k_4:
-                if (selectedObject > 0) {
-                    drawSelection(-1);
-                } else {
-                    drawSelection(((int)-selectedObject) + 47);
-                }
-                break;
-            case k_Right:
-            case k_6:
-                if (selectedObject < 47) {
-                    drawSelection(1);
-                } else {
-                    drawSelection(((int)-selectedObject));
-                }
-                break;
-            case k_Enter:
-                quit = true;
-                break;
-            case k_Clear:
-                quit = true;
-                break;
-            default:
-                break;
-        }
-    }
-    gfx_palette[255] = texPalette[255];
-    drawScreen();
-}
-
-void drawSelection(int offset) {
-    gfx_SetColor(253);
-    gfx_FillRectangle(80 + (20*(selectedObject%8)), 50 + (24*(selectedObject/8)), 20, 20);
-    memcpy(cursorBackground->data, textures[selectedObject][1], 256);
-    gfx_Sprite_NoClip(cursorBackground, 82 + (20*(selectedObject%8)), 52 + (24*(selectedObject/8)));
-    selectedObject += offset;
-    gfx_SetColor(254);
-    gfx_FillRectangle(80 + (20*(selectedObject%8)), 50 + (24*(selectedObject/8)), 20, 20);
-    memcpy(cursorBackground->data, textures[selectedObject][1], 256);
-    gfx_Sprite_NoClip(cursorBackground, 82 + (20*(selectedObject%8)), 52 + (24*(selectedObject/8)));
-}
-
-void texturePackError(const char* message) {
-    gfx_End();
-    os_ClrHomeFull();
-    os_PutStrFull("Texture pack is invalid (");
-    os_PutStrFull(message);
-    os_PutStrFull("). Please select another texture pack or load on the texture pack again. Press any key to continue.");
-    os_GetKey();
-}
-
-void fontPrintString(const char* string, uint16_t row) {
-    os_FontDrawText(string, (LCD_WIDTH - os_FontGetWidth(string))>>1, row);
-}
-
-int texturePackCompare(const void *arg1, const void *arg2) {
-    const char* name1 = ((packEntry*) arg1)->pack->metadata;
-    const char* name2 = ((packEntry*) arg2)->pack->metadata;
-    for (unsigned int i = 0; name1[i] && name2[i]; i++) {
-        if (toupper(name1[i]) != toupper(name2[i])) {
-            return toupper(name1[i]) - toupper(name2[i]);
-        }
-    }
-    return strlen(name1) - strlen(name2);
-}
-
-void texturePackMenu() {
-    memset(gfx_vram, 0, 320*240*sizeof(uint16_t));
-    char* name;
-    void* vat_ptr = nullptr;
-    char** texturePackNames = (char**) malloc(0);
-    unsigned int numberOfTexturePacks = 0;
-    while ((name = ti_Detect(&vat_ptr, TICRAFTTexturePackMagic))) {
-        uint8_t texturePackHandle = ti_Open(name, "r");
-        ti_SetArchiveStatus(true, texturePackHandle);
-        texturePack* pack = (texturePack*) ti_GetDataPtr(texturePackHandle);
-        ti_Close(texturePackHandle);
-        if (pack->version == TICRAFTTexturePackVersion) {
-            texturePackNames = (char**) realloc(texturePackNames, sizeof(char*) * (numberOfTexturePacks + 1));
-            // just remember to delete all of these strings when we're done
-            texturePackNames[numberOfTexturePacks] = new char[strlen(name) + 1];
-            strcpy(texturePackNames[numberOfTexturePacks], name);
-            numberOfTexturePacks++;
-        }
-    }
-    if (numberOfTexturePacks == 0) {
-        texturePackError("none were found");
-        exitOverlay(1);
-    }
-    packEntry* packs = new packEntry[numberOfTexturePacks];
-    for (unsigned int i = 0; i < numberOfTexturePacks; i++) {
-        uint8_t texturePackHandle = ti_Open(texturePackNames[i], "r");
-        packs[i].pack = (texturePack*)ti_GetDataPtr(texturePackHandle);
-        packs[i].filename = texturePackNames[i];
-        packs[i].size = ti_GetSize(texturePackHandle);
-        ti_Close(texturePackHandle);
-    }
-    free(texturePackNames);
-    unsigned int offset = 0;
-    unsigned int selectedPack = 0;
-    bool quit = false;
-    if (numberOfTexturePacks == 1) {
-        if (verifyTexturePack(packs[0])) {
-            goto texturePackEnd;
-        }
-        exitOverlay(1);
-    }
-    qsort(packs, numberOfTexturePacks, sizeof(packEntry), texturePackCompare);
-    // here we make the actual menu
-    os_FontSelect(os_LargeFont);
-    os_SetDrawFGColor(65535);
-    os_SetDrawBGColor(0);
-    fontPrintString("Please select a", 4);
-    fontPrintString("texture pack.", 23);
-    while (!quit) {
-        memset(gfx_vram + (12800*sizeof(uint16_t)), 0, 64000*sizeof(uint16_t));
-        for (unsigned int i = 0; i + offset < numberOfTexturePacks && i < 5; i++) {
-            drawTexturePackSelection(packs[i + offset].pack, i, i == selectedPack);
-        }
-        uint8_t key;
-        bool quit2 = false;
-        while (!quit2) {
-            os_ResetFlag(SHIFT, ALPHALOCK);
-            switch (os_GetKey()) {
-                case 0xFC08:
-                case k_5:
-                case k_Enter:
-                    quit2 = true;
-                    if (verifyTexturePack(packs[selectedPack + offset])) {
-                        quit = true;
-                    }
-                    break;
-                case 0xFCF8:
-                case k_Up:
-                case k_8:
-                    if (selectedPack > 0) {
-                        drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, false);
-                        selectedPack--;
-                        drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, true);
-                    }
-                    break;
-                case 0xFCF4:
-                case k_Down:
-                case k_2:
-                    if (selectedPack + offset + 1 < numberOfTexturePacks && selectedPack < 4) {
-                        drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, false);
-                        selectedPack++;
-                        drawTexturePackSelection(packs[selectedPack + offset].pack, selectedPack, true);
-                    }
-                    break;
-                case 0xFCE2:
-                case k_Left:
-                case k_4:
-                    if (offset > 4) {
-                        offset -= 5;
-                        quit2 = true;
-                    }
-                    break;
-                case 0xFCE5:
-                case k_Right:
-                case k_6:
-                    if (numberOfTexturePacks > offset + 5) {
-                        offset += 5;
-                        if (selectedPack + offset >= numberOfTexturePacks) {
-                            selectedPack = numberOfTexturePacks - offset - 1;
-                        }
-                        quit2 = true;
-                    }
-                    break;
-                case 0x1C3D:
-                case k_Graph:
-                case k_Clear:
-                    exitOverlay(0);
-                default:
-                    break;
-            }
-        }
-    }
-    texturePackEnd:
-    texturePackName = new char[strlen(packs[selectedPack + offset].filename) + 1];
-    strcpy(texturePackName, packs[selectedPack + offset].filename);
-    for (unsigned int i = 0; i < numberOfTexturePacks; i++) {
-        delete[] packs[i].filename;
-    }
-    delete[] packs;
-}
-
-void drawTexturePackSelection(texturePack* pack, int row, bool selected) {
-    if (selected) {
-        drawRectangle(0, (40*row)+40, 320, 40, 65535);
-        os_SetDrawFGColor(0);
-        os_SetDrawBGColor(65535);
-    } else {
-        drawRectangle(0, (40*row)+40, 320, 40, 0);
-        os_SetDrawFGColor(65535);
-        os_SetDrawBGColor(0);
-    }
-    drawImage(4, (40*row)+44, 32, 32, pack->icon);
-    char nameString[32];
-    strncpy(nameString, pack->metadata, 32);
-    nameString[31] = 0;
-    os_FontDrawText(nameString, 40, (40*row)+44);
-}
-
-bool verifyTexturePack(packEntry pack) {
-    os_ClrHomeFull();
-    os_PutStrFull("Verifying texture pack, please wait...");
-    if (strcmp(pack.pack->magic, TICRAFTTexturePackMagic) != 0) {
-        texturePackError("bad magic bytes");
-        return false;
-    }
-    if (pack.pack->version != TICRAFTTexturePackVersion) {
-        texturePackError("for the wrong version of TICRAFT");
-        return false;
-    }
-    #define texturePackCRC *((uint32_t*)(((char*)pack.pack) + pack.size - sizeof(uint32_t)))
-    #define trueCRC crc32((const char*)pack.pack, pack.size - sizeof(uint32_t))
-    if (texturePackCRC != trueCRC) {
-        texturePackError("bad checksum");
-        return false;
-    }
-    return true;
+    exitOverlay();
 }

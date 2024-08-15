@@ -4,12 +4,18 @@
 #include <cstdio>
 #include "fixedpoint.h"
 
+// Might be a good idea to put these in a namespace. Maybe. :/
+
 // might be too close
 #define zCullingDistance 400
-#define maxNumberOfObjects 3000
+#define maxNumberOfObjects 3500
 #define showDraw false
 #define diagnostics false
 #define cubeSize 20
+#define visible 64
+#define outline 128
+#define is_visible(x) ((x)->properties & visible)
+#define is_outline(x) ((x)->properties & outline)
 
 /*
 A point in 3d space
@@ -34,14 +40,6 @@ struct screenPoint {
 
     //Distance to the camera
     uint16_t z = 0;
-};
-
-/*
-(Unused) A line between 2 points (represented as indexes into an array of screenPoints)
-*/
-struct line {
-    uint8_t point1;
-    uint8_t point2;
 };
 
 /*
@@ -97,8 +95,10 @@ class object {
         y = initY;
         z = initZ;
         texture = initTexture;
-        outline = initOutline;
-    };
+        if (initOutline) {
+            properties |= outline;
+        }
+    }
 
     object() {};
 
@@ -106,9 +106,6 @@ class object {
 
     // Offset the cube
     void moveBy(int newX, int newY, int newZ);
-
-    // Move the cube
-    void moveTo(int newX, int newY, int newZ);
 
     // Prepare the cube's polygons for rendering
     void generatePolygons();
@@ -132,11 +129,8 @@ class object {
     // The distance of the cube from the camera
     uint16_t distance = 0;
 
-    // Whether the cube is currently visible
-    bool visible = false;
-
-    // draw as outline or texture
-    bool outline;
+    // Whether the cube is currently visible and whether to draw it as an outline or textured
+    uint8_t properties = 0;
 };
 
 // Used for sorting of objects
@@ -154,7 +148,6 @@ void renderPolygon(object* sourceObject, screenPoint* polygonRenderedPoints, uin
 
 // An array of all the objects in the world
 extern object* objects[maxNumberOfObjects];
-extern object* zSortedObjects[maxNumberOfObjects];
 extern screenPoint renderedPoints[8];
 
 // The number of objects in the world
@@ -185,12 +178,11 @@ extern Fixed24 nsxsyd;
 extern Fixed24 nsxcyd;
 extern Fixed24 cxsyd;
 extern Fixed24 cxcyd;
-extern float angleX;
-extern float angleY;
-extern float degRadRatio;
+extern Fixed24 angleX;
+extern Fixed24 angleY;
 extern uint8_t outlineColor;
 #define xSort() qsort(objects, numberOfObjects, sizeof(object*), xCompare); zSort();
-void rotateCamera(float x, float y);
+void rotateCamera(Fixed24 x, Fixed24 y);
 void resetCamera();
 void drawImage(int x, int y, int width, int height, uint16_t* dataPointer);
 void drawRectangle(int x, int y, int width, int height, uint16_t color);

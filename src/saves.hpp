@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "renderer.hpp"
 
-#define saveFileVersion 4
+#define saveFileVersion 5
 // hey we can just use the back buffer
 #define saveDataBuffer 0xD52C00
 #define saveBufferSize 76800
@@ -34,6 +34,20 @@ struct cubeSave_v2 {
 
     // Z position of the cube
     int16_t z;
+
+    // An index into an array of pointers representing the texture of the cube
+    uint8_t texture;
+};
+
+struct cubeSave_v3 {
+    // X position of the cube
+    int8_t x;
+
+    // Y position of the cube
+    int8_t y;
+
+    // Z position of the cube
+    int8_t z;
 
     // An index into an array of pointers representing the texture of the cube
     uint8_t texture;

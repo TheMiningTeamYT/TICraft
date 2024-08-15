@@ -84,7 +84,7 @@ threeCont:
     ld a, b
     sub a, 9
     ; If the log is less than 9 (true log is less than 18), continue
-    jr c, log_less_than_8
+    jr c, log_less_than_9
         di
         ; Else, shift the number right by 8 and the guess left by 8
         ld b, a
@@ -103,7 +103,7 @@ threeCont:
         ; add the guess and the shifted original number together
         add hl, de
         ret
-    log_less_than_8:
+    log_less_than_9:
     pop de
     ; Because the carry flag is always set by the time we get here, this gives -1
     sbc hl, hl

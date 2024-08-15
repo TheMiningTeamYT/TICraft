@@ -17,7 +17,7 @@ void drawCursor() {
     __asm__ ("di");
     playerCursor.generatePoints();
     drawBuffer();
-    if (playerCursor.visible) {
+    if (playerCursor.properties & visible) {
         int minX = renderedPoints[0].x;
         int minY = renderedPoints[0].y;
         int maxX = renderedPoints[0].x;
@@ -62,7 +62,7 @@ void drawCursor() {
 9: diagonally backward
 */
 void moveCursor(uint8_t direction) {
-    bool visibleBefore = playerCursor.visible;
+    bool visibleBefore = playerCursor.properties & visible;
     switch (direction) {
         case 0:
             playerCursor.moveBy(0, 20, 0);

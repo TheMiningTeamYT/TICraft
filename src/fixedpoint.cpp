@@ -78,3 +78,9 @@ Fixed24 abs(Fixed24 &x) {
   out.n = ::abs(x.n);
   return out;
 }
+
+Fixed24 fromRaw(int _n) {
+  Fixed24 out;
+  out.n = _n;
+  return out;
+}

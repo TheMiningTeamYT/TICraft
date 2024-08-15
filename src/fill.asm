@@ -78,9 +78,7 @@ _drawTextureLineNewA_NoClip:
     ld bc, (iy + dx)
     add hl, bc
     add hl, hl
-    ; Push error*2 to the stack
-    push hl
-    ; Retrieve abs(dy) from DE
+    ; Put error*2 into DE and abs(dy) into HL
     ex de, hl
     or a, a
     sbc hl, bc
@@ -95,21 +93,26 @@ _drawTextureLineNewA_NoClip:
     ; 52 cycles
     ; offset ix (screen pointer) by gfx_vram
     ld ix, (iy + x0) ; 24
-    ld de, $D40000 ; 16
-    add ix, de ; 8
+    ld bc, $D40000 ; 16
+    add ix, bc ; 8
     ; Pre-multiply y0 & y1
-    ld e, 160 ; 8
     ld h, (iy + y0) ; 16
-    ld l, e ; 4
+    ld l, 160 ; 8
     mlt hl ; 12
     add hl, hl ; 4
     ld (iy + y0), hl ; 18
     ex de, hl ; 4
     add ix, de ; 8
+    ex de, hl ; 4
     ld h, (iy + y1) ; 16
+    ld l, 160 ; 8
     mlt hl ; 12
     add hl, hl ; 4
     ld (iy + y1), hl ; 18
+    ; Modify the self-modifying code
+    ld a, (iy + polygonZ)
+    ld (selfModifyingCode1 + 1), a
+    ld (selfModifyingCode2 + 1), a
     ; Init the alternate register set
     exx
         pop bc
@@ -134,7 +137,7 @@ _drawTextureLineNewA_NoClip:
         inc c
         ld hl, (iy + texture)
         ld b, (hl)
-        jr new_fillLoop_entry_point
+    exx ; 4
     ; At this point, all our registers/variables should be initialized
     ; a': texture error
     ; b': texel value
@@ -142,11 +145,7 @@ _drawTextureLineNewA_NoClip:
     ; d': shifted texture length
     ; e': shifted length of the textured line being drawn
     ; hl': texture pointer
-    ; d: polygonZ
     ; 75-208 cycles per pixel
-    dx_cont:
-        ; Push e2 back onto the stack
-        push de ; 10
     new_fillLoop:
         ; Load the texel value and advance the texture pointer
         exx ; 4
@@ -155,6 +154,7 @@ _drawTextureLineNewA_NoClip:
             ld a, b ; 4
             ; Add the color offset to the pixel
             add a, c ; 4
+            dec a ; 4
             ex af, af' ; 4
                 sub a, d ; 4
                 jr nc, textureCont ; 8/9
@@ -166,35 +166,25 @@ _drawTextureLineNewA_NoClip:
                 textureCont:
             ex af, af' ; 4
         exx ; 4
-        ; Load x0 into BC
-        ld bc, (iy + x0) ; 24
         ; If the texel is 255 (the transparency color), skip drawing the pixel
         jr c, fill_cont ; 8/9
-            dec a ; 4
-            ld hl, (iy + x1) ; 24
-            sbc hl, bc ; 8
-            lea de, ix ; 12
-            ld hl, 76801 ; 16
-            add hl, de ; 4
-            ; Save the pixel value to d
-            ld d, a ; 4
-            ld a, (iy + polygonZ) ; 16
-            jr z, right_fill_cont ; 8/9
-                cp a, (hl) ; 8
-                jr nc, right_fill_cont ; 8/9
-                    ld (hl), a ; 6
-                    ld (ix + 1), d ; 14
-            right_fill_cont:
-            dec hl ; 4
+            lea bc, ix ; 12
+            ld hl, 76800 ; 16
+            add hl, bc ; 4
+            ; Save the pixel value to c
+            ld c, a ; 4
+            selfModifyingCode1:
+            ld a, 0 ; 8
             cp a, (hl) ; 8
             jr nc, left_fill_cont ; 8/9
                 ld (hl), a ; 6
-                ld (ix), d ; 14
+                ld (ix), c ; 14
             left_fill_cont:
+            ld a, c ; 4
             scf ; 4
         fill_cont:
-        ; Grab e2 from the stack
-        pop de ; 16
+        ; Load x0 into BC
+        ld bc, (iy + x0) ; 24
         ; Compare e2 to dy
         ld hl, (iy + dy) ; 24
         sbc hl, de ; 8
@@ -219,24 +209,38 @@ _drawTextureLineNewA_NoClip:
             sbc hl, bc ; 8
             ; If x0 == x1, jump out of the loop
             jr z, real_end ; 8/9
-            or a, a ; 4
+            ; If the texel is 255 (the transparency color), skip drawing the pixel
+            cp a, 255 ; 8
+            jr nc, fill_cont_2 ; 8/9
+                lea bc, ix ; 12
+                ld hl, 76800 ; 16
+                add hl, bc ; 4
+                ; Save the pixel value to c
+                ld c, a ; 4
+                selfModifyingCode2:
+                ld a, 0 ; 8
+                cp a, (hl) ; 8
+                jr nc, fill_cont_2 ; 8/9
+                    ld (hl), a ; 6
+                    ld (ix), c ; 14
+                    or a, a ; 4
+            fill_cont_2:
         dy_cont:
         ; Compare e2 to dx
         ld hl, (iy + dx) ; 24
         sbc hl, de ; 8
         ; If e2 > dx, move on (Effectively jump to the beginning of the loop)
-        jp m, dx_cont ; 16/17
+        jp m, new_fillLoop ; 16/17
             ; Restore dx
             add hl, de ; 4
             ; Add dx to e2
             add hl, hl ; 4
             add hl, de ; 4
-            ; Push e2 to the stack
-            push hl ; 10
             ; Add sy to y0
             ld bc, (iy + y0) ; 24
             ld de, (iy + sy) ; 24
             add ix, de ; 8
+            ; Put sy into HL and e2 into DE
             ex de, hl ; 4
             add hl, bc ; 4
             ld (iy + y0), hl ; 18
@@ -285,10 +289,11 @@ _shadeScreen:
     ret
 section .text
 public _polygonZShift
-; Shifts HL right by 5 and return a uint8_t
+; Shift HL right by 4 and return a uint8_t
 _polygonZShift:
     pop de ; 16
     ex (sp), hl ; 22
+    add hl, hl ; 4
     add hl, hl ; 4
     add hl, hl ; 4
     add hl, hl ; 4

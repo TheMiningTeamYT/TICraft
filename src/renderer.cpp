@@ -8,6 +8,7 @@
 #include "textures.hpp"
 #include "saves.hpp"
 #include "cursor.hpp"
+#include "sincos.hpp"
 /*
 optimization ideas:
 I suspect the qsort when generating polygons is taking a while, or at least is taking a not insignificant amount of time.
@@ -22,7 +23,6 @@ Lighting:
 still thinking about how to do it
 */
 object* objects[maxNumberOfObjects];
-object* zSortedObjects[maxNumberOfObjects];
 
 unsigned int numberOfObjects = 0;
 
@@ -49,9 +49,8 @@ polygon cubePolygons[] = {face0, face5, face1, face2, face3, face4};
 // Position of the camera
 Fixed24 cameraXYZ[3] = {-100, 150, -100};
 
-float angleX = 30;
-float angleY = 45;
-float degRadRatio = M_PI/180;
+Fixed24 angleX = 30*degRadRatio;
+Fixed24 angleY = 45*degRadRatio;
 
 Fixed24 cx;
 Fixed24 sx;
@@ -75,7 +74,7 @@ uint8_t outlineColor = 0;
 
 void object::generatePolygons() {
     generatePoints();
-    if (!visible) {
+    if (!(properties & visible)) {
         return;
     }
     // Prepare the polygons for rendering
@@ -86,11 +85,11 @@ void object::generatePolygons() {
         // I feel like those multiplications make it slower than it has to be but online resources say this is a good idea and I don't have any of those right now
         // online resources = http://www.faqs.org/faqs/graphics/algorithms-faq/
         // And this is certainly faster than sorting
-        if (((polygonPoints[0].x-polygonPoints[1].x)*(polygonPoints[2].y-polygonPoints[1].y))-((polygonPoints[0].y-polygonPoints[1].y)*(polygonPoints[2].x-polygonPoints[1].x)) < 0) {
+        if (((polygonPoints[0].x-polygonPoints[1].x)*(polygonPoints[2].y-polygonPoints[1].y)) < ((polygonPoints[0].y-polygonPoints[1].y)*(polygonPoints[2].x-polygonPoints[1].x))) {
             uint8_t normalizedZ;
             // Are we going to render the polygon?
             bool render = false;
-            if (outline) {
+            if (properties & outline) {
                 render = true;
             } else {
                 // Get the average x & y of the polygon
@@ -139,7 +138,7 @@ void object::generatePolygons() {
 }
 
 void object::deleteObject() {
-    if (visible) {
+    if (properties & visible) {
         generatePoints();
         gfx_SetColor(255);
         int minX = renderedPoints[0].x;
@@ -166,16 +165,14 @@ void object::deleteObject() {
         gfx_SetDrawBuffer();
         gfx_FillRectangle(minX, minY, (maxX-minX), (maxY-minY));
         for (unsigned int i = 0; i < numberOfObjects; i++) {
-            object* otherObject = zSortedObjects[i];
-            if (otherObject->visible) {
+            object* otherObject = objects[i];
+            if (otherObject != this && is_visible(otherObject)) {
                 otherObject->generatePoints();
-                if (otherObject != this) {
-                    for (uint8_t pointNum = 0; pointNum < 8; pointNum++) {
-                        screenPoint point = renderedPoints[pointNum];
-                        if (point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY) {
-                            otherObject->generatePolygons();
-                            break;
-                        }
+                for (uint8_t pointNum = 0; pointNum < 8; pointNum++) {
+                    screenPoint point = renderedPoints[pointNum];
+                    if (point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY) {
+                        otherObject->generatePolygons();
+                        break;
                     }
                 }
             }
@@ -193,15 +190,12 @@ void object::deleteObject() {
 void object::generatePoints() {
     // i want to rewrite this in assembly
     // because i have... little faith in the compiler
-    visible = false;
-    if (distance > zCullingDistance && !outline) {
-        return;
-    }
+    properties &= ~visible;
     
     const Fixed24 x1 = (Fixed24)x - cameraXYZ[0];
     const Fixed24 ny1 = cameraXYZ[1] - (Fixed24)y;
     const Fixed24 z1 = (Fixed24)z - cameraXYZ[2];
-    if (angleX >= 45 && ny1 < (Fixed24)0) {
+    if (angleX >= static_cast<Fixed24>(45) && ny1 < (Fixed24)0) {
         return;
     }
 
@@ -291,19 +285,13 @@ void object::generatePoints() {
     dy += cxd;
     w = ((Fixed24)171.3777608f)/dz;
     renderedPoints[6] = {static_cast<int16_t>(dx*w + (Fixed24)160), static_cast<int16_t>(dy*w + (Fixed24)120), approx_sqrt_a(xSquared.b + ySquared.b + zSquared.b)};
-    visible = true;
+    properties |= visible;
 }
 
 void object::moveBy(int newX, int newY, int newZ) {
     x += newX;
     y += newY;
     z += newZ;
-}
-
-void object::moveTo(int newX, int newY, int newZ) {
-    x = newX;
-    y = newY;
-    z = newZ;
 }
 
 void object::findDistance() {
@@ -349,7 +337,9 @@ void drawScreen() {
     gfx_SetDrawBuffer();
     __asm__ ("di");
     for (unsigned int i = 0; i < numberOfObjects; i++) {
-        zSortedObjects[i]->generatePolygons();
+        if (objects[i]->distance < zCullingDistance) {
+            objects[i]->generatePolygons();
+        }
     }
     gfx_SetDrawScreen();
 
@@ -385,7 +375,7 @@ void drawScreen() {
 // idea: integrate this into generatePolygons instead of having it as a seperate function
 
 void renderPolygon(object* sourceObject, screenPoint* polygonRenderedPoints, uint8_t polygonNum, uint8_t normalizedZ) {
-    if (sourceObject->outline) {
+    if (is_outline(sourceObject)) {
         gfx_SetColor(outlineColor);
         // Not sure if this is faster or slower than what I was doing before
         // But it does seem to be a little smaller and it really doesn't matter in this instance
@@ -484,28 +474,28 @@ int getPointDistance(point point) {
     return approx_sqrt_a((x*x)+(y*y)+(z*z));
 }
 
-void rotateCamera(float x, float y) {
+void rotateCamera(Fixed24 x, Fixed24 y) {
     bool rotated = false;
-    if ((x != 0) && (angleX + x >= -90 && angleX + x <= 90)) {
+    if ((x != static_cast<Fixed24>(0)) && (angleX + x >= static_cast<Fixed24>(-90.0f*degRadRatio) && angleX + x <= static_cast<Fixed24>(90.0f*degRadRatio))) {
         angleX += x;
-        cx = cosf(angleX*degRadRatio);
+        cx = fastSinCos::cos(angleX);
         cxd = cx*(Fixed24)cubeSize;
-        sx = sinf(angleX*degRadRatio);
+        sx = fastSinCos::sin(angleX);
         nsxd = sx*(Fixed24)cubeSize;
         rotated = true;
     }
-    if (y != 0) {
+    if (y != static_cast<Fixed24>(0)) {
         angleY += y;
-        while (angleY > 270) {
-            angleY -= 360;
+        if (angleY > static_cast<Fixed24>(270.0f*degRadRatio)) {
+            angleY -= static_cast<Fixed24>(360.0f*degRadRatio);
         }
-        while (angleY < -90) {
-            angleY += 360;
+        if (angleY < static_cast<Fixed24>(-90.0f*degRadRatio)) {
+            angleY += static_cast<Fixed24>(360.0f*degRadRatio);
         }
-        cy = cosf(angleY*degRadRatio);
-        cyd = cy*(Fixed24)cubeSize;
-        sy = sinf(angleY*degRadRatio);
+        sy = fastSinCos::sin(angleY);
         nsyd = sy*(Fixed24)-cubeSize;
+        cy = fastSinCos::cos(angleY);
+        cyd = cy*(Fixed24)cubeSize;
         rotated = true;
     }
     if (rotated) {
@@ -534,12 +524,12 @@ void zSort() {
     }
     // This qsort must go for the sake of performance
     // but how do you replace it?
-    qsort(zSortedObjects, numberOfObjects, sizeof(object*), distanceCompare);
+    qsort(objects, numberOfObjects, sizeof(object*), distanceCompare);
 }
 
 void resetCamera() {
-    angleX = 30;
-    angleY = 45;
+    angleX = 30.0f*degRadRatio;
+    angleY = 45.0f*degRadRatio;
     cx = 0.8660254037844387f;
     sx = 0.49999999999999994f;
     cy = 0.7071067811865476f;
