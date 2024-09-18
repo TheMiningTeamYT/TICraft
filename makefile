@@ -8,5 +8,4 @@ BSSHEAP_HIGH = D13FD8
 CFLAGS = -Ofast
 CXXFLAGS = -Ofast
 ICON = logo.png
-PREFER_OS_LIBC = YES
 include $(shell cedev-config --makefile)

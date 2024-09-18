@@ -16,23 +16,25 @@ _drawTextureLineNewA:
     push ix
     ld iy, 0
     add iy, sp
-    lea hl, iy - 12
+    lea hl, iy - 6
     ld sp, hl
-    ; BC will be sx
-    ld bc, 1
+    ; BC will be the self modifying code written to update x
+    ; inc BC / inc IX
+    ld bc, $23DD03
     ; Compute dx
     ld hl, (iy + x1)
     ld de, (iy + x0)
-    or a, a
     sbc hl, de
     ; If x1 >= x0, continue
     jp p, sx_cont
-        ; Else, set sx (bc) to -1
-        dec bc
-        dec bc
+        ; Else, set bc to dec BC / dec IX
+        ld bc, $2BDD0B
     sx_cont:
-    ; Store sx
-    ld (iy + sx), bc
+    ; Write the self-modifying code
+    ld a, c
+    ld (self_modifying_code_sx), a
+    ld (self_modifying_code_sx_off), bc
+    ld (self_modifying_code_sx_on), bc
     ; If x1 != x0, continue
     jr nz, zero_cont
         ; Else, check if y1 == y0
@@ -61,7 +63,9 @@ _drawTextureLineNewA:
         ld bc, -320
     sy_cont:
     ; Store sy
-    ld (iy + sy), bc
+    ld (self_modifying_code_sy + 1), bc
+    ld (self_modifying_code_sy_on + 1), bc
+    ld (self_modifying_code_sy_off + 1), bc
     ; Compute abs(dy)
     call abs
     ; Negate hl
@@ -115,12 +119,11 @@ _drawTextureLineNewA:
     add hl, hl
     add hl, hl
     ld (iy + y1), hl
-    ; Modify the self-modifying code
-    ld a, (iy + polygonZ)
-    ld (selfModifyingCode_off + 1), a
-    ld (selfModifyingCode_off_2 + 1), a
-    ld (selfModifyingCode_on + 1), a
-    ld (selfModifyingCode_on_2 + 1), a
+    ; Modify (some of) the self-modifying code
+    ld a, (iy + colorOffset) ; 16
+    dec a ; 4
+    ld (self_modifying_code3_off + 1), a ; 18
+    ld (self_modifying_code3_on + 1), a ; 18
     ; Init the alternate register set
     exx
         pop bc
@@ -141,7 +144,11 @@ _drawTextureLineNewA:
             lengthNotZero:
             ld e, a
         ex af, af'
-        ld c, (iy + colorOffset)
+        ; Load the color offset into C'
+        ld c, a
+        ; Set it back to what it was originally
+        inc c
+        ; Increment it once more
         inc c
         ld hl, (iy + texture)
     exx
@@ -179,9 +186,12 @@ _drawTextureLineNewA:
     exx ; 4
         ld b, (hl) ; 6 - 205 cycles (depending on flash) (most likely: 6, 7, or 14 cycles)
     exx ; 4
-    ld ix, gfx_vram ; 20
+    ; Initialize IX
+    ld ix, $D3FFC9 ; 20
     add ix, bc ; 8
     add ix, de ; 8
+    ; Prepare to modify the self-modifying code
+    ld a, (iy + polygonZ) ; 16
 
     ; If the ending y position is off the screen, jump to the code for if the line ends off screen
     ; Restore hl to 76480
@@ -216,7 +226,6 @@ update_x_y:
     pop de ; 16
     ; Compare e2 to dy
     ld hl, (iy + dy) ; 24
-    scf ; 4
     sbc hl, de ; 8
     ; If dy > e2, move on
     jp p, dy_cont ; 16/17
@@ -235,9 +244,9 @@ update_x_y:
         ; If x0 == x1, jump out of the loop
         jr z, real_end ; 8/9
         ; Add sx to x0
-        ld hl, (iy + sx) ; 24
-        add hl, bc ; 4
-        ld (iy + x0), hl ; 18
+        self_modifying_code_sx:
+        inc bc ; 4
+        ld (iy + x0), bc ; 18
         or a, a ; 4
     dy_cont:
     ; Compare e2 to dx
@@ -254,7 +263,8 @@ update_x_y:
         push hl ; 10
         ; Add sy to y0
         ld bc, (iy + y0) ; 24
-        ld hl, (iy + sy) ; 24
+        self_modifying_code_sy:
+        ld hl, 0 ; 16
         add hl, bc ; 4
         ld (iy + y0), hl ; 18
         ; Check if y0 == y1
@@ -270,6 +280,9 @@ update_x_y:
 line_ends_off_screen:
     ; Pop e2 from the stack
     pop de ; 10
+    ; Modify the self modifying code
+    ld (self_modifying_code_off + 1), a ; 18
+    ld (self_modifying_code_off_2 + 1), a ; 18
 new_fill_loop_off:
     ; Load the texel value and advance the texture pointer
     exx ; 4
@@ -293,19 +306,20 @@ new_fill_loop_off:
     jr c, fill_cont_off ; 8/9
         ; also used to make sure we don't draw off the screen
         ; Decrementing A now to make sure we don't overwrite the Z flag later
-        lea bc, ix ; 12
+        lea bc, ix + $37; 12
         ld hl, 76800 ; 16
         add hl, bc ; 4
         ld c, a ; 4
-        selfModifyingCode_off:
+        self_modifying_code_off:
         ld a, 0 ; 8
         cp a, (hl) ; 8
         jr nc, left_fill_cont_off ; 8/9
             ld (hl), a ; 6
-            ld (ix), c ; 6
+            ; ld (ix + $37), c ; 14
+            db $DD, $71
         left_fill_cont_off:
-        ld a, c ; 4
         scf ; 4
+        ld a, c ; 4
     fill_cont_off:
     ; Load x0 into BC
     ld bc, (iy + x0) ; 24
@@ -319,32 +333,36 @@ new_fill_loop_off:
         ; Add dy to e2
         add hl, hl ; 4
         add hl, de ; 4
-        ; Add sx to x0
-        ld de, (iy + sx) ; 24
-        add ix, de ; 8
-        ; Put e2 into DE and sx into HL
+        ; Put e2 into DE
         ex de, hl ; 4
-        add hl, bc ; 4
-        ld (iy + x0), hl ; 18
+        ; Add sx to x0
+        self_modifying_code_sx_off:
+        inc bc ; 4
+        inc ix ; 8
         ; check to make sure that x isn't off the screen to the left or right
         ; if it is, jump out of the loop
-        ld bc, 320 ; 16
+        ld hl, 319 ; 16
+        or a, a ; 4
         sbc hl, bc ; 8
-        jr nc, real_end ; 8/9
-        ld hl, 76799 ; 16
-        cp a, l ; 4
-        jr nc, fill_cont_off_2;  8/9
-            lea bc, ix + 1; 12
+        jr c, real_end ; 8/9
+        ; Actually update x0
+        ld (iy + x0), bc ; 18
+        ; If the texel is 255 (the transparency color) plus the color offset (indicating the texel started off as 255), skip drawing the pixel
+        self_modifying_code3_off:
+        cp a, 255 ; 4
+        jr z, fill_cont_off_2;  8/9
+            lea bc, ix + $37 ; 12
+            ld hl, 76800 ; 16
             add hl, bc ; 4
             ld c, a ; 4
-            selfModifyingCode_off_2:
+            self_modifying_code_off_2:
             ld a, 0 ; 8
             cp a, (hl) ; 8
-            jr nc, fill_cont_off_2 ; 8/9
+            jr nc, dy_cont_off ; 8/9
                 ld (hl), a ; 6
-                ld (ix), c ; 14
-                or a, a ; 4
+                ld (ix + $37), c ; 14
         fill_cont_off_2:
+        or a, a ; 4
     dy_cont_off:
     ; Compare e2 to dx
     ld hl, (iy + dx) ; 24
@@ -360,7 +378,8 @@ new_fill_loop_off:
         ex de, hl ; 4
         ; Add sy to y0
         ld hl, (iy + y0) ; 24
-        ld bc, (iy + sy) ; 24
+        self_modifying_code_sy_off:
+        ld bc, 0 ; 16
         add ix, bc ; 8
         add hl, bc ; 4
         ; check to make sure that y isn't off the screen to the top or bottom
@@ -376,14 +395,17 @@ new_fill_loop_off:
 line_ends_on_screen:
     ; Pop e2 from the stack
     pop de ; 16
+    ; Modify the self-modifying code
+    ld (self_modifying_code_on + 1), a ; 18
+    ld (self_modifying_code_on_2 + 1), a ; 18
 new_fill_loop_on:
     ; Load the texel value and advance the texture pointer
     exx ; 4
         ; Load the texel value
         ld a, b ; 4
-        dec a ; 4
         ; Add the color offset to the pixel
         add a, c ; 4
+        dec a ; 4
         ex af, af' ; 4
             sub a, d ; 4
             jr nc, textureCont_on ; 8/9
@@ -397,20 +419,21 @@ new_fill_loop_on:
     exx ; 4
     ; If the texel is 255 (the transparency color), skip drawing the pixel
     jr c, fill_cont_on ; 8/9
-        lea bc, ix ; 12
+        lea bc, ix + $37; 12
         ld hl, 76800 ; 16
         add hl, bc ; 4
         ; Save the pixel value to c
         ld c, a ; 4
-        selfModifyingCode_on:
+        self_modifying_code_on:
         ld a, 0 ; 8
         cp a, (hl) ; 8
         jr nc, left_fill_cont_on ; 8/9
             ld (hl), a ; 6
-            ld (ix), c ; 6
+            ; ld (ix + $37), c ; 14
+            db $DD, $71
         left_fill_cont_on:
-        ld a, c ; 4
         scf ; 4
+        ld a, c ; 4
     fill_cont_on:
     ; Load x0 into BC
     ld bc, (iy + x0) ; 24
@@ -425,35 +448,36 @@ new_fill_loop_on:
         ; Add dy to e2
         add hl, hl ; 4
         add hl, de ; 4
-        ; Add sx to x0
-        ld de, (iy + sx) ; 24
-        add ix, de ; 8
-        ; Put e2 into DE and sx into HL
+        ; Put e2 into DE
         ex de, hl ; 4
-        add hl, bc ; 4
-        ld (iy + x0), hl ; 18
-        ; Check if (the previous) x0 == x1
+        ; Check if x0 == x1
         ld hl, (iy + x1) ; 24
         or a, a ; 4
         sbc hl, bc ; 8
         ; If x0 == x1, jump out of the loop
         jr z, real_end_on ; 8/9
-        ; If the texel is 255 (the transparency color), skip drawing the pixel
+        ; Add sx to x0
+        self_modifying_code_sx_on:
+        inc bc ; 4
+        inc ix ; 8
+        ld (iy + x0), bc ; 18
+        ; If the texel is 255 (the transparency color) plus the color offset (indicating the texel started off as 255), skip drawing the pixel
+        self_modifying_code3_on:
         cp a, 255 ; 8
-        jr nc, fill_cont_2_on ; 8/9
-            lea bc, ix ; 12
+        jr z, fill_cont_2_on ; 8/9
+            lea bc, ix + $37; 12
             ld hl, 76800 ; 16
             add hl, bc ; 4
             ; Save the pixel value to c
             ld c, a ; 4
-            selfModifyingCode_on_2:
+            self_modifying_code_on_2:
             ld a, 0 ; 8
             cp a, (hl) ; 8
-            jr nc, fill_cont_2_on ; 8/9
+            jr nc, dy_cont_on ; 8/9
                 ld (hl), a ; 6
-                ld (ix), c ; 14
-                or a, a ; 4
+                ld (ix + $37), c ; 14
         fill_cont_2_on:
+        or a, a ; 4
     dy_cont_on:
     ; Compare e2 to dx
     ld hl, (iy + dx) ; 24
@@ -467,7 +491,8 @@ new_fill_loop_on:
         add hl, de ; 4
         ; Add sy to y0
         ld bc, (iy + y0) ; 24
-        ld de, (iy + sy) ; 24
+        self_modifying_code_sy_on:
+        ld de, 0 ; 16
         add ix, de ; 8
         ; Put sy into HL and e2 into DE
         ex de, hl ; 4
@@ -507,9 +532,5 @@ private polygonZ
 polygonZ = 24
 private dx
 dx = -3
-private sx
-sx = -6
 private dy
-dy = -9
-private sy
-sy = -12
+dy = -6

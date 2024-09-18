@@ -434,7 +434,7 @@ void renderPolygon(object* sourceObject, screenPoint* polygonRenderedPoints, uin
     // main body
     for (int i = -2; i < length; i++) {
         if (clipLines) {
-            if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT) && y1 > (GFX_LCD_HEIGHT))))
+            if (!((x0 < 0 && x1 < 0) || (x0 > (GFX_LCD_WIDTH - 1) && x1 > (GFX_LCD_WIDTH - 1))) && !((y0 < 0 && y1 < 0) || (y0 > (GFX_LCD_HEIGHT - 1) && y1 > (GFX_LCD_HEIGHT - 1))))
                 drawTextureLineNewA(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);
         } else {
             drawTextureLineNewA_NoClip(x0, x1, y0, y1, texture + tIndex, colorOffset, normalizedZ);

@@ -1,8 +1,8 @@
 assume adl=1
-section .text
 ; Thanks Runer112 on Cemetech!
 ; Source: https://www.cemetech.net/forum/viewtopic.php?t=11178&start=0
 section .text
+
 public abs
 abs:
     ex de, hl ; 4
@@ -12,7 +12,8 @@ abs:
     ret p ; 5/19
     ex de, hl ; 4
     ret ; 18
-section .text
+
+
 ; An implementation of Bresenham's line algorithm based on the psuedo-code from Wikipedia
 ; https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 public _drawTextureLineNewA_NoClip
@@ -22,23 +23,22 @@ _drawTextureLineNewA_NoClip:
     push ix
     ld iy, 0
     add iy, sp
-    lea hl, iy - 12
+    lea hl, iy - 6
     ld sp, hl
-    ; BC will be sx
-    ld bc, 1
+    ; A will be the self modifying code written to update x
+    ; Set A to inc IX
+    ld a, $23
     ; Compute dx
     ld hl, (iy + x1)
     ld de, (iy + x0)
-    or a, a
     sbc hl, de
     ; If x1 >= x0, continue
     jr nc, sx_cont
-        ; Else, set sx (bc) to -1
-        dec bc
-        dec bc
+        ; Else, set bc to dec IX
+        ld a, $2B
     sx_cont:
-    ; Store sx
-    ld (iy + sx), bc
+    ; Write the self-modifying code
+    ld (self_modifying_code_sx + 1), a
     ; If x1 != x0, continue
     jr nz, zero_cont
         ; Else, check if y1 == y0
@@ -67,22 +67,27 @@ _drawTextureLineNewA_NoClip:
         ld bc, -320
     sy_cont:
     ; Store sy
-    ld (iy + sy), bc
+    ld (self_modifying_code_sy + 1), bc
     ; Compute abs(dy)
     call abs
+    ; Write the number of pixels we have to move on the y axis to y1.
+    ld (iy + y1), l
     ; Negate hl
     ex de, hl
     ; Store hl to dy
     ld (iy + dy), hl
-    ; Load dx
+    ; Load abs(dx)
     ld bc, (iy + dx)
     add hl, bc
     add hl, hl
-    ; Put error*2 into DE and abs(dy) into HL
+    ; Put error*2 into DE and -abs(dy) into HL
     ex de, hl
     or a, a
     sbc hl, bc
-    ; Push dx to the stack
+    ; Push abs(dx) to the stack twice 
+    ; (The first instance will be the number of pixels 
+    ; we have left to move on the x axis.)
+    push bc
     push bc
     ; Jump if dx is greater
     jr c, textureRatio_cont
@@ -93,26 +98,23 @@ _drawTextureLineNewA_NoClip:
     ; 52 cycles
     ; offset ix (screen pointer) by gfx_vram
     ld ix, (iy + x0) ; 24
-    ld bc, $D40000 ; 16
+    ld bc, $D3FFC9 ; 16
     add ix, bc ; 8
-    ; Pre-multiply y0 & y1
+    ; Pre-multiply y0
     ld h, (iy + y0) ; 16
     ld l, 160 ; 8
     mlt hl ; 12
     add hl, hl ; 4
-    ld (iy + y0), hl ; 18
     ex de, hl ; 4
     add ix, de ; 8
     ex de, hl ; 4
-    ld h, (iy + y1) ; 16
-    ld l, 160 ; 8
-    mlt hl ; 12
-    add hl, hl ; 4
-    ld (iy + y1), hl ; 18
     ; Modify the self-modifying code
-    ld a, (iy + polygonZ)
-    ld (selfModifyingCode1 + 1), a
-    ld (selfModifyingCode2 + 1), a
+    ld a, (iy + polygonZ) ; 16
+    ld (self_modifying_code1 + 1), a ; 18
+    ld (self_modifying_code2 + 1), a ; 18
+    ld a, (iy + colorOffset) ; 16
+    dec a ; 4
+    ld (self_modifying_code3 + 1), a ; 18
     ; Init the alternate register set
     exx
         pop bc
@@ -133,11 +135,15 @@ _drawTextureLineNewA_NoClip:
             lengthNotZero:
             ld e, a
         ex af, af'
-        ld c, (iy + colorOffset)
+        ; Load the color offset into C'
+        ld c, a
+        ; Set it back to what it was originally
+        inc c
+        ; Increment it once more
         inc c
         ld hl, (iy + texture)
         ld b, (hl)
-    exx ; 4
+        jr new_fillLoop_entry_point
     ; At this point, all our registers/variables should be initialized
     ; a': texture error
     ; b': texel value
@@ -146,6 +152,14 @@ _drawTextureLineNewA_NoClip:
     ; e': shifted length of the textured line being drawn
     ; hl': texture pointer
     ; 75-208 cycles per pixel
+    dx_cont:
+        ; Decrement the number of pixels we have left on the y axis.
+        dec a ; 4
+        ld (hl), a ; 6
+        ; Add sy to IX
+        self_modifying_code_sy:
+        ld bc, 0 ; 16
+        add ix, bc ; 8
     new_fillLoop:
         ; Load the texel value and advance the texture pointer
         exx ; 4
@@ -157,34 +171,33 @@ _drawTextureLineNewA_NoClip:
             dec a ; 4
             ex af, af' ; 4
                 sub a, d ; 4
-                jr nc, textureCont ; 8/9
+                jr nc, textureCont ; 8/13
                     moveTexturePointer:
                     inc hl ; 4
                     add a, e ; 4
-                    jr nc, moveTexturePointer ; 8/9
+                    jr nc, moveTexturePointer ; 8/13
                     ld b, (hl) ; 6 - 205 cycles (depending on flash) (most likely: 6, 7, or 14 cycles)
                 textureCont:
             ex af, af' ; 4
         exx ; 4
         ; If the texel is 255 (the transparency color), skip drawing the pixel
-        jr c, fill_cont ; 8/9
-            lea bc, ix ; 12
+        jr c, fill_cont ; 8/13
+            lea bc, ix + $37 ; 12
             ld hl, 76800 ; 16
             add hl, bc ; 4
             ; Save the pixel value to c
             ld c, a ; 4
-            selfModifyingCode1:
+            self_modifying_code1:
             ld a, 0 ; 8
             cp a, (hl) ; 8
-            jr nc, left_fill_cont ; 8/9
+            jr nc, left_fill_cont ; 8/13
                 ld (hl), a ; 6
-                ld (ix), c ; 14
+                ; ld (ix + $37), c ; 14
+                db $DD, $71
             left_fill_cont:
-            ld a, c ; 4
             scf ; 4
+            ld a, c ; 4
         fill_cont:
-        ; Load x0 into BC
-        ld bc, (iy + x0) ; 24
         ; Compare e2 to dy
         ld hl, (iy + dy) ; 24
         sbc hl, de ; 8
@@ -196,36 +209,42 @@ _drawTextureLineNewA_NoClip:
             ; Add dy to e2
             add hl, hl ; 4
             add hl, de ; 4
-            ; Add sx to x0
-            ld de, (iy + sx) ; 24
-            add ix, de ; 8
-            ; Put e2 into DE and sx into HL
-            ex de, hl ; 4
-            add hl, bc ; 4
-            ld (iy + x0), hl ; 18
-            ; Check if (the previous) x0 == x1
-            ld hl, (iy + x1) ; 24
-            or a, a ; 4
-            sbc hl, bc ; 8
+            ; Save A
+            ld e, a ; 4
+            ; Pop the number of pixels to move on X from the stack
+            pop bc ; 16
+            ; Check if BC is 0
+            ld a, b ; 4
+            or a, c ; 4
             ; If x0 == x1, jump out of the loop
-            jr z, real_end ; 8/9
-            ; If the texel is 255 (the transparency color), skip drawing the pixel
+            jr z, real_end ; 8/13
+            ; Add sx to IX and decrement the number of pixels to move on X.
+            self_modifying_code_sx:
+            inc ix ; 8
+            dec bc ; 4
+            push bc ; 10
+            ; Restore A
+            ld a, e
+            ; Put e2 into DE
+            ex de, hl ; 4
+            ; If the texel is 255 (the transparency color) plus the color offset (indicating the texel started off as 255), skip drawing the pixel
+            self_modifying_code3:
             cp a, 255 ; 8
-            jr nc, fill_cont_2 ; 8/9
-                lea bc, ix ; 12
+            jr z, fill_cont_2 ; 8/13
+                lea bc, ix + $37 ; 12
                 ld hl, 76800 ; 16
                 add hl, bc ; 4
                 ; Save the pixel value to c
                 ld c, a ; 4
-                selfModifyingCode2:
+                self_modifying_code2:
                 ld a, 0 ; 8
                 cp a, (hl) ; 8
-                jr nc, fill_cont_2 ; 8/9
+                jr nc, fill_cont_2 ; 8/13
                     ld (hl), a ; 6
-                    ld (ix), c ; 14
-                    or a, a ; 4
+                    ld (ix + $37), c ; 14
             fill_cont_2:
-        dy_cont:
+        ; Zero out A
+        xor a, a ; 4
         ; Compare e2 to dx
         ld hl, (iy + dx) ; 24
         sbc hl, de ; 8
@@ -236,20 +255,29 @@ _drawTextureLineNewA_NoClip:
             ; Add dx to e2
             add hl, hl ; 4
             add hl, de ; 4
-            ; Add sy to y0
-            ld bc, (iy + y0) ; 24
-            ld de, (iy + sy) ; 24
-            add ix, de ; 8
-            ; Put sy into HL and e2 into DE
+            ; Put e2 into DE
             ex de, hl ; 4
-            add hl, bc ; 4
-            ld (iy + y0), hl ; 18
-            ; Check if (the previous) y0 == y1
-            ld hl, (iy + y1) ; 24
-            or a, a ; 4
-            sbc hl, bc ; 8
-            ; If y0 != y1, jump to the beginning of the loop
-            jr nz, new_fillLoop ; 8/9
+            ; Check how many pixels we have left to move on the y axis.
+            lea hl, iy + y1 ; 12
+            or a, (hl) ; 8
+            ; If it is not zero, jump to the start of the loop
+            jr nz, dx_cont ; 8/13
+            jr real_end ; 12
+        dy_cont:
+            ; Load dx
+            ld hl, (iy + dx) ; 24
+            ; Add dx to e2
+            add hl, hl ; 4
+            add hl, de ; 4
+            ; Put e2 into DE
+            ex de, hl ; 4
+            ; Zero out A
+            xor a, a ; 4
+            ; Check how many pixels we have left to move on the y axis.
+            lea hl, iy + y1 ; 12
+            or a, (hl) ; 8
+            ; If it is not zero, jump to the start of the loop
+            jr nz, dx_cont ; 8/13
     real_end:
     ld sp, iy
     pop ix
@@ -265,7 +293,7 @@ _shadeScreen:
     shadeLoop:
         ld a, (hl) ; 8
         cp a, c ; 4
-        jr nc, shadeCont ; 8/9
+        jr nc, shadeCont ; 8/13
             add a, c ; 4
             ld (hl), a ; 8
         shadeCont:
@@ -337,10 +365,6 @@ private polygonZ
 polygonZ = 24
 private dx
 dx = -3
-private sx
-sx = -6
 private dy
-dy = -9
-private sy
-sy = -12
+dy = -6
 extern _texPalette
