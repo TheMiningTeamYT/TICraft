@@ -16,6 +16,7 @@
 #define outline 128
 #define is_visible(x) ((x)->properties & visible)
 #define is_outline(x) ((x)->properties & outline)
+#define outlineColor 252
 
 /*
 A point in 3d space
@@ -180,7 +181,6 @@ extern Fixed24 cxsyd;
 extern Fixed24 cxcyd;
 extern Fixed24 angleX;
 extern Fixed24 angleY;
-extern uint8_t outlineColor;
 #define xSort() qsort(objects, numberOfObjects, sizeof(object*), xCompare); zSort();
 void rotateCamera(Fixed24 x, Fixed24 y);
 void resetCamera();

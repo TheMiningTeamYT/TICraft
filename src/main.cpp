@@ -154,7 +154,6 @@ int main() {
             }
         }
         fineMovement = false;
-        outlineColor = 0;
         xSort();
         gfx_Sprite_NoClip(cursorBackground, 0, 0);
         gfx_Sprite_NoClip(background2, 160, 0);
@@ -542,10 +541,9 @@ int main() {
                 case k_Trace:
                     fineMovement = !fineMovement;
                     if (fineMovement) {
-                        outlineColor = 252;
-                        gfx_palette[252] = 0x000F;
+                        gfx_palette[outlineColor] = 0x001F;
                     } else {
-                        outlineColor = 0;
+                        gfx_palette[outlineColor] = 0x0000;
                     }
                     playerCursor.generatePolygons();
                     break;

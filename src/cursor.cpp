@@ -33,14 +33,12 @@ void drawCursor(bool drawBuff) {
     }
     object** matchingObject = cursorOnObject();
     if (matchingObject) {
-        outlineColor = 252;
-        gfx_palette[252] = 0x7C00;
+        gfx_palette[outlineColor] = 0x7C00;
     } else {
         if (fineMovement) {
-            outlineColor = 252;
-            gfx_palette[252] = 0x000F;
+            gfx_palette[outlineColor] = 0x001F;
         } else {
-            outlineColor = 0;
+            gfx_palette[outlineColor] = 0x0000;
         }
     }
     if (playerCursor.properties & visible) {

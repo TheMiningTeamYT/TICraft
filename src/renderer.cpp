@@ -70,8 +70,6 @@ Fixed24 nsxcyd;
 Fixed24 cxsyd;
 Fixed24 cxcyd;
 
-uint8_t outlineColor = 0;
-
 void object::generatePolygons() {
     if (distance < zCullingDistance) {
         generatePoints();
