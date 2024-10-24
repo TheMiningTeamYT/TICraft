@@ -73,66 +73,68 @@ Fixed24 cxcyd;
 uint8_t outlineColor = 0;
 
 void object::generatePolygons() {
-    generatePoints();
-    if (!(properties & visible)) {
-        return;
-    }
-    // Prepare the polygons for rendering
-    for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
-        // The polygon we are rendering
-        polygon polygon = cubePolygons[polygonNum];
-        screenPoint polygonPoints[] = {renderedPoints[polygon.points[0]], renderedPoints[polygon.points[1]], renderedPoints[polygon.points[2]], renderedPoints[polygon.points[3]]};
-        // I feel like those multiplications make it slower than it has to be but online resources say this is a good idea and I don't have any of those right now
-        // online resources = http://www.faqs.org/faqs/graphics/algorithms-faq/
-        // And this is certainly faster than sorting
-        if (((polygonPoints[0].x-polygonPoints[1].x)*(polygonPoints[2].y-polygonPoints[1].y)) < ((polygonPoints[0].y-polygonPoints[1].y)*(polygonPoints[2].x-polygonPoints[1].x))) {
-            uint8_t normalizedZ;
-            // Are we going to render the polygon?
-            bool render = false;
-            if (properties & outline) {
-                render = true;
-            } else {
-                // Get the average x & y of the polygon
-                int x = 0;
-                int y = 0;
-                unsigned int z = 0;
-                for (uint8_t i = 0; i < 4; i++) {
-                    x += polygonPoints[i].x;
-                    y += polygonPoints[i].y;
-                    z += polygonPoints[i].z;
-                }
-                x >>= 2;
-                y >>= 2;
-                // Normalized z (0-255)
-                normalizedZ = polygonZShift(z);
-
-                if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
-                    if (normalizedZ < gfx_GetPixel(x, y)) {
-                        render = true;
-                        goto renderThePolygon;
+    if (distance < zCullingDistance) {
+        generatePoints();
+        if (!(properties & visible)) {
+            return;
+        }
+        // Prepare the polygons for rendering
+        for (uint8_t polygonNum = 0; polygonNum < 6; polygonNum++) {
+            // The polygon we are rendering
+            polygon polygon = cubePolygons[polygonNum];
+            screenPoint polygonPoints[] = {renderedPoints[polygon.points[0]], renderedPoints[polygon.points[1]], renderedPoints[polygon.points[2]], renderedPoints[polygon.points[3]]};
+            // I feel like those multiplications make it slower than it has to be but online resources say this is a good idea and I don't have any of those right now
+            // online resources = http://www.faqs.org/faqs/graphics/algorithms-faq/
+            // And this is certainly faster than sorting
+            if (((polygonPoints[0].x-polygonPoints[1].x)*(polygonPoints[2].y-polygonPoints[1].y)) < ((polygonPoints[0].y-polygonPoints[1].y)*(polygonPoints[2].x-polygonPoints[1].x))) {
+                uint8_t normalizedZ;
+                // Are we going to render the polygon?
+                bool render = false;
+                if (properties & outline) {
+                    render = true;
+                } else {
+                    // Get the average x & y of the polygon
+                    int x = 0;
+                    int y = 0;
+                    unsigned int z = 0;
+                    for (uint8_t i = 0; i < 4; i++) {
+                        x += polygonPoints[i].x;
+                        y += polygonPoints[i].y;
+                        z += polygonPoints[i].z;
                     }
-                }
-                for (uint8_t i = 0; i < 4; i++) {
-                    int pointX = (polygonPointMultiply(polygonPoints[i].x) + x)>>3;
-                    int pointY = (polygonPointMultiply(polygonPoints[i].y) + y)>>3;
-                    if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
-                        if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
+                    x >>= 2;
+                    y >>= 2;
+                    // Normalized z (0-255)
+                    normalizedZ = polygonZShift(z);
+
+                    if (x >= 0 && x < GFX_LCD_WIDTH && y >= 0 && y < GFX_LCD_HEIGHT) {
+                        if (normalizedZ < gfx_GetPixel(x, y)) {
                             render = true;
-                            break;
+                            goto renderThePolygon;
+                        }
+                    }
+                    for (uint8_t i = 0; i < 4; i++) {
+                        int pointX = (polygonPointMultiply(polygonPoints[i].x) + x)>>3;
+                        int pointY = (polygonPointMultiply(polygonPoints[i].y) + y)>>3;
+                        if (pointX >= 0 && pointX < GFX_LCD_WIDTH && pointY >= 0 && pointY < GFX_LCD_HEIGHT) {
+                            if (normalizedZ < gfx_GetPixel(pointX, pointY)) {
+                                render = true;
+                                break;
+                            }
                         }
                     }
                 }
+                // Render this polygon
+                renderThePolygon:
+                if (render) {
+                    renderPolygon(this, polygonPoints, polygon.polygonNum, normalizedZ);
+                }
+                #if diagnostics == true
+                else {
+                    obscuredPolygons++;
+                }
+                #endif
             }
-            // Render this polygon
-            renderThePolygon:
-            if (render) {
-                renderPolygon(this, polygonPoints, polygon.polygonNum, normalizedZ);
-            }
-            #if diagnostics == true
-            else {
-                obscuredPolygons++;
-            }
-            #endif
         }
     }
 }
@@ -328,6 +330,8 @@ void deleteEverything() {
 }
 
 void drawScreen() {
+    // Disable screen updates
+    *((uint8_t*)0xE30018) &= ~1;
     gfx_SetTextXY(0, 0);
     memset(gfx_vram, 255, 153600);
     #if diagnostics == true
@@ -337,9 +341,7 @@ void drawScreen() {
     gfx_SetDrawBuffer();
     __asm__ ("di");
     for (unsigned int i = 0; i < numberOfObjects; i++) {
-        if (objects[i]->distance < zCullingDistance) {
-            objects[i]->generatePolygons();
-        }
+        objects[i]->generatePolygons();
     }
     gfx_SetDrawScreen();
 
@@ -365,8 +367,9 @@ void drawScreen() {
         gfx_SetTextXY(0, gfx_GetTextY() + 10);
     }
     #endif
-    getBuffer();
-    drawCursor();
+    drawCursor(false);
+    // Reenable screen updates
+    *((uint8_t*)0xE30018) |= 1;
 }
 
 // implementation of affine texture mapping (i think thats what you'd call this anyway)
@@ -513,7 +516,8 @@ void rotateCamera(Fixed24 x, Fixed24 y) {
 }
 
 void redrawScreen() {
-    drawBuffer();
+    // Disable screen updates
+    *((uint8_t*)0xE30018) &= ~1;
     zSort();
     drawScreen();
 }

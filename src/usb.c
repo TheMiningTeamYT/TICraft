@@ -21,16 +21,6 @@ static msd_partition_t partitions[MAX_PARTITIONS];
 extern gfx_sprite_t* cursorBackground;
 static global_t* global;
 
-// string returned by this needs to be freed
-char* stringToUpper(const char* str) {
-    char* newString = malloc(strlen(str) + 1);
-    for (unsigned int i = 0; str[i]; i++) {
-        newString[i] = toupper(str[i]);
-    }
-    newString[strlen(str)] = 0;
-    return newString;
-}
-
 usb_error_t handleUsbEvent(usb_event_t event, void *event_data, usb_callback_data_t *global) {
     switch (event) {
         case USB_DEVICE_DISCONNECTED_EVENT:
@@ -93,9 +83,7 @@ bool init_USB() {
     return false;
 }
 
-fat_file_t* openFile(const char* sourcePath, const char* sourceName, bool create) {
-    char* path = stringToUpper(sourcePath);
-    char* name = stringToUpper(sourceName);
+fat_file_t* openFile(const char* path, const char* name, bool create) {
     fat_error_t faterr;
     
     fat_file_t* file = calloc(1, sizeof(fat_file_t));
@@ -107,8 +95,6 @@ fat_file_t* openFile(const char* sourcePath, const char* sourceName, bool create
     }
     strncat(str, name, 256-strlen(str));
     str[255] = 0;
-    free(path);
-    free(name);
     if (create) {
         fat_Create(&global->fat, path, name, 0);
     }
@@ -136,7 +122,6 @@ fat_file_t* openFile(const char* sourcePath, const char* sourceName, bool create
 
 void closeFile(fat_file_t* file) {
     if (file != NULL) {
-        
         fat_CloseFile(file);
         free(file);
     }
@@ -182,14 +167,9 @@ bool writeFile(fat_file_t* file, uint24_t size, void* buffer) {
     return good;
 }
 
-bool createDirectory(const char* sourcePath, const char* sourceName) {
+bool createDirectory(const char* path, const char* name) {
     fat_error_t faterr;
-    char* path = stringToUpper(sourcePath);
-    char* name = stringToUpper(sourceName);
-    
     faterr = fat_Create(&global->fat, path, name, FAT_DIR);
-    free(path);
-    free(name);
     if (faterr != FAT_SUCCESS && faterr != FAT_ERROR_EXISTS) {
         return false;
     }
@@ -204,10 +184,7 @@ int24_t getSizeOf(fat_file_t* file) {
     return size;
 }
 
-void deleteFile(const char* sourcePath, const char* sourceName) {
-    char* path = stringToUpper(sourcePath);
-    char* name = stringToUpper(sourceName);
-    
+void deleteFile(const char* path, const char* name) {    
     char str[256];
     strncpy(str, path, 256);
     str[255] = 0; 
@@ -216,8 +193,6 @@ void deleteFile(const char* sourcePath, const char* sourceName) {
     }
     strncat(str, name, 256-strlen(str));
     fat_Delete(&global->fat, str);
-    free(path);
-    free(name);
 }
 
 void close_USB() {

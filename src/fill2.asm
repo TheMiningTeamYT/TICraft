@@ -169,9 +169,8 @@ _drawTextureLineNewA:
 
     ; check to make sure that x isn't off the screen to the left or right
     ; if it is, move x/y and try again
-    ld hl, 319 ; 16
-    or a, a ; 4
-    sbc hl, bc ; 8
+    ld hl, -320 ; 16
+    add hl, bc ; 4
     jr c, update_x_y ; 8/9
 
     ; init DE
@@ -179,33 +178,40 @@ _drawTextureLineNewA:
 
     ; check to make sure that y isn't off the screen to the bottom or top
     ; if it is, move x/y and try again
-    ld hl, 76480 ; 16
-    sbc hl, de ; 8
+    ld hl, -76800 ; 16
+    add hl, de ; 4
     jr c, update_x_y ; 8/9
 
     exx ; 4
         ld b, (hl) ; 6 - 205 cycles (depending on flash) (most likely: 6, 7, or 14 cycles)
     exx ; 4
     ; Initialize IX
-    ld ix, $D3FFC9 ; 20
+    ld ix, $D52C00 ; 20
     add ix, bc ; 8
     add ix, de ; 8
     ; Prepare to modify the self-modifying code
     ld a, (iy + polygonZ) ; 16
 
     ; If the ending y position is off the screen, jump to the code for if the line ends off screen
-    ; Restore hl to 76480
+    ; Restore hl to -76800
     ; Worried this might require clearing the carry flag, but I don't think it will/
-    add hl, de ; 4
-    ld de, (iy + y1) ; 24
     sbc hl, de ; 8
+    ld de, (iy + y1) ; 24
+    add hl, de ; 4
+
+    ; Pop e2 from the stack
+    pop de ; 16
+
+    ; Set the stack pointer
+    ld sp, -76800 ; 16
+
     jr c, line_ends_off_screen ; 8/9
 
     ; If the ending x position is off the screen, jump to the code for if the line ends off screen
-    ; Set hl to 319
-    ld hl, 319 ; 16
+    ; Set hl to -320
+    ld hl, -320 ; 16
     ld bc, (iy + x1) ; 24
-    sbc hl, bc ; 8/9
+    add hl, bc ; 4
     jr c, line_ends_off_screen ; 8/9
     
     jp line_ends_on_screen ; 17
@@ -278,8 +284,6 @@ update_x_y:
     pop ix ; 20
     ret ; 18
 line_ends_off_screen:
-    ; Pop e2 from the stack
-    pop de ; 10
     ; Modify the self modifying code
     ld (self_modifying_code_off + 1), a ; 18
     ld (self_modifying_code_off_2 + 1), a ; 18
@@ -304,19 +308,15 @@ new_fill_loop_off:
     exx ; 4
     ; If the texel is 255 (the transparency color), skip drawing the pixel
     jr c, fill_cont_off ; 8/9
-        ; also used to make sure we don't draw off the screen
-        ; Decrementing A now to make sure we don't overwrite the Z flag later
-        lea bc, ix + $37; 12
-        ld hl, 76800 ; 16
-        add hl, bc ; 4
+        lea hl, ix ; 12
         ld c, a ; 4
         self_modifying_code_off:
         ld a, 0 ; 8
         cp a, (hl) ; 8
         jr nc, left_fill_cont_off ; 8/9
             ld (hl), a ; 6
-            ; ld (ix + $37), c ; 14
-            db $DD, $71
+            add hl, sp ; 4
+            ld (hl), c ; 6
         left_fill_cont_off:
         scf ; 4
         ld a, c ; 4
@@ -341,26 +341,24 @@ new_fill_loop_off:
         inc ix ; 8
         ; check to make sure that x isn't off the screen to the left or right
         ; if it is, jump out of the loop
-        ld hl, 319 ; 16
-        or a, a ; 4
-        sbc hl, bc ; 8
+        ld hl, -320 ; 16
+        add hl, bc ; 4
         jr c, real_end ; 8/9
         ; Actually update x0
         ld (iy + x0), bc ; 18
         ; If the texel is 255 (the transparency color) plus the color offset (indicating the texel started off as 255), skip drawing the pixel
         self_modifying_code3_off:
-        cp a, 255 ; 4
+        cp a, 0 ; 8
         jr z, fill_cont_off_2;  8/9
-            lea bc, ix + $37 ; 12
-            ld hl, 76800 ; 16
-            add hl, bc ; 4
+            lea hl, ix ; 12
             ld c, a ; 4
             self_modifying_code_off_2:
             ld a, 0 ; 8
             cp a, (hl) ; 8
             jr nc, dy_cont_off ; 8/9
                 ld (hl), a ; 6
-                ld (ix + $37), c ; 14
+                add hl, sp ; 4
+                ld (hl), c ; 6
         fill_cont_off_2:
         or a, a ; 4
     dy_cont_off:
@@ -385,16 +383,14 @@ new_fill_loop_off:
         ; check to make sure that y isn't off the screen to the top or bottom
         ; if it is, break out of the loop
         ld (iy + y0), hl ; 18
-        ld bc, 76481 ; 16
-        sbc hl, bc ; 8
-        jr c, new_fill_loop_off ; 16/17
+        add hl, sp ; 8
+        jr nc, new_fill_loop_off ; 16/17
     real_end_off:
     ld sp, iy ; 8
     pop ix ; 20
     ret ; 18
+
 line_ends_on_screen:
-    ; Pop e2 from the stack
-    pop de ; 16
     ; Modify the self-modifying code
     ld (self_modifying_code_on + 1), a ; 18
     ld (self_modifying_code_on_2 + 1), a ; 18
@@ -419,9 +415,7 @@ new_fill_loop_on:
     exx ; 4
     ; If the texel is 255 (the transparency color), skip drawing the pixel
     jr c, fill_cont_on ; 8/9
-        lea bc, ix + $37; 12
-        ld hl, 76800 ; 16
-        add hl, bc ; 4
+        lea hl, ix; 12
         ; Save the pixel value to c
         ld c, a ; 4
         self_modifying_code_on:
@@ -429,8 +423,8 @@ new_fill_loop_on:
         cp a, (hl) ; 8
         jr nc, left_fill_cont_on ; 8/9
             ld (hl), a ; 6
-            ; ld (ix + $37), c ; 14
-            db $DD, $71
+            add hl, sp ; 4
+            ld (hl), c ; 6
         left_fill_cont_on:
         scf ; 4
         ld a, c ; 4
@@ -463,11 +457,9 @@ new_fill_loop_on:
         ld (iy + x0), bc ; 18
         ; If the texel is 255 (the transparency color) plus the color offset (indicating the texel started off as 255), skip drawing the pixel
         self_modifying_code3_on:
-        cp a, 255 ; 8
+        cp a, 0 ; 8
         jr z, fill_cont_2_on ; 8/9
-            lea bc, ix + $37; 12
-            ld hl, 76800 ; 16
-            add hl, bc ; 4
+            lea hl, ix ; 12
             ; Save the pixel value to c
             ld c, a ; 4
             self_modifying_code_on_2:
@@ -475,7 +467,8 @@ new_fill_loop_on:
             cp a, (hl) ; 8
             jr nc, dy_cont_on ; 8/9
                 ld (hl), a ; 6
-                ld (ix + $37), c ; 14
+                add hl, sp ; 4
+                ld (hl), c ; 6
         fill_cont_2_on:
         or a, a ; 4
     dy_cont_on:

@@ -20,6 +20,8 @@ public _drawTextureLineNewA_NoClip
 ; int startingX, int endingX, int startingY, int endingY, const uint8_t* texture, uint8_t colorOffset
 _drawTextureLineNewA_NoClip:
     di
+    ; Set the short stack pointer
+    ld.sis sp, (shortstack + 2) and $FFFF ; 16
     push ix
     ld iy, 0
     add iy, sp
@@ -71,7 +73,9 @@ _drawTextureLineNewA_NoClip:
     ; Compute abs(dy)
     call abs
     ; Write the number of pixels we have to move on the y axis to y1.
+    inc l
     ld (iy + y1), l
+    dec l
     ; Negate hl
     ex de, hl
     ; Store hl to dy
@@ -84,10 +88,10 @@ _drawTextureLineNewA_NoClip:
     ex de, hl
     or a, a
     sbc hl, bc
-    ; Push abs(dx) to the stack twice 
-    ; (The first instance will be the number of pixels 
+    ; Push abs(dx) to the short and long stack
+    ; (The short stack instance will be the number of pixels 
     ; we have left to move on the x axis.)
-    push bc
+    push.s bc
     push bc
     ; Jump if dx is greater
     jr c, textureRatio_cont
@@ -98,7 +102,7 @@ _drawTextureLineNewA_NoClip:
     ; 52 cycles
     ; offset ix (screen pointer) by gfx_vram
     ld ix, (iy + x0) ; 24
-    ld bc, $D3FFC9 ; 16
+    ld bc, $D52C00 ; 16
     add ix, bc ; 8
     ; Pre-multiply y0
     ld h, (iy + y0) ; 16
@@ -108,13 +112,12 @@ _drawTextureLineNewA_NoClip:
     ex de, hl ; 4
     add ix, de ; 8
     ex de, hl ; 4
-    ; Modify the self-modifying code
-    ld a, (iy + polygonZ) ; 16
-    ld (self_modifying_code1 + 1), a ; 18
-    ld (self_modifying_code2 + 1), a ; 18
+    ; Load polygonZ into B
+    ld b, (iy + polygonZ) ; 16
+    ; Load the color offset minus 1 into I
     ld a, (iy + colorOffset) ; 16
     dec a ; 4
-    ld (self_modifying_code3 + 1), a ; 18
+    ld i, a ; 8
     ; Init the alternate register set
     exx
         pop bc
@@ -143,6 +146,8 @@ _drawTextureLineNewA_NoClip:
         inc c
         ld hl, (iy + texture)
         ld b, (hl)
+        ; Set the long stack pointer
+        ld sp, -76800 ; 16
         jr new_fillLoop_entry_point
     ; At this point, all our registers/variables should be initialized
     ; a': texture error
@@ -153,13 +158,12 @@ _drawTextureLineNewA_NoClip:
     ; hl': texture pointer
     ; 75-208 cycles per pixel
     dx_cont:
-        ; Decrement the number of pixels we have left on the y axis.
-        dec a ; 4
-        ld (hl), a ; 6
         ; Add sy to IX
         self_modifying_code_sy:
-        ld bc, 0 ; 16
-        add ix, bc ; 8
+        ld de, 0 ; 16
+        add ix, de ; 8
+        ; Put e2 into DE
+        ex de, hl ; 4
     new_fillLoop:
         ; Load the texel value and advance the texture pointer
         exx ; 4
@@ -180,23 +184,19 @@ _drawTextureLineNewA_NoClip:
                 textureCont:
             ex af, af' ; 4
         exx ; 4
+        ; Save the pixel value to c
+        ld c, a ; 4
         ; If the texel is 255 (the transparency color), skip drawing the pixel
         jr c, fill_cont ; 8/13
-            lea bc, ix + $37 ; 12
-            ld hl, 76800 ; 16
-            add hl, bc ; 4
-            ; Save the pixel value to c
-            ld c, a ; 4
-            self_modifying_code1:
-            ld a, 0 ; 8
+            lea hl, ix ; 12
+            ld a, b ; 4
             cp a, (hl) ; 8
             jr nc, left_fill_cont ; 8/13
                 ld (hl), a ; 6
-                ; ld (ix + $37), c ; 14
-                db $DD, $71
+                add hl, sp ; 4
+                ld (hl), c ; 6
             left_fill_cont:
             scf ; 4
-            ld a, c ; 4
         fill_cont:
         ; Compare e2 to dy
         ld hl, (iy + dy) ; 24
@@ -209,42 +209,37 @@ _drawTextureLineNewA_NoClip:
             ; Add dy to e2
             add hl, hl ; 4
             add hl, de ; 4
-            ; Save A
-            ld e, a ; 4
             ; Pop the number of pixels to move on X from the stack
-            pop bc ; 16
-            ; Check if BC is 0
-            ld a, b ; 4
-            or a, c ; 4
+            pop.s de ; 16
+            ; Check if DE is 0
+            ld a, d ; 4
+            or a, e ; 4
             ; If x0 == x1, jump out of the loop
             jr z, real_end ; 8/13
             ; Add sx to IX and decrement the number of pixels to move on X.
             self_modifying_code_sx:
             inc ix ; 8
-            dec bc ; 4
-            push bc ; 10
-            ; Restore A
-            ld a, e
+            dec de ; 4
+            push.s de ; 12
             ; Put e2 into DE
             ex de, hl ; 4
             ; If the texel is 255 (the transparency color) plus the color offset (indicating the texel started off as 255), skip drawing the pixel
-            self_modifying_code3:
-            cp a, 255 ; 8
-            jr z, fill_cont_2 ; 8/13
-                lea bc, ix + $37 ; 12
-                ld hl, 76800 ; 16
-                add hl, bc ; 4
-                ; Save the pixel value to c
-                ld c, a ; 4
-                self_modifying_code2:
-                ld a, 0 ; 8
+            ; using I as a general purpose register yuck. but since vectored interrupts are broken on rev I+ calculators anyway, it should be fine.
+            ld a, i ; 8
+            xor a, c ; 4
+            jr z, fill_cont_3 ; 8/13
+                lea hl, ix ; 12
+                ld a, b ; 4
                 cp a, (hl) ; 8
-                jr nc, fill_cont_2 ; 8/13
+                jr nc, fill_cont_3 ; 8/13
                     ld (hl), a ; 6
-                    ld (ix + $37), c ; 14
+                    add hl, sp ; 4
+                    ; C already contains the pixel value from when A was saved before
+                    ld (hl), c ; 6
             fill_cont_2:
-        ; Zero out A
-        xor a, a ; 4
+            ; Clear the carry flag
+            or a, a ; 4
+        fill_cont_3:
         ; Compare e2 to dx
         ld hl, (iy + dx) ; 24
         sbc hl, de ; 8
@@ -255,11 +250,8 @@ _drawTextureLineNewA_NoClip:
             ; Add dx to e2
             add hl, hl ; 4
             add hl, de ; 4
-            ; Put e2 into DE
-            ex de, hl ; 4
-            ; Check how many pixels we have left to move on the y axis.
-            lea hl, iy + y1 ; 12
-            or a, (hl) ; 8
+            ; Check and update how many pixels we have left to move on the y axis.
+            dec (iy + y1) ; 19
             ; If it is not zero, jump to the start of the loop
             jr nz, dx_cont ; 8/13
             jr real_end ; 12
@@ -269,13 +261,8 @@ _drawTextureLineNewA_NoClip:
             ; Add dx to e2
             add hl, hl ; 4
             add hl, de ; 4
-            ; Put e2 into DE
-            ex de, hl ; 4
-            ; Zero out A
-            xor a, a ; 4
-            ; Check how many pixels we have left to move on the y axis.
-            lea hl, iy + y1 ; 12
-            or a, (hl) ; 8
+            ; Check and update how many pixels we have left to move on the y axis.
+            dec (iy + y1) ; 19
             ; If it is not zero, jump to the start of the loop
             jr nz, dx_cont ; 8/13
     real_end:
@@ -368,3 +355,6 @@ dx = -3
 private dy
 dy = -6
 extern _texPalette
+section .bss
+public shortstack
+shortstack: rb 2

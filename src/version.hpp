@@ -1,1 +1,1 @@
-#define TICRAFTversion "v2.2.0"
+#define TICRAFTversion "v2.2.1"

@@ -363,17 +363,9 @@ int main() {
                 case k_Space:
                 case k_5: {
                     // A linear search feels inefficient here but I guess it's fast enough
-                    object** matchingObject = objects;
-                    bool deletedObject = false;
                     drawBuffer();
-                    while (matchingObject < objects + numberOfObjects) {
-                        if (((*matchingObject)->x == playerCursor.x) && ((*matchingObject)->y == playerCursor.y) && ((*matchingObject)->z == playerCursor.z) && (is_visible(*matchingObject))) {
-                            deletedObject = true;
-                            break;
-                        }
-                        matchingObject++;
-                    }
-                    if (deletedObject) {
+                    object** matchingObject = cursorOnObject();
+                    if (matchingObject) {
                         object* matchingObjectReference = *matchingObject;
                         memmove(matchingObject, matchingObject + 1, sizeof(object*) * (size_t)(objects + numberOfObjects - matchingObject - 1));
                         numberOfObjects--;
@@ -397,8 +389,7 @@ int main() {
                             gfx_SetDrawScreen();
                         }
                     }
-                    getBuffer();
-                    drawCursor();
+                    drawCursor(false);
                     break;
                 }
                 case 0x21:
@@ -552,6 +543,7 @@ int main() {
                     fineMovement = !fineMovement;
                     if (fineMovement) {
                         outlineColor = 252;
+                        gfx_palette[252] = 0x000F;
                     } else {
                         outlineColor = 0;
                     }

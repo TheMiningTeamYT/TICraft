@@ -524,8 +524,12 @@ void takeScreenshot() {
             if (good) {
                 printStringAndMoveDownCentered("Writing image data");
                 good = fat_WriteFile(screenshot, 150, gfx_vram + (LCD_WIDTH*LCD_HEIGHT) + 458) == 150;
+            } else {
+                printStringAndMoveDownCentered("Failed to write header.");
             }
             closeFile(screenshot);
+        } else {
+            printStringAndMoveDownCentered("Failed to open file.");
         }
     } else {
         printStringAndMoveDownCentered("Failed to init USB.");
@@ -539,6 +543,7 @@ void takeScreenshot() {
         printStringAndMoveDownCentered("You may now remove the drive.");
     } else {
         printStringAndMoveDownCentered("Failed to write screenshot.");
+        printStringAndMoveDownCentered(name + 27);
     }
     printStringAndMoveDownCentered("Press any key to continue.");
     close_USB();

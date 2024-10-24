@@ -8,15 +8,41 @@ object playerCursor(20, 20, 20, selectedObject, true);
 gfx_sprite_t* cursorBackground;
 int playerCursorX = 0;
 int playerCursorY = 0;
+extern bool fineMovement;
 
 extern "C" {
     int ti_MemChk();
 }
 
-void drawCursor() {
+object** cursorOnObject() {
+    object** matchingObject = objects;
+    while (matchingObject < objects + numberOfObjects) {
+        if (((*matchingObject)->x == playerCursor.x) && ((*matchingObject)->y == playerCursor.y) && ((*matchingObject)->z == playerCursor.z) && (is_visible(*matchingObject))) {
+            return matchingObject;
+        }
+        matchingObject++;
+    }
+    return nullptr;
+}
+
+void drawCursor(bool drawBuff) {
     __asm__ ("di");
     playerCursor.generatePoints();
-    drawBuffer();
+    if (drawBuff) {
+        drawBuffer();
+    }
+    object** matchingObject = cursorOnObject();
+    if (matchingObject) {
+        outlineColor = 252;
+        gfx_palette[252] = 0x7C00;
+    } else {
+        if (fineMovement) {
+            outlineColor = 252;
+            gfx_palette[252] = 0x000F;
+        } else {
+            outlineColor = 0;
+        }
+    }
     if (playerCursor.properties & visible) {
         int minX = renderedPoints[0].x;
         int minY = renderedPoints[0].y;
@@ -97,7 +123,7 @@ void moveCursor(uint8_t direction) {
         default:
             return;
     }
-    drawCursor();
+    drawCursor(true);
 }
 
 void getBuffer() {
